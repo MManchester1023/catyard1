@@ -74,6 +74,17 @@ function parseJson(text) {
   try { return JSON.parse(text.slice(i, j + 1)); } catch { return null; }
 }
 
+// What the cat said, from whatever came back. A clean JSON object is the normal case; a reply that was cut short
+// (no closing brace) or wrapped in a code fence still has its words in it; plain text is used as it is. Raw JSON
+// punctuation is never shown to the player.
+export function sayFrom(out) {
+  const j = parseJson(out); if (j && typeof j.say === 'string' && j.say.trim()) return { say: j.say, feeling: j.feeling };
+  const m = /"say"\s*:\s*"((?:[^"\\]|\\.)*)/.exec(out); // (an unfinished string is fine: take what is there)
+  if (m) { let s = m[1]; try { s = JSON.parse('"' + s + '"'); } catch { s = s.replace(/\\(["\\])/g, '$1').replace(/\\n/g, ' ').replace(/\\$/, ''); } const f = /"feeling"\s*:\s*"(\w+)"/.exec(out); return { say: s, feeling: f && f[1] }; }
+  const plain = out.replace(/```(?:json)?/g, '').trim();
+  return /^[{[]/.test(plain) ? { say: '' } : { say: plain }; // (JSON with no words in it is not something to say)
+}
+
 export class Brain {
   constructor({ getSettings, saveSettings, http }) {
     this.get = getSettings; this.save = saveSettings; this.http = http || ((u, o) => fetch(u, o));
@@ -117,11 +128,13 @@ export class Brain {
     if (!this.enabled() || this.busy) return false;
     this.busy = true; this._set('busy');
     try {
-      const recent = w.chat.slice(-9, -1).map(m => `${m.from === 'you' ? 'Human' : m.from === 'cat' ? w.cat.name : 'note'}: ${m.text}`).join('\n');
-      const out = await this.call(SYSTEM(w), `STATE\n${digest(w)}\n\nRECENT CHAT\n${recent || '(none yet)'}\n\nThe human says: "${clip(text, 300)}"\n\nReply as ${w.cat.name}. JSON: {"say": "<= 35 words", "feeling": "happy|calm|curious|annoyed|sleepy|shy|excited"}`, 260);
-      const j = parseJson(out); const say = clip(j && j.say ? j.say : out, 260); if (!say) throw new Error('Empty reply');
+      // only what was actually said: the game's own messages ("X has moved in...") are not part of the conversation, and
+      // calling them notes made the cat answer as if the human had left one
+      const recent = w.chat.slice(-12, -1).filter(m => m.from === 'you' || m.from === 'cat').slice(-8).map(m => `${m.from === 'you' ? 'Human' : w.cat.name}: ${m.text}`).join('\n');
+      const out = await this.call(SYSTEM(w), `STATE\n${digest(w)}\n\nRECENT CHAT\n${recent || '(none yet)'}\n\nThe human says: "${clip(text, 300)}"\n\nReply as ${w.cat.name}, to the human, in your own words. JSON only: {"say": "<= 35 words", "feeling": "happy|calm|curious|annoyed|sleepy|shy|excited"}`, 400);
+      const r = sayFrom(out), say = clip(r.say, 260); if (!say) throw new Error('Empty reply');
       catSays(w, say);
-      const f = j && j.feeling; if (f === 'happy' || f === 'excited') w.cat.mood.joy = Math.min(1, w.cat.mood.joy + 0.1); else if (f === 'annoyed') w.cat.mood.joy = Math.max(0, w.cat.mood.joy - 0.1);
+      const f = r.feeling; if (f === 'happy' || f === 'excited') w.cat.mood.joy = Math.min(1, w.cat.mood.joy + 0.1); else if (f === 'annoyed') w.cat.mood.joy = Math.max(0, w.cat.mood.joy - 0.1);
       this._set('idle'); return true;
     } catch (e) { this._set('error', clip(e.message, 120)); return false; }
     finally { this.busy = false; this.onChange && this.onChange(); }

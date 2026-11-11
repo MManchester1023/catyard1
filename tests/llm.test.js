@@ -1,7 +1,7 @@
 // Exercises the Claude layer against a fake server: success, bad JSON, HTTP errors, cap, no key, timeouts.
 import assert from 'node:assert/strict';
 import { makeWorld, tick } from '../src/sim/sim.js';
-import { Brain, DEFAULTS, digest } from '../src/sim/llm.js';
+import { Brain, DEFAULTS, digest, sayFrom } from '../src/sim/llm.js';
 import { userSpeaks } from '../src/sim/chat.js';
 import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
 seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
@@ -31,6 +31,26 @@ console.log('chat ok:', w.chat.at(-1).text);
 
 // junk (non-JSON) is used as plain text
 mode = 'junk'; await brain.chat(w, 'hi again'); assert.match(w.chat.at(-1).text, /meow/);
+
+// replies that are cut off, fenced or empty never show raw JSON; game messages are not fed back as "notes"
+{
+  const cut = '{"say": "Hello, human. The note says a new cat moved in, and I am \\"watching\\" it from the oa';
+  assert.deepEqual(sayFrom(cut), { say: 'Hello, human. The note says a new cat moved in, and I am "watching" it from the oa', feeling: null });
+  assert.equal(sayFrom('```json\n{"say": "Fenced hello.", "feeling": "calm"}\n```').say, 'Fenced hello.');
+  assert.equal(sayFrom('{"say": "Whole one.", "feeling": "happy"}').feeling, 'happy');
+  assert.equal(sayFrom('{"feeling": "happy"}').say, '', 'JSON with no words is not spoken');
+  assert.equal(sayFrom('just meow').say, 'just meow');
+  const real = mode; mode = 'cut'; const before = w.chat.length;
+  const http0 = brain.http; brain.http = async () => ({ ok: true, status: 200, json: async () => ({ content: [{ type: 'text', text: cut }] }) });
+  w.chat.push({ from: 'sys', text: 'Pudding has moved into the yard.', day: 1, time: '09:00' }); userSpeaks(w, 'who is that?');
+  await brain.chat(w, 'who is that?'); const said = w.chat.at(-1).text;
+  assert.ok(w.chat.length > before && !/[{}]|"say"/.test(said), 'no raw JSON in the chat: ' + said);
+  brain.http = http0; mode = real;
+  let seen = ''; brain.http = async (u, o) => { seen = JSON.parse(o.body).messages[0].content; return http(u, o); };
+  w.chat.push({ from: 'sys', text: 'Pudding has moved into the yard.', day: 1, time: '09:01' }); userSpeaks(w, 'hi');
+  await brain.chat(w, 'hi'); brain.http = http0;
+  assert.ok(!/Pudding has moved/.test(seen) && !/^note:/m.test(seen), 'game messages stay out of the conversation the cat is shown');
+}
 
 // HTTP error surfaces and does not throw; sim unaffected
 mode = 'http'; assert.equal(await brain.chat(w, 'x'), false); assert.match(brain.label(), /401/);
