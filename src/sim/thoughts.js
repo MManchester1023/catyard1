@@ -9,7 +9,7 @@ const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => (v[k] != null ? v[k] : '
 const vars = w => {
   const c = w.cat, q = c.quirk, n = w.stash.items.length, a = c.art;
   const top = Object.entries(stashColors(w)).sort((x, y) => y[1] - x[1])[0];
-  return { item: ITEM_LABEL[q.item], items: ITEM_PLURAL[q.item], fav: q.favColor, n, name: c.name, level: LEVEL_NAMES[levelOf(a.xp)], top: top ? top[0] : q.favColor, best: Math.round(a.best * 100), human: 'the human' };
+  return { frog: w.frog ? w.frog.name : 'the frog', item: ITEM_LABEL[q.item], items: ITEM_PLURAL[q.item], fav: q.favColor, n, name: c.name, level: LEVEL_NAMES[levelOf(a.xp)], top: top ? top[0] : q.favColor, best: Math.round(a.best * 100), human: 'the human' };
 };
 
 const T = {
@@ -56,12 +56,25 @@ const T = {
   wishWrite: ['I will leave the human a note. Politely.', 'Typing with one paw. This will take a while.'],
   wishGranted: ['The human listened. I did not expect that.', 'It came. I asked and it came.'],
   learned: ['Now I know how. That is better than having.', 'The slab explained it. I owe the slab.'],
+  frogGo: ['{frog} is out. {frog} is always glad to see me. I think.', 'I will go and sit with {frog}. Nobody needs to know.', 'The pond has a friend in it. I forget how good that is.'],
+  frogDone: ['Quiet company. The best kind.', 'I feel lighter. {frog} does that.', 'Same time tomorrow, {frog}.'],
+  meetFrog: ['A frog. A friend. In the pond. All this time.', 'Not a ghost. Better than a ghost.'],
+  birdCaught: ['A BIRD. I caught a bird. Nobody saw. Everybody should have seen.', 'I need nothing. For the first time, I need nothing.', 'I will remember this for the rest of my life.'],
+  stalkHunter: ['Everything that moves is mine.', 'Low and quiet. Low and quiet. Low.', 'I have been waiting for this all day.', 'Yes. Come closer. Come closer.'],
+  paintVg: ['Just one more. Then I will stop. I will not stop.', 'The canvas cannot wait. I cannot wait.', 'It will never look like what I see. That is why I must keep going.'],
 };
 const WONDER = {
   wantA: w => { const x = w.cat.wants[0]; return x ? pick([`I really should ${x.text}.`, `Still want to ${x.text}.`, `Today might be the day I ${x.text}.`]) : null; },
   theory: w => { const ms = Object.entries(w.mysteries).filter(([, m]) => m.theory && !m.solved); if (!ms.length) return null; const [id, m] = pick(ms); return `${MYSTERY_INFO[id].name[0].toUpperCase() + MYSTERY_INFO[id].name.slice(1)}... ${m.theory}`; },
   quirk: w => (w.stash.items.length ? pick(['Do I have enough {items}? No. Never enough.', 'The {fav} ones are the best. I will not hear otherwise.', 'I wonder what the stash is doing right now.']) : pick(['A cat should own something small and perfect.', 'I wonder if the {item} is out there today.'])),
   art: w => (w.cat.art.count ? pick(['My last painting was almost good.', 'I am a {level}. That is not nothing.', 'Next canvas, I will try something braver.']) : 'My paws feel like they want to make something.'),
+  temper: w => {
+    const t = w.cat.temper;
+    if (t === 'vangogh') return pick(['The canvas. I keep thinking about the canvas.', 'Yellow. I need more yellow.', 'Why does nothing look the way it feels?']);
+    if (t === 'hunter') return pick(['Something rustled. Something is always about to rustle.', 'Every shadow is a mouse until proven otherwise.', 'My paws itch. Somewhere, a pounce is waiting.']);
+    if (t === 'nightowl') return isNight(w) ? pick(['The night is young. So am I, mostly.', 'Everyone else is asleep. This is the good part.']) : pick(['Too bright. Wake me at dusk.', 'The sun is a lot, honestly.']);
+    return null;
+  },
   night: w => (isNight(w) ? pick(['The yard is different at night. Bigger.', 'Everything smells louder in the dark.']) : null),
 };
 
@@ -69,11 +82,11 @@ export function thoughtFor(w, kind, extra = {}) {
   const v = Object.assign(vars(w), extra), c = w.cat;
   if (kind === 'idle' || kind === 'explore') {
     const r = Math.random();
-    if (r < 0.55) { const f = pick([WONDER.wantA, WONDER.theory, WONDER.quirk, WONDER.art, WONDER.night]); const s = f(w); if (s) return fmt(s, v); }
+    if (r < 0.55) { const f = pick([WONDER.wantA, WONDER.theory, WONDER.quirk, WONDER.art, WONDER.night, WONDER.temper, WONDER.temper]); const s = f(w); if (s) return fmt(s, v); }
     const fam = Object.entries(c.words).filter(([, n]) => n >= 3).map(([k]) => k);
     if (fam.length && r < 0.7) return `"${pick(fam)}"... the human keeps saying that.`;
   }
-  const bank = T[kind] || T.idle;
+  const bank = (kind === 'stalk' && c.temper === 'hunter' ? T.stalkHunter : kind === 'paint' && c.temper === 'vangogh' && Math.random() < 0.5 ? T.paintVg : T[kind]) || T.idle;
   return fmt(pick(bank), v);
 }
 
@@ -90,14 +103,16 @@ export function offlineReply(w, text) {
   let body = null;
   if (has(/good (cat|kitty|girl|boy)|cute|pretty|love you|best cat|sweet/)) { body = pick(['*purrs loudly* I know.', 'I accept this praise.', '*headbutts the glass*']); c.mood.joy = clamp(c.mood.joy + 0.2); c.bond = clamp(c.bond + 0.02); }
   else if (has(/your name|who are you|what are you called/)) body = `I am ${c.name}. I live here. I am also a ${v.level}.`;
+  else if (has(/personality|temperament|what are you like|about yourself/)) body = c.temper === 'vangogh' ? 'I am a painter first and a cat second.' : c.temper === 'hunter' ? 'I hunt. Whatever else I am, I am that.' : c.temper === 'nightowl' ? 'I do my best living after dark.' : 'I am a cat. That is plenty.';
   else if (has(/how are you|how do you feel|you ok|you okay/)) body = n.hunger > 0.7 ? 'Hungry. Terribly, tragically hungry.' : n.tired > 0.75 ? 'So sleepy. Talk quieter.' : n.fun > 0.7 ? 'Bored. Entertain me.' : c.mood.joy > 0.6 ? 'Good. Very good. Something is going right.' : 'Fine. Thinking about things.';
   else if (has(/stash|collect|treasure|hoard|bottle ?cap|feather|button|marble/)) body = w.stash.items.length ? `I have ${v.n}. The ${v.top} ones are my favourite. I keep them ${w.stash.site ? w.stash.site.label : 'somewhere safe'}. Do not tell anyone.` : `I do not have a stash yet. I am looking for ${an('' + v.fav + ' ' + v.item)}.`;
   else if (has(/paint|art|canvas|draw|picture|gallery/)) body = c.art.count ? `I have made ${c.art.count} painting${c.art.count === 1 ? '' : 's'}. My best was ${v.best} out of 100. I am a ${v.level}.` : 'I have not painted yet. The paint is looking at me.';
   else if (has(/moon|stars?|night sky/)) body = w.mysteries.moon.theory || 'The moon is up there. I am working on it.';
   else if (has(/table|bark|craft|make|build|workbench|oak|tree/)) body = w.table ? `I made the bark table myself. My things live on it now.${c.crafted.length > 1 ? ` I have made ${c.crafted.length} things so far.` : ''}` : (c.inv.bark ? `I have ${c.inv.bark} bark. Soon I will make a table.` : 'I scratch the oak for bark. One day it will be a table.');
   else if (has(/wish|want|need|please|give|notes?/) && (c.wishes || []).some(x => x.state === 'open')) { const o = c.wishes.find(x => x.state === 'open'); body = `I left you a note on the tablet. ${o.text}`; }
-  else if (has(/pond|frog|fish|water/)) body = w.mysteries.ripples.theory || 'The pond is quiet. Too quiet.';
+  else if (has(/pond|frog|fish|water/)) body = w.frog ? pick([`${w.frog.name} lives in the pond. We are friends. Do not tell anyone I said "friends".`, `${w.frog.name} is the best thing in the yard. Do not repeat that.`, `I go and sit with ${w.frog.name} when it is too quiet. ${w.frog.visits ? `${w.frog.visits} time${w.frog.visits === 1 ? '' : 's'} so far.` : ''}`]) : w.mysteries.ripples.theory || 'The pond is quiet. Too quiet.';
   else if (has(/firefl|spark|bug|glow/)) body = w.mysteries.sparks.theory || 'Little lights. Over the flowers. Ask me later.';
+  else if (has(/hunt|bird|mouse|mice|prey|pounce/)) body = w.stats.birds ? `I have caught a bird. Once${w.stats.birds > 1 ? ' or twice' : ''}. It was the best day of my life.` : c.temper === 'hunter' ? 'I hunt. That is the whole truth. The birds are too quick. For now.' : c.mem.caught ? `I have caught ${c.mem.caught}. Not a bird. Birds are too quick.` : 'I have not caught anything yet. Birds are too quick.';
   else if (has(/treat|food|hungry|eat|snack/)) body = n.hunger > 0.5 ? 'Yes. Food. Say more.' : 'I could eat. I can always eat.';
   else if (has(/\bwant|wish|goal|dream/)) body = c.wants.length ? `I want to ${c.wants[0].text}.` : 'Nothing right now. That is strange.';
   else if (has(/bye|goodnight|good night|see you|gotta go/)) body = pick(['Go. I will be here. I am always here.', '*slow blink* Come back.']);

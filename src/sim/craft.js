@@ -6,6 +6,7 @@ import { RECIPES, knows, costText } from './recipes.js';
 import { feel } from './feelings.js';
 import { onEvent } from './wants.js';
 import { layoutStash } from './quirk.js';
+import { PACE, paceOf, barkLuck, gatherRoom } from './pace.js';
 
 export const INV_CAP = 12;
 export const have = (w, m) => w.cat.inv[m] || 0;
@@ -39,13 +40,15 @@ export const neededMat = (w, m) => goals(w).some(id => (shortfall(w, id)[m] || 0
 
 // ---------- the oak ----------
 export function scratchTree(w) {
-  const c = w.cat, r = Math.random(), lucky = 0.38 + c.traits.curious * 0.06;
-  const drop = r < lucky ? 'bark' : r < lucky + 0.14 ? 'twig' : null;
+  if (!gatherRoom(w)) { feel(w, ['act:tree'], { joy: 0.02 }, 'content'); return null; } // it has given what it can today
+  const c = w.cat, r = Math.random(), k = barkLuck(w), lucky = (0.38 + c.traits.curious * 0.06) * k; // pace.js: the oak is not that generous
+  const drop = r < lucky ? 'bark' : r < lucky + 0.14 * k ? 'twig' : null;
   if (!drop || c.inv[drop] >= INV_CAP) { feel(w, ['act:tree'], { joy: 0.02 }, 'content'); return null; }
   return drop;
 }
 export function collectDrop(w, type) {
   const c = w.cat; c.inv[type] = Math.min(INV_CAP, c.inv[type] + 1); w.stats.gathered++;
+  const day = dayOf(w); if (c.gDay !== day) { c.gDay = day; c.gToday = 0; } c.gToday++;
   note(w, `${c.name} scratched the oak and ${an(MAT_LABEL[type])} came loose.`, 'craft');
   if (w.stats.gathered === 1) journal(w, `The tree gave me ${an(MAT_LABEL[type])}. It had not occurred to me that trees give things back.`, 'craft');
   feel(w, ['act:tree', 'mat:' + type], { joy: 0.1 }, 'content');
@@ -94,7 +97,7 @@ export function unlockRecipe(w, id, title, how = 'tablet') {
 // with no connection the tablet cannot teach it, so a recipe it has wanted for a couple of days it works out itself
 export function selfTaught(w) {
   if (w.netOn) return false;
-  for (const x of w.cat.wants) if (x.kind === 'learn' && !knows(w, x.recipe) && dayOf(w) - x.day >= 2) return unlockRecipe(w, x.recipe, '', 'itself');
+  for (const x of w.cat.wants) if (x.kind === 'learn' && !knows(w, x.recipe) && dayOf(w) - x.day >= PACE.selfTaughtDays * paceOf(w)) return unlockRecipe(w, x.recipe, '', 'itself');
   return false;
 }
 // a page the cat just read: does it explain something it was hoping to learn?

@@ -1,6 +1,6 @@
 # Cat Yard
 
-A small world where a cat lives on its own and you watch. It has needs, moods and a personality, but also wants: it collects small objects in a hidden stash, paints with its paws and slowly gets better, and keeps theories about the mysteries of the yard (the moon, ripples in the pond, sparks at dusk). You can talk to it, and an admin mode lets you change the world.
+A small world where a cat lives on its own and you watch. It has needs, moods and a personality, but also wants: it collects small objects in a hidden stash, paints with its paws and slowly gets better, and keeps theories about the mysteries of the yard (the moon, ripples in the pond, sparks at dusk). Each cat also has a **temperament** (Van Gogh, Hunter or Night owl), can occasionally catch a bird, and can make friends with a **frog** from the pond. You can talk to it, and an admin mode lets you change the world.
 
 The whole yard is drawn in a dithered, low-resolution pixel style (ordered Bayer dithering, so the pattern holds still instead of shimmering), including the cat's paintings.
 
@@ -74,6 +74,42 @@ The mat sits by the glass at the front of the yard. Open the **Outside** tab to 
 
 Chat commands (no admin mode needed): `offer item <type> [color]`, `offer material <bark|twig|twine>` (or just `give <material>`), `offer note <text>`, `offer list`, `tastes`, `feelings`. `offer clear` needs admin mode.
 
+## Temperament: Van Gogh, Hunter, Night owl
+
+Every cat has one temperament, picked at random for a new cat and shown in the **Cat** tab under *Quirk*. It is separate from the collector quirk (what it keeps in the stash).
+
+- **Van Gogh**: obsessed with painting. The urge to create builds faster and it starts painting at a much lower urge, even when tired or hungry; it paints more than twice as often, stays longer at the canvas, and is never quite finished with a picture. It still sleeps and eats.
+- **Hunter**: hunts whenever it can. It notices mice and birds from much farther away, stalks them whether or not it is hungry, tries again almost at once, and more mice are allowed in the yard for it.
+- **Night owl**: stays up late. Its whole day runs about three hours behind: lively well into the night, deeply asleep from roughly 2am to 7:30am.
+
+Cats from an older save get a random temperament the first time they are loaded. In admin mode `quirk trait <vangogh|hunter|nightowl|none>` changes it.
+
+## Birds
+
+Birds land in the yard now and then. A cat that stalks one has a **rare** lucky pounce (a few percent per stalk, a little better for a skilled hunter). If it works, the bird is caught: hunger and thirst are filled, and boredom and loneliness are emptied. A feather drops, and it goes into the history. The odds are the same for every cat; the Hunter only gets more tries, so expect roughly one catch every ten or so days for an ordinary cat and one every few days for a Hunter. Mice work as before.
+
+## The frog
+
+The ripples in the pond are a frog. Once the cat has worked that mystery out (see *How long things take*), the frog becomes its friend and gets a name. It lives on a lily pad at the near edge of the pond, comes up a few times a day for a while and then goes back under (it comes up sooner in the rain and when the cat is lonely).
+
+When the cat is lonely and the frog is out, it goes and sits with it. A visit takes **loneliness down a lot** (about 0.55 to 0.75 depending on how well they know each other), far more than anything else it can do for company, and the friendship grows with each visit. After a visit the frog hides for a while, so it cannot be used all day. The **Cat** tab shows the frog, whether it is out, how many visits there have been, and a bond meter. A cat whose pond mystery was already solved in an older save meets its frog the first time that save is loaded. `frog` in admin mode: `frog meet|out|hide|visit`.
+
+## How long things take
+
+Discoveries are slow on purpose, and each mystery can only teach the cat so much per day however busy it is, so the big ones take days.
+
+| Thing | Roughly, at the default pace |
+| --- | --- |
+| A first theory about the moon | 2 to 3 days; understanding it needs 6 different moon phases (about a week) |
+| The pond ripples (the frog) | about 5 good days, it can learn from the pond once a day |
+| The dancing sparks | about 8 days at the very fastest, usually 10 to 20 (it can learn six things a day from them) |
+| Bark and twigs from the oak | at most two pieces a day, and not every scratch gives one |
+| Working out a recipe without the tablet | 4 days |
+| Noticing a part of the yard (pond, tree, easel, tablet…) | it has to get within about 100 px of it, and only three new things sink in per day: about 2 to 3 days for all of them |
+| The bark table | about 6 days (it has to find the oak first, then gets two pieces a day) |
+
+All of these are numbers in `src/sim/pace.js`. In admin mode `pace X` scales them all at once: `pace 2` is twice as slow, `pace 0.5` twice as fast, `pace 1` the default (range 0.25 to 4). It is saved with the cat, so a save made before this change simply starts at 1.
+
 ## Feelings and tastes
 
 Whenever something happens to the cat (a gift, a page, a finished painting, a piece of bark, a visit to the stash, something it made), its mood and needs move: it may feel warm, thrilled, soothed, proud, uneasy or let down. Whatever it was engaged with gets a memory of how that felt, and those memories are what it likes and dislikes. They feed the colour and object tastes, and nudge what it chooses to do (a cat that finds painting rewarding paints a little more). It says so in its diary when a feeling has settled into a preference. The **Cat** and **Outside** tabs show what currently makes it feel good and what makes it uneasy; `/feelings` lists them. Nobody sets this: it is learned.
@@ -89,7 +125,7 @@ The cat scratches the oak, and now and then a piece of **bark** or a **twig** co
 | Bird feeder | 3 bark, 2 twigs | Looks it up on the tablet. Draws more birds. |
 | Wind chime | 3 twigs, 1 twine | Looks it up on the tablet. Calms it a little. |
 
-When it wants to make something it does not know, it goes to the tablet and looks the topic up; the page it reads is what unlocks the recipe. If the tablet turns up nothing twice it works it out itself, and with no connection it does the same after a couple of days. **Twine can only come from you** (leave it on the mat, or use `/give twine`); it cannot be found in the yard. The **Cat** tab shows what it is carrying, what it knows how to make and what it has made.
+When it wants to make something it does not know, it goes to the tablet and looks the topic up; the page it reads is what unlocks the recipe. If the tablet turns up nothing twice it works it out itself, and with no connection it does the same after about four days. **Twine can only come from you** (leave it on the mat, or use `/give twine`); it cannot be found in the yard. The **Cat** tab shows what it is carrying, what it knows how to make and what it has made.
 
 ## Notes from the cat
 
@@ -142,6 +178,9 @@ Type in the chat to talk to the cat. Press **Admin** (or type `admin on`) to run
 | `tp <place>` | Move the cat (house, bowl, water, cushion, post, pond, flowers, tree, fence, easel, stash, glass, mat, tablet, table) |
 | `want list\|add\|done\|clear` | Read, give or grant wants |
 | `quirk item\|color\|taste ...` | Change what it collects and how it arranges it |
+| `quirk trait <vangogh\|hunter\|nightowl\|none>` | Change its temperament |
+| `frog [meet\|out\|hide\|visit]` | Bring in, show, hide or visit the pond frog |
+| `pace [X]` | How slowly it works things out (1 default, 2 twice as slow, 0.25 to 4) |
 | `stash list\|add\|steal\|clear` | Edit the stash |
 | `art level\|paint\|clear` | Painting skill and gallery |
 | `think <text>` | Put a thought in its head |
@@ -163,7 +202,7 @@ Type in the chat to talk to the cat. Press **Admin** (or type `admin on`) to run
 ```
 npm install        # installs the Tauri CLI (only needed for the desktop app)
 npm run web        # serves src/ at http://localhost:8765/index.html for the browser version
-npm test           # simulation, save, Claude-layer, offering, tablet and crafting/feelings/history tests (no network needed)
+npm test           # simulation, save, Claude-layer, offering, tablet, crafting/feelings/history and temperament/frog/pacing tests (no network needed)
 npm run dev        # desktop app with live files (needs Rust + the Tauri prerequisites)
 npm run build      # local installer (Windows)
 ```
@@ -179,4 +218,5 @@ Layout: `src/sim/` is the DOM-free simulation (runs in Node and in the app; `off
 - Crafting, wish notes, feelings and the history were tested in Node (including headless multi-day runs and a fake Wikipedia for recipe lookups) and clicked through in a real browser. The recipe lookups have never run against live Wikipedia, and the export file and its folder have only been exercised in the browser (as a download), not in the installed Windows app.
 - Recipe pages are matched by title and keyword (for example a page whose title mentions "feeder"). If Wikipedia has no such page the cat works the recipe out itself.
 - Pages and page titles come from Wikipedia's own text, which can contain anything; the filter is a word list, not moderation.
+- Temperaments, the bird catch, the frog and the slower pacing were measured in Node over many simulated cats and days (for example the Van Gogh spends about 12 to 16% of its time painting, the Hunter makes about five times as many stalks, the night owl is awake between midnight and 3am about two thirds of the time) and clicked through in a real browser, but the pacing numbers are tuned by simulation, not by watching a cat for weeks. If something takes too long or too short a time, `pace` and the numbers in `src/sim/pace.js` are the dials.
 - The cat's world is a single yard with one cat. It is deliberately small.

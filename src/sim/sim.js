@@ -11,6 +11,9 @@ import { makeTastes, ensureOfferState, offerTick, refreshFavourites } from './of
 import { ensureFeel } from './feelings.js';
 import { considerWish, wishTick } from './wishes.js';
 import { selfTaught } from './craft.js';
+import { makeTemper } from './temper.js';
+import { frogTick } from './frog.js';
+import { discoverRadius, placeCap } from './pace.js';
 import { ensureTablet } from './tablet.js';
 
 export { describe };
@@ -26,7 +29,7 @@ export function makeCat(name) {
     mood: { joy: 0.45 }, act: null, thought: '', thoughtId: 0, thoughtAt: -99, thoughtHint: null,
     reeval: 1, carry: null, huntCool: 0, begAt: -999, zoomAt: -999, attAt: -999, groomNext: false, bond: 0.2, words: {}, wants: [], doneWants: 0,
     inv: { bark: 0, twig: 0, twine: 0 }, recipes: {}, crafted: [], wishes: [], lastWishAt: -999, assoc: {}, lastTasteSay: -999,
-    quirk, tastes: makeTastes(quirk), keepsakes: [], offerHist: [], art: makeArt(), mem: { known: { house: 1, bowl: 1, water: 1 }, nap: {}, lastMeal: null, caught: 0, missed: 0 },
+    quirk, temper: makeTemper(), tastes: makeTastes(quirk), keepsakes: [], offerHist: [], art: makeArt(), mem: { known: { house: 1, bowl: 1, water: 1 }, nap: {}, lastMeal: null, caught: 0, missed: 0 },
   };
 }
 
@@ -37,10 +40,10 @@ export function makeWorld(name) {
     log: [], logId: 0, journal: [], chat: [], asks: [], pending: [], onNote: null,
     weather: { type: 'clear', rain: 0, cloud: 0.15, timer: rnd(160, 300), forced: null },
     o: makeObjects(), mice: [], birds: [], flies: [], sparks: [], treats: [], items: [], offers: [], tablet: null, netq: [], netOn: false,
-    table: null, deco: {}, hist: [], days: {}, lastThoughtId: 0, lastDid: null,
+    table: null, deco: {}, hist: [], days: {}, lastThoughtId: 0, lastDid: null, frog: null, pace: 1,
     stash: { site: null, items: [], seed: 1, known: null }, easel: null, ripple: null, rippleT: rnd(50, 100), thief: null, thiefT: dayLen * rnd(2, 4),
     mysteries: makeMysteries(), fed: 0, mouseT: rnd(30, 70), itemT: rnd(20, 50), wantT: 30, createdAt: Date.now(),
-    stats: { meals: 0, naps: 0, mice: 0, misses: 0, treats: 0, zoomies: 0, gifts: 0, scratch: 0, collected: 0, found: 0, paintings: 0, wants: 0, offerings: 0, crafted: 0, gathered: 0, wishes: 0 },
+    stats: { meals: 0, naps: 0, mice: 0, misses: 0, treats: 0, zoomies: 0, gifts: 0, scratch: 0, collected: 0, found: 0, paintings: 0, wants: 0, offerings: 0, crafted: 0, gathered: 0, wishes: 0, birds: 0, frogVisits: 0 },
   };
   w.cat = makeCat(name); ensureOfferState(w); ensureTablet(w); ensureFeel(w.cat);
   for (let i = 0; i < 3; i++) w.birds.push(makeBird(i));
@@ -88,7 +91,8 @@ export function tick(w, dt) {
   n.fun = clamp(n.fun + dt / 380 * (asleep ? 0.2 : 1));
   n.dirty = clamp(n.dirty + dt / 1100);
   n.lonely = clamp(n.lonely + dayDt / 1.5 * (0.7 + c.bond * 0.8) * (asleep ? 0.3 : 1));
-  n.create = clamp(n.create + dayDt / 1.0 * (asleep ? 0.2 : 1));
+  n.create = clamp(n.create + dayDt / 1.0 * (asleep ? 0.2 : 1) * (c.temper === 'vangogh' ? 1.5 : 1));
+  if (c.temper === 'vangogh' && n.create > 0.85 && !asleep) c.mood.joy = clamp(c.mood.joy - dt * 0.0015); // it is miserable when it cannot paint
   n.fear = clamp(n.fear - dayDt * 0.15);
   c.mood.joy = clamp(c.mood.joy + (0.4 - c.mood.joy) * Math.min(1, dt * 0.02));
   if (!c.hidden && w.weather.rain > 0.3) n.wet = clamp(n.wet + w.weather.rain * 0.035 * dt * (c.z > 0 ? 0.5 : 1));
@@ -96,17 +100,19 @@ export function tick(w, dt) {
 
   // senses
   if (!c.hidden) {
-    for (const id of PLACES) if (!c.mem.known[id] && Math.hypot(c.x - o[id].x, c.y - o[id].y) < 190) discover(w, id);
+    const dd = dayOf(w); if (c.mem.dDay !== dd) { c.mem.dDay = dd; c.mem.dToday = 0; }
+    if (c.mem.dToday < placeCap(w)) for (const id of PLACES) if (!c.mem.known[id] && Math.hypot(c.x - o[id].x, c.y - o[id].y) < discoverRadius(w)) { discover(w, id); c.mem.dToday++; if (c.mem.dToday >= placeCap(w)) break; } // pace.js: only so much of the yard sinks in per day
     if (bm.on && !c.mem.known.beam && Math.hypot(c.x - bm.x, c.y - bm.y) < 55) discover(w, 'beam', `${c.name} found a warm patch of sunlight.`);
   }
 
   // the yard
   c.huntCool = Math.max(0, c.huntCool - dt);
   w.mouseT -= dt;
-  if (w.mouseT <= 0) { if (w.mice.length < 1 && w.weather.rain < 0.3) spawnMouse(w); w.mouseT = rnd(60, 150) / ((h > 16.5 && h < 21) || (h > 4.5 && h < 8) ? 1.6 : 1); }
+  const hunter = c.temper === 'hunter'; // there is more to hunt where a Hunter lives
+  if (w.mouseT <= 0) { if (w.mice.length < (hunter ? 2 : 1) && w.weather.rain < 0.3) spawnMouse(w); w.mouseT = rnd(60, 150) / ((h > 16.5 && h < 21) || (h > 4.5 && h < 8) ? 1.6 : 1) / (hunter ? 1.7 : 1); }
   w.mice.forEach(m => mouseTick(w, m, dt)); w.mice = w.mice.filter(m => !m.gone && !m.dead);
   w.birds.forEach(b => birdTick(w, b, dt)); w.flies.forEach(f => flyTick(w, f, dt)); w.sparks.forEach(s => sparkTick(w, s, dt));
-  rippleTick(w, dt, h, isNight(w));
+  rippleTick(w, dt, h, isNight(w)); frogTick(w, dt);
   w.itemT -= dt; if (w.itemT <= 0) { spawnItem(w); w.itemT = rnd(w.dayLen / 3, w.dayLen / 1.1); }
   for (const p of [...w.pending]) if (w.clock >= p.at) { spawnItem(w, p.type, p.color); w.pending.splice(w.pending.indexOf(p), 1); }
   w.items.forEach(i => (i.age += dt)); w.items = w.items.filter(i => i.age < w.dayLen * 1.5);
@@ -154,7 +160,7 @@ export function advance(w, realDt, maxSteps = 90) {
 // fast-forward the time the app was closed. no thoughts spoken, no LLM asks
 export function catchUp(w, seconds, step = 0.5) {
   const log0 = w.logId, hook = w.onNote, netWas = w.netOn; w.onNote = null; w.netOn = false; w.quiet = true;
-  const before = { tab: (w.tablet && w.tablet.uses) || 0, offers: w.cat.offerHist.length, paintings: w.stats.paintings, crafted: w.stats.crafted, gathered: w.stats.gathered, wishes: w.stats.wishes, collected: w.stats.collected, wants: w.stats.wants, mice: w.stats.mice, level: levelOf(w.cat.art.xp), day: dayOf(w) };
+  const before = { birds: w.stats.birds || 0, frogVisits: w.stats.frogVisits || 0, tab: (w.tablet && w.tablet.uses) || 0, offers: w.cat.offerHist.length, paintings: w.stats.paintings, crafted: w.stats.crafted, gathered: w.stats.gathered, wishes: w.stats.wishes, collected: w.stats.collected, wants: w.stats.wants, mice: w.stats.mice, level: levelOf(w.cat.art.xp), day: dayOf(w) };
   try { for (let t = 0; t < seconds; t += step) tick(w, step); } finally { w.quiet = false; }
   w.asks.length = 0; w.onNote = hook; w.netOn = netWas;
   const s = w.stats, c = w.cat;
@@ -168,6 +174,8 @@ export function catchUp(w, seconds, step = 0.5) {
   if (s.wants > before.wants) lines.push(`got ${s.wants - before.wants} thing${s.wants - before.wants > 1 ? 's' : ''} it wanted`);
   if (w.tablet && w.tablet.uses > before.tab) lines.push(`read ${w.tablet.uses - before.tab} thing${w.tablet.uses - before.tab > 1 ? 's' : ''} on the tablet`);
   if (w.cat.offerHist.length > before.offers) lines.push(`looked over ${w.cat.offerHist.length - before.offers} offering${w.cat.offerHist.length - before.offers > 1 ? 's' : ''} you left`);
+  if ((s.birds || 0) > before.birds) lines.push(`caught ${s.birds - before.birds} bird${s.birds - before.birds > 1 ? 's' : ''} (a rare thing)`);
+  if ((s.frogVisits || 0) > before.frogVisits) lines.push(`visited ${w.frog ? w.frog.name : 'the frog'} ${s.frogVisits - before.frogVisits} time${s.frogVisits - before.frogVisits > 1 ? 's' : ''}`);
   if (s.mice > before.mice) lines.push(`caught ${s.mice - before.mice} ${s.mice - before.mice > 1 ? 'mice' : 'mouse'}`);
   const wonder = w.log.filter(e => e.id > log0 && (e.kind === 'wonder')).map(e => e.text).slice(0, 3);
   return { seconds, days: dayOf(w) - before.day, lines, wonder };

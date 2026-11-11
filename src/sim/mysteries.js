@@ -1,6 +1,8 @@
 // Things in the yard the cat does not understand. It collects clues, forms a theory, and revises it.
 import { pick } from './util.js';
-import { note, journal } from './world.js';
+import { note, journal, dayOf } from './world.js';
+import { PACE, paceOf, scaled, clueCap } from './pace.js';
+import { meetFrog } from './frog.js';
 import { quirkWord } from './quirk.js';
 import { onEvent } from './wants.js';
 
@@ -28,25 +30,45 @@ function setTheory(w, id, text, why) {
   w.asks.push({ type: 'theory', id });
 }
 
-// one observation. amt scales how much the cat learned
+// one observation. amt scales how much the cat learned. A day can only teach so much (see pace.js), so extra
+// observations after that are worth nothing until tomorrow.
 export function clue(w, id, amt = 1, phase = null) {
   const m = w.mysteries[id]; if (m.solved) return;
+  if (phase != null && !m.phases.includes(phase)) m.phases.push(phase); // the calendar does not care how tired the cat is
+  const day = dayOf(w); if (m.capDay !== day) { m.capDay = day; m.today = 0; }
+  const room = clueCap(w, id) - (m.today || 0);
+  if (room <= 0.001) { if (id === 'moon') moonPhasesCheck(w, id, m); return; }
+  amt = Math.min(amt, room); m.today = (m.today || 0) + amt;
   m.clues += amt;
-  if (phase != null && !m.phases.includes(phase)) m.phases.push(phase);
-  if (!m.theory && m.clues >= 3) { setTheory(w, id, pick(THEORIES[id](w.cat.quirk))); m.conf = 0.3; return; }
-  if (!m.theory) return;
-  m.conf = Math.min(0.95, m.conf + 0.012 * amt);
-  if (id === 'moon' && m.phases.length >= 4 && !m.sawPhases) {
-    m.sawPhases = true; m.conf = Math.max(m.conf, 0.55);
-    setTheory(w, id, 'The moon changes. It gets eaten and then refilled. Someone is taking turns.', 'I have seen enough nights to be sure of that part.');
-  }
-  const revise = Math.floor(m.clues / 6);
+  if (!m.theory && m.clues >= scaled(w, PACE.theoryClues, 2)) { setTheory(w, id, pick(THEORIES[id](w.cat.quirk))); m.conf = 0.3; return; }
+  if (!m.theory) { if (id === 'moon') moonPhasesCheck(w, id, m); return; }
+  m.conf = Math.min(0.95, m.conf + (PACE.confPerClue / paceOf(w)) * amt);
+  if (id === 'moon') moonPhasesCheck(w, id, m);
+  const revise = Math.floor(m.clues / (PACE.reviseEvery * paceOf(w)));
   if (revise > m.revised && !(id === 'moon' && m.sawPhases)) {
     m.revised = revise;
     if (Math.random() < 0.55) { const old = m.theory; m.conf = 0.35; setTheory(w, id, pick(THEORIES[id](w.cat.quirk).filter(t => t !== old)), 'I was wrong before. New evidence.'); }
   }
-  if (id === 'sparks' && m.clues >= 22) return solve(w, id);
+  if (id === 'sparks' && m.clues >= scaled(w, PACE.sparksSolve, 4)) return solve(w, id);
   onEvent(w, 'mystery', { id, conf: m.conf, solved: m.solved });
+}
+
+// the moon is understood once enough of its phases have been seen, however many clues that took
+function moonPhasesCheck(w, id, m) {
+  if (m.sawPhases || !m.theory || m.phases.length < Math.min(8, scaled(w, PACE.moonPhases, 2))) return;
+  m.sawPhases = true; m.conf = Math.max(m.conf, 0.55);
+  setTheory(w, id, 'The moon changes. It gets eaten and then refilled. Someone is taking turns.', 'I have seen enough nights to be sure of that part.');
+}
+
+// the frog showed itself while the cat was watching the pond. Only one sighting a day counts (see pace.js); once
+// there have been enough of them the cat knows what lives there, and the frog becomes its friend.
+export function frogSighting(w) {
+  const m = w.mysteries.ripples; if (m.solved) return false;
+  const day = dayOf(w); if (m.frogDay !== day) { m.frogDay = day; m.frogToday = 0; m.frogGood = Math.random() < PACE.frogDayChance; }
+  if (!m.frogGood || m.frogToday >= Math.max(1, Math.round(PACE.frogPerDay / paceOf(w)))) return false;
+  m.frogToday++; m.frogSeen = (m.frogSeen || 0) + 1;
+  if (m.frogSeen >= scaled(w, PACE.frogSightings, 2)) { solve(w, 'ripples'); return true; }
+  return false;
 }
 
 export function solve(w, id) {
@@ -57,6 +79,7 @@ export function solve(w, id) {
   w.cat.thoughtHint = 'solved:' + id; w.cat.mood.joy = Math.min(1, w.cat.mood.joy + 0.6);
   w.asks.push({ type: 'solved', id });
   onEvent(w, 'mystery', { id, conf: 1, solved: true });
+  if (id === 'ripples') meetFrog(w);
 }
 
 // the pond occasionally ripples; at dusk and night a frog may surface

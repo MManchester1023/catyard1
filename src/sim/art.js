@@ -69,13 +69,13 @@ export function critique(tier, score) {
 
 export function finishWork(w, work) {
   const c = w.cat, a = c.art, before = levelOf(a.xp);
-  a.xp += 5 + work.score * 14; a.count++; a.works.unshift(work);
+  const vg = c.temper === 'vangogh'; a.xp += (5 + work.score * 14) * (vg ? 1.25 : 1); a.count++; a.works.unshift(work);
   if (work.score > a.best) { a.best = work.score; a.hung = work.id; }
   if (a.works.length > 60) { // keep the best 40 and the newest 20
     const keep = new Set([...a.works.slice(0, 20), ...[...a.works].sort((x, y) => y.score - x.score).slice(0, 40)].map(x => x.id));
     a.works = a.works.filter(x => keep.has(x.id));
   }
-  c.needs.create = 0; c.mood.joy = clamp(c.mood.joy + 0.15); w.stats.paintings++;
+  c.needs.create = vg ? 0.1 : 0; c.mood.joy = clamp(c.mood.joy + 0.15); w.stats.paintings++;
   note(w, `${c.name} finished a painting: "${work.title}".`, 'art');
   journal(w, `"${work.title}" (${Math.round(work.score * 100)}/100). ${work.critique}`, 'art');
   const after = levelOf(a.xp);

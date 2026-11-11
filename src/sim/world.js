@@ -111,7 +111,7 @@ export function walk(w, c, tx, ty, sp, dt) {
 // Everything the cat does, thinks and has happen is also appended to w.hist (oldest first, trimmed), and the
 // important things are kept per day in w.days so the history stays readable long after the timeline has scrolled.
 export const HIST_MAX = 2000, DAYS_MAX = 45;
-const HIGHLIGHT = new Set(['want', 'art', 'collect', 'craft', 'offer', 'tablet', 'wish', 'discover', 'hunt', 'taste', 'wonder', 'learn']);
+const HIGHLIGHT = new Set(['want', 'art', 'collect', 'craft', 'offer', 'tablet', 'wish', 'discover', 'hunt', 'taste', 'wonder', 'learn', 'friend']);
 const short = (s, n = 160) => { s = String(s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 export function dayRec(w, day = dayOf(w)) {
   if (!w.days) w.days = {};
@@ -189,6 +189,7 @@ export function birdTick(w, b, dt) {
     else { b.x += dx / d * m; b.y += dy / d * m; b.z += dz / d * m; }
     return;
   }
+  if (b.frozen > 0 && b.state === 'ground') { b.frozen -= dt; b.alert = 0; b.vx = b.vy = 0; return; }
   b.vx = b.vy = 0; b.timer -= dt;
   const d = Math.hypot(b.x - c.x, b.y - c.y), cp = c.pose;
   const threat = !c.hidden && cp !== 'sleep' && cp !== 'inside' && d < (cp === 'run' ? 210 : cp === 'crouch' ? 85 : 120);

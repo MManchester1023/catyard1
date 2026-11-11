@@ -4,6 +4,7 @@ import { drawCat, drawBird, drawMouse, drawButterfly, drawCrow, drawItem } from 
 import { hourOf, sunOf, moonPos, moonLight, beamOf } from './sim/world.js';
 import { buildOps, drawPainting } from './sim/art.js';
 import { slotPos } from './sim/offerings.js';
+import { frogSpot } from './sim/frog.js';
 import { mulberry32, clamp } from './sim/util.js';
 import { dither } from './dither.js';
 
@@ -191,7 +192,17 @@ export function createRenderer(canvas) {
     // water shimmer, ripple, frog
     g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1; for (let i = 0; i < 4; i++) { const x = 600 + i * 28 + Math.sin(t * 0.6 + i) * 6, y = 458 + (i % 2) * 18; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 14, y); g.stroke(); }
     if (w.ripple) { const r = w.ripple, u = r.t / 5, px = o.pond.x + r.dx, py = o.pond.y + r.dy; for (let i = 0; i < 3; i++) { const uu = clamp(u * 1.4 - i * 0.18); if (uu <= 0 || uu >= 1) continue; g.globalAlpha = (1 - uu) * 0.7; g.strokeStyle = '#eaf6ff'; g.lineWidth = 1.4; ell(g, px, py, 6 + uu * 26, 2.5 + uu * 10); g.stroke(); } g.globalAlpha = 1;
-      if (r.frog && r.t > 0.4 && r.t < 3.6) { g.fillStyle = '#58a65a'; ell(g, px, py - 2, 6, 4); g.fill(); g.fillStyle = '#6fc06f'; ell(g, px - 3, py - 6, 2.2, 2.2); g.fill(); ell(g, px + 3, py - 6, 2.2, 2.2); g.fill(); g.fillStyle = '#1e1a22'; ell(g, px - 3, py - 6, 0.8, 0.8); g.fill(); ell(g, px + 3, py - 6, 0.8, 0.8); g.fill(); } }
+      if (r.frog && !w.frog && r.t > 0.4 && r.t < 3.6) { g.fillStyle = '#58a65a'; ell(g, px, py - 2, 6, 4); g.fill(); g.fillStyle = '#6fc06f'; ell(g, px - 3, py - 6, 2.2, 2.2); g.fill(); ell(g, px + 3, py - 6, 2.2, 2.2); g.fill(); g.fillStyle = '#1e1a22'; ell(g, px - 3, py - 6, 0.8, 0.8); g.fill(); ell(g, px + 3, py - 6, 0.8, 0.8); g.fill(); } }
+    // the frog that became the cat's friend: on a lily pad at the near edge when it is up
+    if (w.frog && w.frog.out) {
+      const f = w.frog, fs = frogSpot(w), hop = Math.sin(clamp(f.hop) * Math.PI) * 5, px = fs.fx, py = fs.fy - hop, visiting = w.cat.act.type === 'frog' && w.cat.act.phase === 'do';
+      g.fillStyle = '#3f8a4a'; ell(g, fs.fx, fs.fy + 2, 11, 4); g.fill();
+      g.fillStyle = '#58a65a'; ell(g, px, py - 3, 6.5, 4.4); g.fill();
+      g.fillStyle = '#6fc06f'; ell(g, px - 3.2, py - 7.2, 2.4, 2.4); g.fill(); ell(g, px + 3.2, py - 7.2, 2.4, 2.4); g.fill();
+      g.fillStyle = '#1e1a22'; ell(g, px - 3.2, py - 7.2, 0.9, 0.9); g.fill(); ell(g, px + 3.2, py - 7.2, 0.9, 0.9); g.fill();
+      const th = 0.5 + 0.5 * Math.sin(t * 3 + f.t); g.fillStyle = '#a6d99a'; ell(g, px, py - 1.2, 3 + th * 0.8, 1.5 + th * 0.8); g.fill();
+      if (visiting) { g.fillStyle = '#e780ab'; for (let i = 0; i < 3; i++) { const u = ((t * 0.7 + i / 3) % 1); g.globalAlpha = 1 - u; ell(g, px - 9 + i * 8 + Math.sin(t * 2 + i) * 2, py - 11 - u * 14, 1.5, 1.5); g.fill(); } g.globalAlpha = 1; }
+    }
     // bowls contents
     g.fillStyle = '#8a5a3a'; ell(g, 318, 353, 11 * clamp(o.bowl.food * 1.4, 0.001, 1), 4.6 * clamp(o.bowl.food * 1.4, 0.001, 1)); g.fill();
 

@@ -3,6 +3,7 @@ import { rnd, pick, uid, clamp, an, COLOR_NAMES } from './util.js';
 import { note, journal, dayOf } from './world.js';
 import { itemName, stashColors, quirkWord } from './quirk.js';
 import { RECIPES, knows } from './recipes.js';
+import { paceOf } from './pace.js';
 
 export const MAX_WANTS = 3;
 const MYST_TEXT = { moon: 'work out what the moon is', ripples: 'find out what lives in the pond', sparks: 'catch one of the dancing sparks' };
@@ -90,7 +91,7 @@ export function wantsTick(w, dtDays) {
   const c = w.cat;
   for (const x of [...c.wants]) {
     x.strength = clamp(x.strength + dtDays * 0.06, 0, 1);
-    if (dayOf(w) - x.day >= (x.kind === 'craft' || x.kind === 'learn' ? 9 : 4) && x.kind !== 'guard') {
+    if (dayOf(w) - x.day >= (x.kind === 'craft' || x.kind === 'learn' ? 9 * Math.max(1, paceOf(w)) : 4) && x.kind !== 'guard') {
       c.wants = c.wants.filter(y => y !== x);
       journal(w, `I have stopped wanting to ${x.text}. For now.`, 'want');
       note(w, `${c.name} gave up on wanting to ${x.text}.`, 'want');

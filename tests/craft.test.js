@@ -48,12 +48,13 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
 // ---- bark: scratching the oak sometimes gives bark or a twig, never beyond what it can hold
 {
   const w = makeWorld('Fern'), c = w.cat; calm(w); knowAll(w);
-  assert.equal(withRandom(0.01, () => scratchTree(w)), 'bark'); assert.equal(withRandom(0.5, () => scratchTree(w)), 'twig'); assert.equal(withRandom(0.99, () => scratchTree(w)), null);
+  const luck = (0.38 + c.traits.curious * 0.06) * 0.5; // the oak is half as generous as it used to be (pace.js)
+  assert.equal(withRandom(0.01, () => scratchTree(w)), 'bark'); assert.equal(withRandom(luck + 0.03, () => scratchTree(w)), 'twig'); assert.equal(withRandom(0.99, () => scratchTree(w)), null);
   c.inv.bark = INV_CAP; assert.equal(withRandom(0.01, () => scratchTree(w)), null, 'a full load gets no more');
   c.inv.bark = 0; collectDrop(w, 'bark'); collectDrop(w, 'twig'); assert(c.inv.bark === 1 && c.inv.twig === 1 && w.stats.gathered === 2);
   assert(w.journal.some(e => e.tag === 'craft'), 'the first piece gets a diary line');
   // the whole act: walk to the oak, scratch, a piece drops, it picks it up
-  c.inv = { bark: 0, twig: 0, twine: 0 }; c.reeval = 1e9; const g0 = w.stats.gathered;
+  c.inv = { bark: 0, twig: 0, twine: 0 }; c.reeval = 1e9; const g0 = w.stats.gathered; c.gToday = 0; // (a new day: the oak has its two pieces back)
   withRandom(0.01, () => { start(w, 'play', { kind: 'tree', gather: true }); let sawPick = false; for (let i = 0; i < 900 && w.stats.gathered === g0; i++) { c.reeval = 1e9; tick(w, 0.1); if (c.act.phase === 'pick') sawPick = true; } assert(sawPick, 'it crouches to pick the piece up'); });
   assert(c.inv.bark === 1 && w.stats.gathered === g0 + 1, 'the piece went into what it carries');
   assert(/oak/i.test(w.log.find(e => e.kind === 'craft').text));
@@ -114,9 +115,9 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
   assert(knows(w2, 'chime'), 'after failing twice it figured it out by itself'); assert(w2.journal.some(e => /no help/.test(e.text)));
   // and with no connection at all it works it out after a couple of days
   const w3 = makeWorld('Fern'); calm(w3); w3.netOn = false; w3.cat.wants.push({ id: 'l3', kind: 'learn', key: 'feeder', recipe: 'feeder', strength: 0.9, born: 0, day: 1, text: 'work out how to make a bird feeder' });
-  assert(!selfTaught(w3), 'not at once'); w3.clock += 2.5 * w3.dayLen; assert(selfTaught(w3) && knows(w3, 'feeder'), 'after a couple of days'); w3.netOn = true;
-  const w4 = makeWorld('Fern'); w4.netOn = true; w4.cat.wants.push({ id: 'l4', kind: 'learn', key: 'feeder', recipe: 'feeder', strength: 0.9, born: 0, day: 1, text: 'x' }); w4.clock += 5 * w4.dayLen; assert(!selfTaught(w4), 'online, it uses the tablet instead');
-  ok('recipes from the tablet: a lookup unlocks it; after two misses (or two offline days) it works it out itself');
+  assert(!selfTaught(w3), 'not at once'); w3.clock += 2.5 * w3.dayLen; assert(!selfTaught(w3), 'two and a half days is still too soon (pace.js: four)'); w3.clock += 2 * w3.dayLen; assert(selfTaught(w3) && knows(w3, 'feeder'), 'after a few days'); w3.netOn = true;
+  const w4 = makeWorld('Fern'); w4.netOn = true; w4.cat.wants.push({ id: 'l4', kind: 'learn', key: 'feeder', recipe: 'feeder', strength: 0.9, born: 0, day: 1, text: 'x' }); w4.clock += 9 * w4.dayLen; assert(!selfTaught(w4), 'online, it uses the tablet instead');
+  ok('recipes from the tablet: a lookup unlocks it; after two misses (or a few offline days) it works it out itself');
 }
 
 // ---- notes to the human: something only they can bring becomes a note on the tablet, and bringing it grants the wish
@@ -215,12 +216,14 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
       if (!Number.isFinite(c.x) || !Number.isFinite(c.y) || c.x < 0 || c.x > 960 || c.y < 0 || c.y > 600) bad++;
       for (const m of ['bark', 'twig', 'twine']) if (c.inv[m] > INV_CAP || c.inv[m] < 0) over++;
     }
+    // discovery is slow now (pace.js): finding the oak and getting two pieces a day means the table can take a couple of weeks, so give it until day 22
+    for (let t = 0; t < 1200 * 13 * 10 && !w.table; t++) tick(w, 0.1);
     assert.equal(bad, 0, 'cat stayed finite and in the yard'); assert.equal(over, 0, 'carrying stayed within its cap');
     assert(w.stats.gathered > 3 && w.table, `seed ${seed}: gathered ${w.stats.gathered}, table ${!!w.table}`);
     assert(w.hist.length <= HIST_MAX + 100 && Object.keys(w.days).length <= DAYS_MAX);
     assert(Object.values(c.needs).every(v => v >= 0 && v <= 1) && c.mood.joy >= 0 && c.mood.joy <= 1);
     for (const k of Object.keys(c.assoc)) assert(Number.isFinite(c.assoc[k].v) && Math.abs(c.assoc[k].v) <= 1.0001);
   }
-  ok('nine days, three cats: no NaN, stays in the yard, gathers bark, builds the table, caps hold');
+  ok('nine days, three cats: no NaN, stays in the yard, gathers bark, builds the table (within three weeks), caps hold');
 }
 console.log('\nALL OK');

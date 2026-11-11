@@ -12,6 +12,7 @@ import { MATERIALS, MAT_LABEL, MAT_GIFT, matText } from './sim/util.js';
 import { thingsSummary, timeline, daySummary, daysList, spentText, KINDS, KIND_IDS } from './sim/history.js';
 import { wishLabel } from './sim/wishes.js';
 import { INV_CAP } from './sim/craft.js';
+import { TEMPERS } from './sim/temper.js';
 
 export function h(tag, props, ...kids) {
   const e = document.createElement(tag);
@@ -43,6 +44,13 @@ export function renderCat(el, w) {
   const secs = [];
   secs.push(h('div', { class: 'sec' }, h('div', { class: 'big', text: c.name }), h('div', { class: 'muted', text: `${c.age}-year-old ${COAT_LABEL[c.coat]} · ${moodLabel(w)}` }), h('div', { class: 'small', text: describe(w) }),
     h('div', { style: 'margin-top:10px' }, ...[['Curious', 'curious'], ['Bold', 'bold'], ['Affectionate', 'affection'], ['Lazy', 'lazy']].map(([l, k]) => h('div', { class: 'trait' }, h('span', { text: l }), meter(c.traits[k]), h('span', { class: 'muted', text: pct(c.traits[k]) }))))));
+  const tp = TEMPERS[c.temper];
+  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Quirk: ' + (tp ? tp.name : 'none') }), h('div', { class: 'muted small', text: tp ? tp.line : 'No temperament. (Admin: quirk trait <vangogh|hunter|nightowl>)' }),
+    c.temper === 'hunter' ? h('div', { class: 'muted small', style: 'margin-top:6px', text: `${c.mem.caught} mice caught, ${w.stats.birds || 0} bird${w.stats.birds === 1 ? '' : 's'} (birds are very rare).` }) : w.stats.birds ? h('div', { class: 'muted small', style: 'margin-top:6px', text: `Has caught ${w.stats.birds} bird${w.stats.birds === 1 ? '' : 's'}. A rare thing.` }) : null));
+  if (w.frog) { const f = w.frog; secs.push(h('div', { class: 'sec' }, h('h3', { text: `Friend: ${f.name} the frog` }),
+    h('div', { text: f.out ? `${f.name} is up on the lily pad.` : `${f.name} is under the water.` }),
+    h('div', { class: 'muted small', text: `Met on day ${f.day}. ${c.name} has sat with ${f.name} ${f.visits} time${f.visits === 1 ? '' : 's'}. Visits are the best cure for loneliness it has.` }),
+    h('div', { class: 'trait' }, h('span', { text: 'Bond' }), meter(f.bond), h('span', { class: 'muted', text: pct(f.bond) })))); }
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Quirk: collector' }),
     h('div', { text: `Collects ${ITEM_PLURAL[q.item]}. Favourite color: ${q.favColor}.` }),
     h('div', { class: 'muted small', text: w.stash.site ? `${w.stash.items.length} in the stash, ${w.table ? 'kept on the bark table it made' : 'hidden ' + w.stash.site.label}, arranged as ${TASTE_LABEL[q.taste]}. Checked ${q.visits} time${q.visits === 1 ? '' : 's'}.` : 'No stash yet. It is still looking for the right spot.' }),

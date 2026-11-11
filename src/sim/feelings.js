@@ -12,7 +12,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 export function ensureFeel(c) { if (!c.assoc) c.assoc = {}; if (c.lastTasteSay == null) c.lastTasteSay = -999; return c; }
 
 // a readable name for an association key
-const ACTS = { paint: 'painting', tablet: 'the tablet', gaze: 'gazing at the moon', perch: 'watching from up high', craft: 'making things', tree: 'scratching the oak', post: 'scratching the post', stash: 'tending the stash', investigate: 'investigating', offering: 'what the human leaves' };
+const ACTS = { frog: 'visiting the frog', hunt: 'hunting', paint: 'painting', tablet: 'the tablet', gaze: 'gazing at the moon', perch: 'watching from up high', craft: 'making things', tree: 'scratching the oak', post: 'scratching the post', stash: 'tending the stash', investigate: 'investigating', offering: 'what the human leaves' };
 export function keyName(key) {
   const [kind, name] = key.split(':');
   if (kind === 'color') return name;

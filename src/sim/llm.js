@@ -8,6 +8,7 @@ import { MYSTERY_INFO } from './mysteries.js';
 import { describe } from './acts.js';
 import { catSays } from './chat.js';
 import { feelingSummary } from './feelings.js';
+import { TEMPERS } from './temper.js';
 import { RECIPES, knows, costText } from './recipes.js';
 import { wishLabel, openWishes } from './wishes.js';
 import { matText, MATERIALS } from './util.js';
@@ -39,6 +40,9 @@ export function digest(w) {
   const mats = MATERIALS.filter(m => c.inv && c.inv[m] > 0).map(m => matText(m, c.inv[m])).join(', ');
   const known = Object.keys(RECIPES).filter(id => knows(w, id)).map(id => RECIPES[id].name), made = (c.crafted || []).slice(0, 4).map(x => x.name);
   lines.push(`Making things: carrying ${mats || 'nothing'}; knows how to make ${known.join(', ') || 'nothing yet'}; has made ${made.join(', ') || 'nothing yet'}.`);
+  if (TEMPERS[c.temper]) lines.push(`Temperament: ${TEMPERS[c.temper].name}. ${TEMPERS[c.temper].line}`);
+  if (w.frog) lines.push(`Your friend: ${w.frog.name}, a frog who lives in the pond (you have sat with ${w.frog.name} ${w.frog.visits} time${w.frog.visits === 1 ? '' : 's'}). Sitting with ${w.frog.name} cures your loneliness better than anything.`);
+  if (w.stats.birds) lines.push(`You have caught a bird ${w.stats.birds === 1 ? 'once' : w.stats.birds + ' times'}. It is a rare thing.`);
   const ow = openWishes(w); if (ow.length) lines.push(`Notes you left the human on the tablet (unanswered): ${ow.map(x => wishLabel(x)).join(', ')}.`);
   lines.push(`What makes you feel good (learned from experience): ${feelingSummary(w)}.`);
   const fam = Object.entries(c.words).filter(([, k]) => k >= 3).map(([k]) => k).slice(0, 8);

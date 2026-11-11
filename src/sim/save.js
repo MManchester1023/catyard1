@@ -7,8 +7,9 @@ import { makeTastes, ensureOfferState } from './offerings.js';
 import { ensureTablet } from './tablet.js';
 import { ensureCraft } from './recipes.js';
 import { ensureFeel } from './feelings.js';
+import { meetFrog } from './frog.js';
 
-const KEEP_W = ['v', 'clock', 'dayLen', 'speed', 'paused', 'log', 'logId', 'journal', 'chat', 'pending', 'weather', 'stash', 'easel', 'mysteries', 'fed', 'stats', 'createdAt', 'items', 'treats', 'wantT', 'rippleT', 'thiefT', 'lastChatAt', 'offers', 'tablet', 'table', 'deco', 'hist', 'days'];
+const KEEP_W = ['v', 'clock', 'dayLen', 'speed', 'paused', 'log', 'logId', 'journal', 'chat', 'pending', 'weather', 'stash', 'easel', 'mysteries', 'fed', 'stats', 'createdAt', 'items', 'treats', 'wantT', 'rippleT', 'thiefT', 'lastChatAt', 'offers', 'tablet', 'table', 'deco', 'hist', 'days', 'frog', 'pace'];
 
 export function serialize(w) {
   const data = { app: 'cat-yard', version: VERSION, savedAt: Date.now(), w: {}, cat: null, o: { bowl: w.o.bowl.food, yarn: { x: w.o.yarn.x, y: w.o.yarn.y } } };
@@ -39,6 +40,8 @@ export function deserialize(text) {
   merge(w.cat, finite(data.cat));
   if (!data.cat.tastes) w.cat.tastes = makeTastes(w.cat.quirk);
   w.offers = Array.isArray(data.w.offers) ? data.w.offers : []; ensureOfferState(w); ensureTablet(w); ensureCraft(w); ensureFeel(w.cat); w.netq = []; w.netOn = false;
+  if (!(w.pace > 0)) w.pace = 1;
+  if (!w.frog && w.mysteries.ripples.solved) meetFrog(w, true); // a cat that had already found out what lives in the pond before frogs became friends
   if (data.o) { w.o.bowl.food = data.o.bowl; if (data.o.yarn) { w.o.yarn.x = data.o.yarn.x; w.o.yarn.y = data.o.yarn.y; } }
   // a treasure that was in the cat's mouth goes back on the ground
   const c = w.cat;

@@ -20,7 +20,7 @@ export const KIND_IDS = Object.keys(KINDS);
 const ACT_LABEL = {
   sleep: 'sleeping', idle: 'sitting about', explore: 'exploring', eat: 'eating', drink: 'drinking', groom: 'grooming', play: 'playing', gather: 'gathering bark',
   hunt: 'hunting', perch: 'watching from up high', beg: 'asking for food', zoom: 'zoomies', gift: 'bringing gifts', collect: 'collecting', stash: 'tending the stash',
-  paint: 'painting', gaze: 'gazing at the moon', investigate: 'investigating', attention: 'at the glass', offering: 'looking over offerings', tablet: 'on the tablet', craft: 'making things',
+  paint: 'painting', frog: 'visiting the frog', gaze: 'gazing at the moon', investigate: 'investigating', attention: 'at the glass', offering: 'looking over offerings', tablet: 'on the tablet', craft: 'making things',
 };
 
 // the timeline, newest first. kinds: array of KIND_IDS (default all); q: text to look for; day: one day only

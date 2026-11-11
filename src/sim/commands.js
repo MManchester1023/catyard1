@@ -11,6 +11,9 @@ import { leaveOffering, offerLabel, clearOffers, topTastes } from './offerings.j
 import { ensureTablet } from './tablet.js';
 import { timeline, daySummary, daysList, spentText, thingsSummary, KINDS } from './history.js';
 import { topFeelings } from './feelings.js';
+import { TEMPERS, TEMPER_IDS, temperName } from './temper.js';
+import { meetFrog } from './frog.js';
+import { PACE, paceOf, scaled, MIN_PACE, MAX_PACE } from './pace.js';
 import { wishLabel } from './wishes.js';
 import { RECIPES, knows } from './recipes.js';
 import { unlockRecipe, startable, INV_CAP } from './craft.js';
@@ -29,7 +32,9 @@ const HELP = {
   set: 'set trait <curious|bold|affection|lazy> <0-1>  |  set need <hunger|thirst|tired|fun|dirty|lonely|create|fear> <0-1>  |  set joy <0-1>',
   tp: 'tp <house|bowl|water|cushion|post|pond|flowers|tree|fence|easel|stash|glass|mat|tablet|table>',
   want: 'want list | want add <text> | want done <n> | want clear',
-  quirk: 'quirk item <bottlecap|feather|button|marble> | quirk color <color> | quirk taste <pile|rows|ring|rainbow>',
+  quirk: 'quirk item <bottlecap|feather|button|marble> | quirk color <color> | quirk taste <pile|rows|ring|rainbow> | quirk trait <vangogh|hunter|nightowl|none>',
+  frog: 'frog (status) | frog meet (the cat finds the frog now) | frog out | frog hide | frog visit',
+  pace: 'pace [X] - how slowly the cat works things out (theories, the sparks, the frog, recipes): 1 is the default, 2 is twice as slow, 0.5 twice as fast. Range 0.25 to 4',
   stash: 'stash list | stash add <type> <color> [n] | stash steal [n] | stash clear',
   art: 'art level <1-12> | art paint | art clear (delete the gallery)',
   think: 'think <text> - put a thought in the cat\'s head',
@@ -70,6 +75,7 @@ export function runCommand(w, line, ctx = {}) {
         `hunger ${pct(n.hunger)}  thirst ${pct(n.thirst)}  tired ${pct(n.tired)}  fun ${pct(n.fun)}  lonely ${pct(n.lonely)}  create ${pct(n.create)}`,
         `traits: curious ${pct(c.traits.curious)}, bold ${pct(c.traits.bold)}, affection ${pct(c.traits.affection)}, lazy ${pct(c.traits.lazy)}`,
         `stash: ${w.stash.items.length} items${w.stash.site ? ' at ' + w.stash.site.label : ''} | art: level ${levelOf(c.art.xp)} ${LEVEL_NAMES[levelOf(c.art.xp)]}, ${c.art.count} works`,
+        `temperament: ${temperName(c)}${w.frog ? ' | friend: ' + w.frog.name + ' the frog' : ''}${paceOf(w) !== 1 ? ' | pace ' + paceOf(w) : ''}`,
         `wants: ${c.wants.map(x => x.text).join('; ') || 'none'}`, `mysteries: ${Object.entries(m).map(([k, v]) => `${k} ${v.solved ? 'solved' : v.theory ? Math.round(v.conf * 100) + '%' : 'no theory'}`).join(', ')}`]);
     }
     case 'time': {
@@ -121,7 +127,26 @@ export function runCommand(w, line, ctx = {}) {
       if (a[0] === 'item' && ITEM_TYPES.includes(a[1])) { q.item = a[1]; c.tastes.type[a[1]] = Math.max(c.tastes.type[a[1]], topTastes(w, 'type', 1)[0][1] + 0.15); return L(`${c.name} now collects ${quirkWord(q)}.`); }
       if (a[0] === 'color' && COLOR_NAMES.includes(a[1])) { q.favColor = a[1]; c.tastes.color[a[1]] = Math.min(1, Math.max(c.tastes.color[a[1]], topTastes(w, 'color', 1)[0][1] + 0.15)); return L(`Favourite color: ${a[1]}.`); }
       if (a[0] === 'taste' && TASTES.includes(a[1])) { q.taste = a[1]; q.tasteSince = dayOf(w); layoutStash(w); return L(`The stash is now arranged as ${TASTE_LABEL[a[1]]}.`); }
+      if (a[0] === 'trait') {
+        const id = String(a[1] || '').toLowerCase().replace(/[^a-z]/g, '');
+        if (id === 'none') { c.temper = null; return L(`${c.name} has no temperament now.`); }
+        if (TEMPER_IDS.includes(id)) { c.temper = id; return L(`${c.name} is now a ${TEMPERS[id].name}. ${TEMPERS[id].line}`); }
+      }
       return bad(HELP.quirk);
+    }
+    case 'frog': {
+      const f = w.frog;
+      if (a[0] === 'meet') { if (f) return L(`${f.name} is already a friend.`); meetFrog(w); return L(`${c.name} found the frog in the pond: ${w.frog.name}.`); }
+      if (!f) { const m = w.mysteries.ripples; return L(`${c.name} has not found the frog yet (${m.frogSeen || 0} of ${scaled(w, PACE.frogSightings, 2)} days of sightings). "frog meet" makes it happen now.`); }
+      if (a[0] === 'out') { f.out = true; f.timer = w.dayLen * 0.08; f.lastVisit = -999; f.hop = 1; return L(`${f.name} came up.`); }
+      if (a[0] === 'hide') { f.out = false; f.timer = w.dayLen * 0.2; return L(`${f.name} went under.`); }
+      if (a[0] === 'visit') { f.out = true; f.timer = w.dayLen * 0.08; f.lastVisit = -999; start(w, 'frog'); return L(`${c.name} is going to see ${f.name}.`); }
+      return L(`${f.name}: ${f.out ? 'sitting on the lily pad' : 'under the water'}. ${c.name} has sat with ${f.name} ${f.visits} time${f.visits === 1 ? '' : 's'}; bond ${pct(f.bond)}.`);
+    }
+    case 'pace': {
+      const v = num(a[0], MIN_PACE, MAX_PACE);
+      if (v == null) return L(`Discovery pace is ${paceOf(w)} (1 is the default; higher is slower). ${HELP.pace}`);
+      w.pace = v; return L(`Pace set to ${v}. ${v > 1 ? 'The cat will take longer' : v < 1 ? 'The cat will work things out faster' : 'Back to the default'} (theories, the sparks, the frog, recipes).`);
     }
     case 'stash': {
       if (a[0] === 'list') { const cs = stashColors(w); return L(w.stash.items.length ? [`${w.stash.items.length} items at ${w.stash.site ? w.stash.site.label : '?'}`, Object.entries(cs).map(([k, v]) => `${k} x${v}`).join(', ')] : 'The stash is empty.'); }
