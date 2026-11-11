@@ -6,6 +6,7 @@ import { stashColors, itemName } from './quirk.js';
 import { addWant, hasWant, MAX_WANTS, onEvent } from './wants.js';
 import { learnWords } from './thoughts.js';
 import { feel } from './feelings.js';
+import { upsetBy, soothe } from './upset.js';
 import { neededMat, receiveMaterial } from './craft.js';
 import { matchWish, grantWish } from './wishes.js';
 import { ensureCraft } from './recipes.js';
@@ -155,6 +156,8 @@ export function inspectOffer(w, off) {
   c.bond = clamp(c.bond + 0.01 + 0.03 * l);
   if (off.kind === 'item') refreshFavourites(w);
   if (wish) grantWish(w, wish);
+  if (off.kind === 'note' && l < 0.3) upsetBy(w, 'words', `A note on the mat said "${off.text.slice(0, 50)}". It was not a kind note. I read it twice, to be sure.`, { level: 0.4, days: 0.25, cool: 0.4, bond: 0.02, note: 'it did not like that note.', hint: 'words' });
+  else if (l >= 0.55) soothe(w, 0.6 + 0.4 * l, 'someone left me something');
   off.state = 'seen'; off.keep = keep;
   c.thought = text; c.thoughtId++; c.thoughtAt = w.clock;
   const entry = off.kind === 'note' ? `A note on the mat: "${off.text}" ${text}` : `Someone left ${offerLabel(off)} on the mat. ${text}`;

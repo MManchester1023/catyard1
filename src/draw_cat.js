@@ -129,11 +129,12 @@ function drawFront(g, c, col, t) {
 
 // ---------- small things ----------
 export function drawItem(g, type, color, x, y, r, rot = 0) {
-  const HEX = { red: '#d9453b', orange: '#ee8a2e', yellow: '#f0cd3d', green: '#58a95b', teal: '#2fa5a0', blue: '#3f76d6', purple: '#8a5bc8', pink: '#e780ab', white: '#f1eee6', black: '#2b2830' };
+  const HEX = { gold: '#f2c23a', red: '#d9453b', orange: '#ee8a2e', yellow: '#f0cd3d', green: '#58a95b', teal: '#2fa5a0', blue: '#3f76d6', purple: '#8a5bc8', pink: '#e780ab', white: '#f1eee6', black: '#2b2830' };
   const h = HEX[color] || '#ccc'; g.save(); g.translate(x, y); g.rotate(rot);
   if (type === 'bottlecap') { g.fillStyle = h; g.beginPath(); for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.2832, rr = i % 2 ? r : r * 0.86; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.8); } g.closePath(); g.fill(); g.fillStyle = 'rgba(255,255,255,0.35)'; ell(g, -r * 0.2, -r * 0.18, r * 0.5, r * 0.32); g.fill(); g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 0.8; ell(g, 0, 0, r * 0.62, r * 0.5); g.stroke(); }
   else if (type === 'button') { g.fillStyle = h; ell(g, 0, 0, r, r * 0.85); g.fill(); g.strokeStyle = 'rgba(0,0,0,0.22)'; g.lineWidth = 0.8; ell(g, 0, 0, r * 0.72, r * 0.6); g.stroke(); g.fillStyle = 'rgba(30,20,30,0.7)'; for (const d of [[-0.25, -0.2], [0.25, -0.2], [-0.25, 0.22], [0.25, 0.22]]) { ell(g, d[0] * r, d[1] * r, r * 0.12, r * 0.12); g.fill(); } }
   else if (type === 'marble') { g.fillStyle = h; ell(g, 0, 0, r * 0.85, r * 0.85); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 1; g.beginPath(); g.arc(0, 0, r * 0.5, 3.6, 5.4); g.stroke(); g.fillStyle = 'rgba(255,255,255,0.75)'; ell(g, -r * 0.3, -r * 0.3, r * 0.2, r * 0.14); g.fill(); }
+  else if (type === 'coin') { g.fillStyle = '#b8862a'; ell(g, 0, r * 0.12, r * 0.95, r * 0.8); g.fill(); g.fillStyle = h; ell(g, 0, 0, r * 0.95, r * 0.8); g.fill(); g.strokeStyle = 'rgba(120,80,10,0.55)'; g.lineWidth = 0.7; ell(g, 0, 0, r * 0.62, r * 0.5); g.stroke(); g.fillStyle = 'rgba(255,250,200,0.85)'; g.fillRect(-r * 0.5, -r * 0.45, r * 0.45, r * 0.18); }
   else if (type === 'feather') { g.strokeStyle = 'rgba(60,45,40,0.7)'; g.lineWidth = 0.9; g.beginPath(); g.moveTo(-r * 1.2, r * 0.5); g.lineTo(r * 1.3, -r * 0.4); g.stroke(); g.fillStyle = h; g.beginPath(); g.moveTo(-r * 1.1, r * 0.45); g.quadraticCurveTo(0, -r * 1.1, r * 1.3, -r * 0.4); g.quadraticCurveTo(r * 0.2, r * 0.9, -r * 1.1, r * 0.45); g.fill(); }
   g.restore();
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { makeWorld, tick, advance } from '../src/sim/sim.js';
-import { serialize, deserialize, catchUpFromSave } from '../src/sim/save.js';
+import { serialize, deserialize, catchUpFromSave, gapAction, GAP_SKIP_SECONDS } from '../src/sim/save.js';
 import { runCommand } from '../src/sim/commands.js';
 import { userSpeaks, offlineSays } from '../src/sim/chat.js';
 import { levelOf } from '../src/sim/art.js';
@@ -33,6 +33,13 @@ const t0 = performance.now(); const r = catchUpFromSave(w2); const ms = performa
 console.log(`catch-up of ${(r.seconds / 60).toFixed(0)} sim-minutes took ${ms.toFixed(0)}ms:`, r.lines.join(', ') || 'nothing notable', '| days passed', r.days);
 assert.ok(ms < 4000);
 const t1 = performance.now(); w2.savedAt = Date.now() - 20 * 3600 * 1000; const r2 = catchUpFromSave(w2); console.log(`capped catch-up (20h away) took ${(performance.now() - t1).toFixed(0)}ms, capped=${r2.capped}`);
+
+// while the app is closed (or the computer sleeps) the world is paused unless the player chose otherwise
+assert.equal(gapAction(0.03, false), 'step'); assert.equal(gapAction(1.9, false), 'step');
+assert.equal(gapAction(30, false), 'catchup', 'a slowed-down background tab still catches up');
+assert.equal(gapAction(GAP_SKIP_SECONDS, false), 'catchup'); assert.equal(gapAction(GAP_SKIP_SECONDS + 1, false), 'skip', 'longer than two minutes means it was closed or asleep');
+assert.equal(gapAction(8 * 3600, false), 'skip'); assert.equal(gapAction(8 * 3600, true), 'catchup', 'unless the player wants the cat to live on');
+console.log('away policy ok');
 
 // commands
 const run = (line, admin = true) => runCommand(w2, line, { admin });

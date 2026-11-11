@@ -1,5 +1,6 @@
 // The tablet: web layer (fake Wikipedia), safety filter, caps, the cat's visit, offline re-reading, effects.
 import assert from 'node:assert/strict';
+globalThis.__catTemper = null; // (these tests are about the plain tablet; quirk searches are tested in secrets.test.js)
 import { makeWorld, tick, catchUp, describe } from '../src/sim/sim.js';
 import { start } from '../src/sim/acts.js';
 import { fetchPage, Net, isSafe, tidyExtract, TABLET_DEFAULTS } from '../src/sim/web.js';

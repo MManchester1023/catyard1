@@ -6,6 +6,7 @@ import { note, journal, dayOf, clockStr } from './world.js';
 import { RECIPES } from './recipes.js';
 import { humanNeed, craftWant, goals } from './craft.js';
 import { itemName, stashColors } from './quirk.js';
+import { upsetBy, soothe } from './upset.js';
 
 export const WISH_OPEN_MAX = 2, WISH_LIFE_DAYS = 5;
 const sameAs = (a, b) => a.kind === b.kind && a.type === b.type; // one open request per kind of thing is plenty
@@ -67,10 +68,15 @@ export function matchWish(w, off) {
 export function grantWish(w, wish) {
   const c = w.cat; wish.state = 'granted'; wish.granted = { day: dayOf(w), time: clockStr(w) }; c.bond = Math.min(1, c.bond + 0.03);
   journal(w, `I asked for ${wishLabel(wish)} and the human brought it. They read the tablet.`, 'wish'); note(w, `${c.name}'s wish came true: ${wishLabel(wish)}.`, 'wish');
-  c.thoughtHint = 'wishGranted';
+  c.thoughtHint = 'wishGranted'; soothe(w, 1, 'the human finally read my note');
 }
 
 // housekeeping: wishes nobody answered fade
 export function wishTick(w) {
-  for (const x of w.cat.wishes) if (x.state === 'open' && dayOf(w) - x.written.day >= WISH_LIFE_DAYS) { x.state = 'faded'; journal(w, `I have stopped hoping for ${wishLabel(x)}. The tablet is quiet.`, 'wish'); }
+  for (const x of w.cat.wishes) {
+    if (x.state !== 'open') continue;
+    const age = dayOf(w) - x.written.day;
+    if (age >= WISH_LIFE_DAYS) { x.state = 'faded'; journal(w, `I have stopped hoping for ${wishLabel(x)}. The tablet is quiet.`, 'wish'); upsetBy(w, 'wish2', `I asked for ${wishLabel(x)} and nobody answered. Not even a no. I will remember being ignored.`, { level: 0.75, days: 0.6, bond: 0.04, cool: 0.5, note: 'its note was never answered.', hint: 'wish' }); }
+    else if (age >= 2 && !x.sulked) { x.sulked = true; upsetBy(w, 'wish', `Two days since I wrote to the human about ${wishLabel(x)}. They have read the tablet. I think. They are ignoring me.`, { level: 0.5, days: 0.4, bond: 0.02, cool: 0.4, note: 'nobody has answered its note.', hint: 'wish' }); }
+  }
 }

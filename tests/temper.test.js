@@ -16,11 +16,12 @@ import { runCommand } from '../src/sim/commands.js';
 import { dayOf } from '../src/sim/world.js';
 
 const ok = m => console.log('  ok ' + m);
-const fresh = (temper = null) => { const w = makeWorld('Tess'); w.cat.temper = temper; return w; };
+const fresh = (temper = null) => { const w = makeWorld('Tess'); w.cat.temper = temper; w.cat.traits.curious = 0.5; return w; }; // (not over 0.75 or 0.9: those cats have extra secrets, tested below)
 // a cat with nothing pressing, in daylight, that knows the whole yard: its choice depends only on what is being tested
 const calm = (w, hour = 10) => {
   const c = w.cat; w.clock = (hour / 24) * w.dayLen; w.weather.rain = 0; w.weather.cloud = 0.1; c.huntCool = 0; c.hidden = false;
-  c.traits.curious = 0.1; c.traits.lazy = 0.5; c.traits.bold = 0.5; Object.assign(c.mem.known, { pond: 1, post: 1, tree: 1, flowers: 1, cushion: 1, yarn: 1, fence: 1, easel: 1, tablet: 1 });
+  c.traits.curious = 0.1; c.traits.lazy = 0.5; c.traits.bold = 0.5; c.postAt = w.clock; c.loungeAt = w.clock; c.catTreeAt = w.clock; // (its claws are fine and it has just rested)
+  Object.assign(c.mem.known, { pond: 1, post: 1, tree: 1, flowers: 1, cushion: 1, yarn: 1, fence: 1, easel: 1, tablet: 1 });
   Object.assign(c.needs, { hunger: 0.2, thirst: 0.2, tired: 0.2, fun: 0.2, dirty: 0.1, wet: 0, lonely: 0.1, create: 0.1, fear: 0 });
   w.birds.forEach(b => (b.state = 'away')); w.mice = []; w.items = []; w.treats = []; w.offers = []; c.wants = [];
   return w;
@@ -144,7 +145,7 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
 
 // ---------- the rare bird catch ----------
 {
-  assert.ok(birdChance({ skill: 0.35 }) >= 0.02 && birdChance({ skill: 0.8 }) <= 0.04, 'a few per cent per stalk, for every cat');
+  assert.ok(birdChance({ skill: 0.35 }) >= 0.05 && birdChance({ skill: 0.8 }) <= 0.1, 'about five to ten per cent per stalk, for every cat (the Hunter just stalks far more often)');
   const realRandom = Math.random;
   const setup = stub => { Math.random = realRandom; const w = calm(fresh(null)); const c = w.cat; c.x = 300; c.y = 420; const b = w.birds[0]; Object.assign(b, { state: 'ground', x: 440, y: 420, z: 0, alert: 0, timer: 99, hop: 99 }); start(w, 'hunt', { prey: b }); Math.random = stub; return { w, c, b }; };
   try {
@@ -218,6 +219,19 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
 {
   for (const t of [...TEMPER_IDS, null]) { const w = fresh(t); meetFrog(w); const r = catchUp(w, 3 * 3600); assert.ok(Number.isFinite(w.cat.needs.lonely) && r.days >= 8, 'catch-up runs for ' + t); }
   ok('catching up three hours works for every temperament, with a frog');
+}
+
+// ---------- a wash always ends: it once hung in the 'dry off in the sun' step when the patch of sun was somewhere it could not reach ----------
+{
+  for (let i = 0; i < 40; i++) {
+    const w = fresh(null), c = w.cat; w.clock = (9 + (i % 8)) / 24 * w.dayLen; w.weather.rain = 0; w.weather.cloud = 0; Object.assign(c.mem.known, { pond: 1, cushion: 1, post: 1, tree: 1, flowers: 1 });
+    c.needs.dirty = 0.9; c.needs.wet = 0.8; c.x = 40 + (i * 23) % 880; c.y = 300 + (i * 17) % 220;
+    start(w, 'wash'); let t = 0; while (c.act.type === 'wash' && t < 120) { c.reeval = 1e9; tick(w, 0.25); t += 0.25; }
+    assert.ok(c.act.type !== 'wash', `wash ${i} ended (it ran ${t.toFixed(0)}s)`); assert.ok(t < 75, `wash ${i} took ${t.toFixed(0)}s`);
+  }
+  const w = fresh(null), c = w.cat; w.clock = 11 / 24 * w.dayLen; w.weather.rain = 0; w.weather.cloud = 0; c.mem.known.cushion = 1; start(w, 'wash');
+  c.act.phase = 'dry'; c.act.t = 0; w.weather.cloud = 1; c.reeval = 1e9; tick(w, 0.5); tick(w, 0.5); assert.equal(c.act.phase, 'shake', 'when the sun goes in it stops drying and shakes off');
+  ok('washing always ends, including when the sun patch goes in or cannot be reached');
 }
 
 console.log('\nALL OK');

@@ -7,6 +7,7 @@ import { feel } from './feelings.js';
 import { onEvent } from './wants.js';
 import { layoutStash } from './quirk.js';
 import { PACE, paceOf, barkLuck, gatherRoom } from './pace.js';
+import { foundCatTree } from './secrets.js';
 
 export const INV_CAP = 12;
 export const have = (w, m) => w.cat.inv[m] || 0;
@@ -22,6 +23,7 @@ export function gatherNeed(w) {
 }
 // what only the human can supply (twine), for goals it actually wants
 export function humanNeed(w) {
+  if (knows(w, 'string')) return null; // once it knows where string comes from it stops asking
   const need = {}; for (const id of goals(w)) { if (!craftWant(w, id)) continue; const n = shortfall(w, id).twine; if (n) need.twine = Math.max(need.twine || 0, n); }
   return Object.keys(need).length ? need : null;
 }
@@ -46,10 +48,20 @@ export function scratchTree(w) {
   if (!drop || c.inv[drop] >= INV_CAP) { feel(w, ['act:tree'], { joy: 0.02 }, 'content'); return null; }
   return drop;
 }
+// ---------- the cushion: once it has worked out where string comes from, it can pull some out of its bed ----------
+export const bedCap = w => Math.max(1, Math.round(2 / paceOf(w)));
+export const bedRoom = w => { const c = w.cat; return (c.sDay === dayOf(w) ? c.sToday || 0 : 0) < bedCap(w); };
+export const stringWanted = w => knows(w, 'string') && (w.cat.inv.twine || 0) < 4 && goals(w).some(id => (shortfall(w, id).twine || 0) > 0);
+export function scratchBed(w) {
+  const c = w.cat;
+  if (!bedRoom(w) || c.inv.twine >= INV_CAP || Math.random() > 0.5 * Math.min(1, barkLuck(w) * 2)) { feel(w, ['act:bed'], { joy: 0.01 }, 'content'); return null; }
+  return 'twine';
+}
 export function collectDrop(w, type) {
   const c = w.cat; c.inv[type] = Math.min(INV_CAP, c.inv[type] + 1); w.stats.gathered++;
-  const day = dayOf(w); if (c.gDay !== day) { c.gDay = day; c.gToday = 0; } c.gToday++;
-  note(w, `${c.name} scratched the oak and ${an(MAT_LABEL[type])} came loose.`, 'craft');
+  const day = dayOf(w);
+  if (type === 'twine') { if (c.sDay !== day) { c.sDay = day; c.sToday = 0; } c.sToday++; } else { if (c.gDay !== day) { c.gDay = day; c.gToday = 0; } c.gToday++; }
+  note(w, type === 'twine' ? `${c.name} pulled at the cushion and a length of string came away.` : `${c.name} scratched the oak and ${an(MAT_LABEL[type])} came loose.`, 'craft');
   if (w.stats.gathered === 1) journal(w, `The tree gave me ${an(MAT_LABEL[type])}. It had not occurred to me that trees give things back.`, 'craft');
   feel(w, ['act:tree', 'mat:' + type], { joy: 0.1 }, 'content');
 }
@@ -77,6 +89,7 @@ export function finishCraft(w, id) {
     const best = c.art.works.slice().sort((a, b) => b.score - a.score)[0]; made.work = best ? best.title : 'a painting'; c.art.xp += 6;
     journal(w, `I made a frame for "${made.work}". It looks like it matters now.`, 'craft'); note(w, `${c.name} framed "${made.work}".`, 'craft');
   } else if (id === 'feeder') { w.deco.feeder = true; journal(w, 'I hung a bird feeder by the oak. This is not hunting. This is hospitality with a purpose.', 'craft'); note(w, `${c.name} put up a bird feeder.`, 'craft'); }
+  else if (id === 'cattree') foundCatTree(w, 'made');
   else if (id === 'chime') { w.deco.chime = true; journal(w, 'The chime sings when the air moves. I hung it where I can hear it from the cushion.', 'craft'); note(w, `${c.name} hung a wind chime in the oak.`, 'craft'); }
   c.crafted.unshift(made); if (c.crafted.length > 16) c.crafted.pop(); w.stats.crafted++;
   feel(w, ['act:craft', 'craft:' + id], { joy: 0.28, fun: -0.2, fear: id === 'chime' ? -0.1 : 0 }, 'proud');
@@ -89,8 +102,13 @@ export function finishCraft(w, id) {
 export function unlockRecipe(w, id, title, how = 'tablet') {
   const c = w.cat, r = RECIPES[id]; if (knows(w, id)) return false;
   c.recipes[id] = { known: true, day: dayOf(w), via: title || '' };
+  if (r.knowledge) {
+    journal(w, how === 'itself' ? 'I looked at the cushion for a long time and then I understood: the stuffing is held in by string. If I pull, string comes. The cushion has not agreed to this.' : `From the tablet${title ? ` ("${title}")` : ''}: string is made of fibres twisted together, and my cushion is full of them. I can pull some out whenever I need it.`, 'craft');
+    note(w, `${c.name} worked out where to get string: the cushion.`, 'learn');
+  } else {
   journal(w, how === 'itself' ? `The tablet was no help, so I worked out how to make ${an(r.name)} myself. It takes ${costText(r.cost)}.` : `From the tablet${title ? ` ("${title}")` : ''}: I know how to make ${an(r.name)} now. It takes ${costText(r.cost)}.`, 'craft');
   note(w, `${c.name} worked out how to make ${an(r.name)}.`, 'learn');
+  }
   onEvent(w, 'learned', { id, title });
   return true;
 }
@@ -104,7 +122,7 @@ export function selfTaught(w) {
 export function learnFromPage(w, pg, wantedId) {
   const text = `${pg.title} ${pg.extract}`;
   for (const [id, r] of Object.entries(RECIPES)) {
-    if (r.preset || knows(w, id)) continue;
+    if (r.preset || knows(w, id) || (r.knowledge && wantedId !== id)) continue; // a knowledge recipe is only learned when it was being looked for
     if ((wantedId === id && r.match.test(text)) || r.match.test(pg.title)) { if (unlockRecipe(w, id, pg.title)) return id; }
   }
   return null;

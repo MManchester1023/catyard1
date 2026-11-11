@@ -1,7 +1,7 @@
 // App shell: boot, main loop, saving, chat, and wiring the panels together.
 import { createRenderer, LW, LH } from './render.js';
 import { makeWorld, advance, catchUp, describe } from './sim/sim.js';
-import { serialize, deserialize, catchUpFromSave } from './sim/save.js';
+import { serialize, deserialize, catchUpFromSave, gapAction } from './sim/save.js';
 import { runCommand } from './sim/commands.js';
 import { userSpeaks, offlineSays, systemSays } from './sim/chat.js';
 import { Brain, DEFAULTS } from './sim/llm.js';
@@ -10,16 +10,18 @@ import { leaveOffering } from './sim/offerings.js';
 import { clockStr, dayOf } from './sim/world.js';
 import { exportText, exportName } from './sim/history.js';
 import { storage, isDesktop } from './storage.js';
-import { h, buildNeeds, updateNeeds, renderCat, renderHistory, renderGallery, renderSettings, renderOutside, paintingModal, moodLabel } from './ui.js';
+import { blogStarted, unreadPosts, markBlogRead } from './sim/blog.js';
+import { h, buildNeeds, updateNeeds, renderCat, renderStash, renderBlog, renderHistory, renderGallery, renderSettings, renderOutside, paintingModal, moodLabel } from './ui.js';
 
 const $ = id => document.getElementById(id);
 const T = window.__TAURI__;
 let w, settings, brain, net, outsideUpdate = null, historyUpdate = null, renderer, where = '', adminMode = false, activeTab = 'chat';
-let lastSave = Date.now(), saveChain = Promise.resolve(), lastDrive = performance.now(), lastDraw = 0, lastHud = 0, focused = true, histSt = { mode: 'today', kinds: new Set(['did', 'thought', 'event']), q: '', limit: 120 }, gallerySig = '';
+let blogSig = '', blogFresh = new Set();
+let lastSave = Date.now(), saveChain = Promise.resolve(), lastDrive = performance.now(), lastDraw = 0, lastHud = 0, focused = true, histSt = { mode: 'today', kinds: new Set(['did', 'thought', 'event']), q: '', limit: 120 }, gallerySig = '', stashSig = '';
 let bubbleId = -1, bubbleUntil = 0, chatSig = '', pendingCat = false;
 
 // ---------- settings ----------
-const defaultSettings = () => Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), { autosaveMin: 3, fps: 'normal', closeToTray: true, speed: 1 });
+const defaultSettings = () => Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), { autosaveMin: 3, fps: 'normal', closeToTray: true, speed: 1, awayMode: 'pause' });
 const persistSettings = () => storage.writeSettings(settings).catch(() => {});
 
 // ---------- saving ----------
@@ -37,30 +39,36 @@ async function loadSlot(slot, { catchup }) {
   let text = await storage.read(slot), from = 'save';
   if (!text) return null;
   let world; try { world = deserialize(text); } catch (e) { const bak = slot === 'main' ? await storage.readBackup(slot) : null; if (!bak) throw e; world = deserialize(bak); from = 'backup'; }
-  const away = catchup ? catchUpFromSave(world) : null; return { world, away, from };
+  const away = catchup && settings.awayMode === 'live' ? catchUpFromSave(world) : null; return { world, away, from };
 }
 
 // ---------- the world loop ----------
+// Time only passes while the app is open: when it was closed (or the computer slept) the world is paused, not fast-forwarded.
+// 'live' in Settings brings back the old catch-up. trayHidden: the desktop window was closed to the tray.
+let trayHidden = false;
+const awayLive = () => settings && settings.awayMode === 'live';
 function drive(dt) {
   lastDrive = performance.now();
-  if (dt > 2) { if (!w.paused) catchUp(w, Math.min(dt, 3 * 3600)); } else advance(w, dt);
+  if (trayHidden && !awayLive()) return;
+  const act = gapAction(dt, awayLive());
+  if (act === 'step') advance(w, dt); else if (act === 'catchup' && !w.paused) catchUp(w, Math.min(dt, 3 * 3600));
 }
 function frame(now) {
   requestAnimationFrame(frame);
   if (document.hidden) return;
   const interval = focused ? (settings.fps === 'eco' ? 66 : 33) : 125;
   if (now - lastDraw < interval - 2) return;
-  const dt = (now - lastDraw) / 1000; lastDraw = now; drive(dt);
+  const dt = lastDraw ? (now - lastDraw) / 1000 : 0.033; lastDraw = now; drive(dt); // lastDraw is 0 right after the tab comes back, which must not count as a huge gap
   renderer.draw(w, now / 1000);
   if (now - lastHud > 250) { lastHud = now; hud(now); }
 }
 // while the window is hidden or minimized, nothing is drawn and the world ticks on a slow timer
-setInterval(() => { const now = performance.now(); if (now - lastDrive > 1500) { drive((now - lastDrive) / 1000); if (document.hidden) { brain.tick(w, false); } } }, 1000);
+setInterval(() => { const now = performance.now(); if (now - lastDrive > 1500) { drive((now - lastDrive) / 1000); if (document.hidden && !(trayHidden && !awayLive())) { brain.tick(w, false); } } }, 1000);
 setInterval(() => { if (!document.hidden) brain.tick(w, focused); }, 1000);
-setInterval(() => { if (w && net) net.tick(w).catch(() => {}); }, 1000);
+setInterval(() => { if (w && net && !(trayHidden && !awayLive())) net.tick(w).catch(() => {}); }, 1000);
 setInterval(() => { if (Date.now() - lastSave > settings.autosaveMin * 60000) saveNow('main', true); }, 10000);
-window.addEventListener('focus', () => (focused = true)); window.addEventListener('blur', () => (focused = false));
-document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow('main', true); else { lastDraw = 0; } });
+window.addEventListener('focus', () => { focused = true; if (trayHidden) { trayHidden = false; lastDrive = performance.now(); lastDraw = 0; } }); window.addEventListener('blur', () => (focused = false));
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow('main', true); else { lastDraw = 0; trayHidden = false; lastDrive = performance.now(); } });
 window.addEventListener('beforeunload', () => { try { storage.write('main', serialize(w)); } catch { /* best effort */ } });
 
 // ---------- HUD ----------
@@ -69,8 +77,11 @@ function hud(now) {
   $('clock').textContent = `Day ${dayOf(w)} · ${clockStr(w)} · ${cap(w.weather.type)}`;
   $('pause').textContent = w.paused ? 'Resume' : 'Pause'; if ($('speed').value !== String(w.speed) && !$('speed').matches(':focus')) { const o = [...$('speed').options].find(x => +x.value === w.speed); if (o) $('speed').value = o.value; }
   updateNeeds($('needs'), w); updateSavedLabel(); bubble(now);
+  { const bt = document.querySelector('#tabs [data-tab="blog"]'), on = blogStarted(w); if (bt.hidden === on) bt.hidden = !on; const lab = 'Blog' + (on && activeTab !== 'blog' && unreadPosts(w) ? ' •' : ''); if (bt.textContent !== lab) bt.textContent = lab; }
   if (activeTab === 'cat') renderCat($('tab-cat'), w);
   else if (activeTab === 'outside') { if (outsideUpdate) outsideUpdate(); }
+  else if (activeTab === 'stash') { const sig = w.stash.items.length + ':' + Object.keys(w.cat.assoc || {}).length + ':' + w.cat.quirk.favColor + w.cat.quirk.item + (w.stash.site ? w.stash.site.label : ''); if (sig !== stashSig) { stashSig = sig; renderStash($('tab-stash'), w); } }
+  else if (activeTab === 'blog') { const sig = (w.blog ? w.blog.posts.length + ':' + (w.blog.draft ? 1 : 0) + ':' + w.blog.title + ':' + w.blog.posts.map(x => x.title).join('|').length : ''); if (sig !== blogSig) { blogSig = sig; const f = new Set((w.blog ? w.blog.posts : []).filter(x => !x.read).map(x => x.id)); renderBlog($('tab-blog'), w, new Set([...blogFresh, ...f])); f.forEach(id => blogFresh.add(id)); markBlogRead(w); } }
   else if (activeTab === 'history') { if (historyUpdate) historyUpdate(); }
   else if (activeTab === 'gallery') { const sig = w.cat.art.count + ':' + w.cat.art.works.map(x => x.title).join('|').length; if (sig !== gallerySig) { gallerySig = sig; renderGallery($('tab-gallery'), w, openWork); } }
   renderChat();
@@ -82,7 +93,7 @@ function bubble(now) {
   if (c.thoughtId !== bubbleId) { bubbleId = c.thoughtId; bubbleUntil = now + Math.min(9000, 3200 + c.thought.length * 70); b.textContent = c.thought; }
   const show = c.thought && now < bubbleUntil && !document.hidden; b.hidden = !show; if (!show) return;
   const cv = $('view'), s = cv.clientWidth / LW, p = renderer.persp(c.y), x = c.hidden ? w.o.house.x : c.x, y = c.hidden ? 250 : c.y - c.z - 52 * p;
-  b.style.left = Math.max(80, Math.min(cv.clientWidth - 80, cv.offsetLeft + x * s)) + 'px'; b.style.top = Math.max(40, cv.offsetTop + y * s) + 'px';
+  b.style.left = cv.offsetLeft + Math.max(120, Math.min(cv.clientWidth - 120, x * s)) + 'px'; b.style.top = Math.max(40, cv.offsetTop + y * s) + 'px';
 }
 
 // ---------- chat ----------
@@ -177,8 +188,10 @@ function resetModal() {
 function showTab(name) {
   activeTab = name;
   for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
-  for (const id of ['chat', 'cat', 'outside', 'history', 'gallery', 'settings']) $('tab-' + id).hidden = id !== name;
-  histSt.sig = ''; gallerySig = '';
+  for (const id of ['chat', 'cat', 'stash', 'blog', 'outside', 'history', 'gallery', 'settings']) $('tab-' + id).hidden = id !== name;
+  histSt.sig = ''; gallerySig = ''; stashSig = ''; blogSig = ''; blogFresh = new Set();
+  if (name === 'stash') renderStash($('tab-stash'), w);
+  if (name === 'blog') hud(performance.now());
   if (name === 'cat') renderCat($('tab-cat'), w);
   if (name === 'history') historyUpdate = renderHistory($('tab-history'), w, histSt, { actions: { export: exportStory } });
   if (name === 'outside') outsideUpdate = renderOutside($('tab-outside'), w, { net, actions: { leave: spec => leaveOffering(w, spec) } });
@@ -252,7 +265,7 @@ function bindEvents() {
 async function desktopHooks() {
   try {
     const win = T.window.getCurrentWindow();
-    await win.onCloseRequested(async ev => { ev.preventDefault(); await saveNow('main', true); if (settings.closeToTray) await win.hide(); else await win.destroy(); });
+    await win.onCloseRequested(async ev => { ev.preventDefault(); await saveNow('main', true); if (settings.closeToTray) { trayHidden = true; await win.hide(); } else await win.destroy(); });
     if (T.event && T.event.listen) await T.event.listen('quit-requested', async () => { await saveNow('main', true); await win.destroy(); });
   } catch (e) { sys('Desktop hooks unavailable: ' + (e && e.message ? e.message : e)); }
 }

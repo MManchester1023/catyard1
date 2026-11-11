@@ -1,5 +1,5 @@
 // Yard layout, time, weather, geometry helpers, and the creatures that share the yard.
-import { W, H, GY0, GY1, rnd, ri, clamp, pick, dist, sstep, ITEM_TYPES, COLOR_NAMES, FEATHER_COLORS, uid } from './util.js';
+import { W, H, GY0, GY1, rnd, ri, clamp, pick, dist, sstep, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, FEATHER_COLORS, uid, an } from './util.js';
 
 export const hourOf = w => ((w.clock % w.dayLen) / w.dayLen) * 24;
 export const dayOf = w => Math.floor(w.clock / w.dayLen) + 1;
@@ -91,10 +91,56 @@ export function randomOpenPoint(w, x0 = 40, x1 = 920, y0 = GY0 + 24, y1 = GY1 - 
   return { x: 400, y: 450 };
 }
 
-// step a body toward a target, steering around obstacles. true on arrival
-export function walk(w, c, tx, ty, sp, dt) {
+// ---------- getting around: a plan around anything big, local steering for the rest ----------
+// The old greedy steering got stuck in the dips of the pond and behind the table and easel: with the target on the far
+// side of an obstacle, every step toward it was blocked and the cat circled until the walk timed out. So when the
+// straight line is blocked we plan a path across a coarse grid (A*, then pulled straight) and steer toward its corners.
+const CELL = 14, COLS = Math.ceil(W / CELL), ROWS = Math.ceil((GY1 - GY0 + 24) / CELL);
+const cellX = x => clamp(Math.floor(x / CELL), 0, COLS - 1), cellY = y => clamp(Math.floor((y - GY0) / CELL), 0, ROWS - 1);
+const midX = i => i * CELL + CELL / 2, midY = j => GY0 + j * CELL + CELL / 2;
+const NAV = new WeakMap(); // body -> its current plan (kept out of the body itself so it is never saved)
+
+export function lineClear(w, x0, y0, x1, y1) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 6));
+  for (let i = 1; i <= n; i++) if (blocked(w, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n)) return false;
+  return true;
+}
+
+// a path from (x0,y0) to near (x1,y1): { pts, adj } (adj: the goal was inside something, so it ends at the nearest open spot) or null
+export function findPath(w, x0, y0, x1, y1) {
+  const free = new Uint8Array(COLS * ROWS); for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) free[j * COLS + i] = blocked(w, midX(i), midY(j)) ? 0 : 1;
+  const sI = cellX(x0), sJ = cellY(y0); let gI = cellX(x1), gJ = cellY(y1), adj = false;
+  free[sJ * COLS + sI] = 1;
+  if (!free[gJ * COLS + gI]) { // the goal is inside an obstacle: aim for the nearest open cell
+    adj = true; let found = null;
+    for (let r = 1; r < 9 && !found; r++) { let bd = 1e9; for (let j = gJ - r; j <= gJ + r; j++) for (let i = gI - r; i <= gI + r; i++) { if (i < 0 || j < 0 || i >= COLS || j >= ROWS || !free[j * COLS + i]) continue; const d = Math.hypot(midX(i) - x1, midY(j) - y1); if (d < bd) { bd = d; found = [i, j]; } } }
+    if (!found) return null; [gI, gJ] = found;
+  }
+  const idx = (i, j) => j * COLS + i, g = new Float32Array(COLS * ROWS).fill(1e9), from = new Int32Array(COLS * ROWS).fill(-1), done = new Uint8Array(COLS * ROWS);
+  const heap = []; const push = (f, k) => { heap.push([f, k]); let c = heap.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (heap[p][0] <= heap[c][0]) break; [heap[p], heap[c]] = [heap[c], heap[p]]; c = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let c = 0; for (;;) { let l = 2 * c + 1, r = l + 1, m = c; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === c) break; [heap[m], heap[c]] = [heap[c], heap[m]]; c = m; } } return top; };
+  const hh = (i, j) => { const dx = Math.abs(i - gI), dy = Math.abs(j - gJ); return Math.max(dx, dy) + 0.414 * Math.min(dx, dy); };
+  g[idx(sI, sJ)] = 0; push(hh(sI, sJ), idx(sI, sJ)); let ok = false;
+  while (heap.length) {
+    const k = pop()[1]; if (done[k]) continue; done[k] = 1; const i = k % COLS, j = (k / COLS) | 0;
+    if (i === gI && j === gJ) { ok = true; break; }
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+      if (!di && !dj) continue; const ni = i + di, nj = j + dj; if (ni < 0 || nj < 0 || ni >= COLS || nj >= ROWS || !free[idx(ni, nj)]) continue;
+      if (di && dj && (!free[idx(i + di, j)] || !free[idx(i, j + dj)])) continue; // no cutting corners
+      const nk = idx(ni, nj), ng = g[k] + (di && dj ? 1.414 : 1); if (ng < g[nk]) { g[nk] = ng; from[nk] = k; push(ng + hh(ni, nj), nk); }
+    }
+  }
+  if (!ok) return null;
+  const cells = []; for (let k = idx(gI, gJ); k >= 0; k = from[k]) cells.push({ x: midX(k % COLS), y: midY((k / COLS) | 0) }); cells.reverse();
+  cells[0] = { x: x0, y: y0 }; if (!adj) cells[cells.length - 1] = { x: x1, y: y1 };
+  const pts = [cells[0]]; let at = 0; // pull the path straight: skip every corner that can be cut
+  while (at < cells.length - 1) { let nxt = at + 1; for (let k = cells.length - 1; k > at + 1; k--) if (lineClear(w, cells[at].x, cells[at].y, cells[k].x, cells[k].y)) { nxt = k; break; } pts.push(cells[nxt]); at = nxt; }
+  pts.shift(); if (!pts.length) pts.push(adj ? { x: midX(gI), y: midY(gJ) } : { x: x1, y: y1 }); return { pts, adj };
+}
+
+// one step of local steering toward a point, going round small things
+function steer(w, c, tx, ty, sp, dt) {
   const dx = tx - c.x, dy = ty - c.y, d = Math.hypot(dx, dy);
-  if (d <= Math.max(2, sp * dt * 0.6)) return true;
   const m = Math.min(d, sp * dt), a0 = Math.atan2(dy, dx), inside = blocked(w, c.x, c.y);
   for (const off of [0, 0.55, -0.55, 1.1, -1.1, 1.7, -1.7, 2.4, -2.4]) {
     const a = a0 + off, nx = clamp(c.x + Math.cos(a) * m, 14, W - 14), ny = clamp(c.y + Math.sin(a) * m, GY0, GY1);
@@ -105,6 +151,22 @@ export function walk(w, c, tx, ty, sp, dt) {
     }
   }
   return false;
+}
+
+// step a body toward a target. true on arrival
+export function walk(w, c, tx, ty, sp, dt) {
+  const d = Math.hypot(tx - c.x, ty - c.y);
+  if (d <= Math.max(2, sp * dt * 0.6)) return true;
+  if (lineClear(w, c.x, c.y, tx, ty)) { NAV.delete(c); return steer(w, c, tx, ty, sp, dt); }
+  let nv = NAV.get(c);
+  if (!nv || Math.hypot(nv.tx - tx, nv.ty - ty) > 36 || nv.table !== !!w.table || w.clock - nv.at > 6) {
+    const pl = findPath(w, c.x, c.y, tx, ty);
+    nv = { tx, ty, table: !!w.table, at: w.clock, pts: pl ? pl.pts : [{ x: tx, y: ty }], adj: pl ? pl.adj : false, i: 0 }; NAV.set(c, nv);
+  }
+  while (nv.i < nv.pts.length - 1 && (Math.hypot(nv.pts[nv.i].x - c.x, nv.pts[nv.i].y - c.y) < 10 || lineClear(w, c.x, c.y, nv.pts[nv.i + 1].x, nv.pts[nv.i + 1].y))) nv.i++;
+  const p = nv.pts[nv.i];
+  if (nv.adj && nv.i === nv.pts.length - 1 && Math.hypot(p.x - c.x, p.y - c.y) < Math.max(4, sp * dt * 0.6)) return true; // as close as it can get
+  return steer(w, c, p.x, p.y, sp, dt) && false;
 }
 
 // ---------- log, journal and history ----------
@@ -174,7 +236,8 @@ export function birdTick(w, b, dt) {
     b.timer -= dt;
     if (b.timer <= 0 && w.weather.rain < 0.4 && sunOf(hourOf(w)) > 0.2) {
       const r = Math.random(); b.x = Math.random() < 0.5 ? -30 : W + 30; b.y = rnd(250, 420); b.z = 170;
-      if (r < 0.6) { const p = randomOpenPoint(w, 160, 880, 300, 545); b.tx = p.x; b.ty = p.y; b.tz = 0; b.dest = 'ground'; if (w.deco && w.deco.feeder && Math.random() < 0.5) { b.tx = 872 + rnd(-16, 16); b.ty = 360 + rnd(-6, 10); } }
+      const fd = !!(w.deco && w.deco.feeder); b.feed = false;
+      if (r < (fd ? 0.8 : 0.6) || b.gift) { const p = randomOpenPoint(w, 160, 880, 300, 545); b.tx = p.x; b.ty = p.y; b.tz = 0; b.dest = 'ground'; if (fd && Math.random() < 0.75) { b.tx = 872 + rnd(-16, 16); b.ty = 360 + rnd(-6, 10); b.feed = true; } }
       else if (r < 0.85) { b.tx = pick([120, 260, 380, 520, 700, 860]); b.ty = GY0 + 4; b.tz = 46; b.dest = 'perch'; }
       else { b.tx = 822 + rnd(-20, 30); b.ty = 312; b.tz = 118; b.dest = 'perch'; }
       b.state = 'fly'; b.alert = 0;
@@ -185,7 +248,7 @@ export function birdTick(w, b, dt) {
     const dx = b.tx - b.x, dy = b.ty - b.y, dz = b.tz - b.z, d = Math.hypot(dx, dy, dz), m = 170 * dt;
     b.vx = dx / (d || 1) * 170; b.vy = dy / (d || 1) * 170;
     if (Math.abs(dx) > 1) b.face = dx > 0 ? 1 : -1;
-    if (d <= m) { b.x = b.tx; b.y = b.ty; b.z = b.tz; if (b.dest === 'out') { b.state = 'away'; b.timer = rnd(30, 100) * (w.deco && w.deco.feeder ? 0.45 : 1); } else { b.state = b.dest; b.timer = rnd(10, 26); b.hop = 1; } }
+    if (d <= m) { b.x = b.tx; b.y = b.ty; b.z = b.tz; if (b.dest === 'out') { b.state = 'away'; b.timer = rnd(30, 100) * (w.deco && w.deco.feeder ? 0.3 : 1); } else { b.state = b.dest; b.timer = rnd(10, 26) * (b.feed ? 1.5 : 1); b.hop = 1; } }
     else { b.x += dx / d * m; b.y += dy / d * m; b.z += dz / d * m; }
     return;
   }
@@ -193,12 +256,50 @@ export function birdTick(w, b, dt) {
   b.vx = b.vy = 0; b.timer -= dt;
   const d = Math.hypot(b.x - c.x, b.y - c.y), cp = c.pose;
   const threat = !c.hidden && cp !== 'sleep' && cp !== 'inside' && d < (cp === 'run' ? 210 : cp === 'crouch' ? 85 : 120);
-  if (threat) { b.alert += dt * 3; if (b.alert > 0.6) { birdLeave(b); return; } } else b.alert = Math.max(0, b.alert - dt);
+  if (threat) { b.alert += dt * 3; if (b.alert > 0.6) { if (b.gift && b.state === 'ground') dropFromBird(w, b, true); birdLeave(b); return; } } else b.alert = Math.max(0, b.alert - dt);
   if (b.state === 'ground') {
     b.hop -= dt; b.peck = Math.max(0, b.peck - dt);
     if (b.hop <= 0) { const nx = clamp(b.x + rnd(-20, 20), 20, W - 20), ny = clamp(b.y + rnd(-9, 9), GY0 + 40, GY1); if (!blocked(w, nx, ny)) { b.face = nx > b.x ? 1 : -1; b.x = nx; b.y = ny; } b.hop = rnd(0.6, 2); b.peck = 0.35; }
   }
-  if (b.timer <= 0) birdLeave(b);
+  if (b.timer <= 0) { if (b.state === 'ground') dropFromBird(w, b); birdLeave(b); }
+}
+
+// Birds are where new things in the yard come from: one that lands and then leaves may leave something behind. Mostly a
+// small treasure (any of the four kinds, in any colour), now and then a bit of string. A bird sent with a particular
+// gift (see sim.js: what the cat wants to find) always leaves it. A feeder brings more birds, so more things.
+export function dropFromBird(w, b, sure = false) {
+  const gift = b.gift; b.gift = null;
+  if (!gift && !sure && Math.random() > (w.deco && w.deco.feeder ? 0.045 : 0.13)) return null; // (with a feeder there are four times the visits, so each leaves less often)
+  if (w.items.length >= 7) return null;
+  const q = w.cat.quirk; let type, color = null;
+  if (gift) { type = gift.type; color = gift.color; }
+  else if (Math.random() < 0.18) type = 'twine';
+  else { type = Math.random() < 0.45 ? q.item : pick(ITEM_TYPES); color = type === 'feather' ? pick(FEATHER_COLORS) : pick(COLOR_NAMES.filter(c => c !== 'black')); }
+  let x = clamp(b.x + rnd(-8, 8), 30, W - 30), y = clamp(b.y + rnd(2, 10), GY0 + 24, GY1 - 12);
+  if (blocked(w, x, y)) { const p = randomOpenPoint(w, x - 60, x + 60, GY0 + 24, GY1 - 12); x = p.x; y = p.y; }
+  const it = { id: uid(), type, color, x, y, age: 0, from: 'bird' }; w.items.push(it);
+  note(w, `A bird dropped ${an((color ? color + ' ' : '') + ITEM_LABEL[type])} before it flew off.`, 'bird');
+  return it;
+}
+
+// a fish now and then glides through the pond. The cat can try for it (acts.js 'fish').
+export function fishTick(w, dt) {
+  const p = w.o.pond; if (!w.fx) w.fx = [];
+  for (const s of w.fx) s.t += dt; if (w.fx.length) w.fx = w.fx.filter(s => s.t < 1.6);
+  const f = w.fish;
+  if (!f) {
+    if (w.fishT == null) w.fishT = rnd(60, 140);
+    w.fishT -= dt;
+    if (w.fishT <= 0 && sunOf(hourOf(w)) > 0.12 && w.weather.rain < 0.5) { w.fish = { x: p.x + rnd(-0.6, 0.6) * p.rx, y: p.y + rnd(-0.3, 0.4) * p.ry, dir: Math.random() < 0.5 ? -1 : 1, t: 0, life: rnd(45, 95), spooked: false, spookT: 0, wag: 0 }; w.fishT = rnd(0.2, 0.45) * w.dayLen; }
+    return;
+  }
+  f.t += dt; f.wag += dt * 5;
+  f.x += f.dir * (f.spooked ? 80 : 11) * dt; f.y += Math.sin(f.t * 0.6) * 2 * dt;
+  const nx = (f.x - p.x) / (p.rx * 0.82);
+  if (Math.abs(nx) > 1) { f.dir = -Math.sign(nx); f.x = p.x + Math.sign(nx) * p.rx * 0.82 * 0.99; }
+  const fishing = w.cat.act && w.cat.act.type === 'fish' && !f.spooked;
+  if (fishing) f.life = Math.max(f.life, f.t + 6);
+  if (f.t > f.life || (f.spooked && f.t > f.spookT + 1.4)) w.fish = null;
 }
 
 export function spawnMouse(w) {

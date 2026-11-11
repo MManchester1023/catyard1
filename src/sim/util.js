@@ -20,8 +20,8 @@ export const COAT_LABEL = { orange: 'orange tabby', grey: 'grey tabby', black: '
 
 // things a collector cat can fall for
 export const ITEM_TYPES = ['bottlecap', 'feather', 'button', 'marble'];
-export const ITEM_LABEL = { bottlecap: 'bottle cap', feather: 'feather', button: 'button', marble: 'marble' };
-export const ITEM_PLURAL = { bottlecap: 'bottle caps', feather: 'feathers', button: 'buttons', marble: 'marbles' };
+export const ITEM_LABEL = { bottlecap: 'bottle cap', feather: 'feather', button: 'button', marble: 'marble', twine: 'bit of string', coin: 'coin' };
+export const ITEM_PLURAL = { bottlecap: 'bottle caps', feather: 'feathers', button: 'buttons', marble: 'marbles', twine: 'bits of string', coin: 'coins' };
 export const COLORS = {
   red: '#d9453b', orange: '#ee8a2e', yellow: '#f0cd3d', green: '#58a95b', teal: '#2fa5a0',
   blue: '#3f76d6', purple: '#8a5bc8', pink: '#e780ab', white: '#f1eee6', black: '#2b2830',

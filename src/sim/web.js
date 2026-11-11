@@ -32,9 +32,18 @@ export async function fetchPage(get, req, { safe = true, onCall = () => {} } = {
   const check = p => { const pg = fromPage(p); if (safe && !isSafe(pg.title + ' ' + pg.extract)) return null; return pg; };
   if (req.kind === 'lookup') {
     const q = clip(req.q, 60).replace(/[^\p{L}\p{N} '-]/gu, ''); if (!q) throw new Error('nothing to look up');
-    onCall(); const j = await get(query(`generator=search&gsrnamespace=0&gsrlimit=1&gsrsearch=${encodeURIComponent(q)}`));
-    const p = j && j.query && j.query.pages && j.query.pages[0];
-    if (!p) throw new Error('nothing found'); if (!usable(p)) throw new Error('nothing readable'); const pg = check(p); if (!pg) throw new Error('filtered'); return pg;
+    const skip = new Set((Array.isArray(req.skip) ? req.skip : []).map(x => String(x).toLowerCase())); // (pages it has already read)
+    onCall(); const j = await get(query(`generator=search&gsrnamespace=0&gsrlimit=${skip.size || req.vary ? 10 : 1}&gsrsearch=${encodeURIComponent(q)}`));
+    const found = ((j && j.query && j.query.pages) || []).slice().sort((a, b) => (a.index || 0) - (b.index || 0));
+    // a general search (not a research subject) never gives up: when there is nothing new on that subject it reads something random instead
+    const giveUp = msg => { if (req.fallback) return randomPage(get, check, onCall); throw new Error(msg); };
+    if (!found.length) return giveUp('nothing found');
+    const fresh = found.filter(x => !skip.has(String(x.title).toLowerCase()));
+    if (!fresh.length) return giveUp('nothing more found');
+    let sawUnsafe = false; const ok = [];
+    for (const p of fresh) { if (!usable(p)) continue; const pg = check(p); if (pg) ok.push(pg); else sawUnsafe = true; if (ok.length >= (req.vary ? 3 : 1)) break; }
+    if (ok.length) return req.vary ? ok[Math.floor(Math.random() * ok.length)] : ok[0]; // (a varied search picks among the first few new results, so the same words do not always give the same page)
+    return giveUp(sawUnsafe ? 'filtered' : 'nothing readable');
   }
   if (req.kind === 'featured') {
     const d = new Date(), url = `${FEED}${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
@@ -46,6 +55,9 @@ export async function fetchPage(get, req, { safe = true, onCall = () => {} } = {
     }
     throw new Error('nothing readable today');
   }
+  return randomPage(get, check, onCall);
+}
+async function randomPage(get, check, onCall) {
   for (let i = 0; i < 4; i++) {
     onCall(); const j = await get(query('generator=random&grnnamespace=0&grnlimit=1'));
     const p = j && j.query && j.query.pages && j.query.pages[0];

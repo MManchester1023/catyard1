@@ -1,7 +1,8 @@
 // The collector quirk: what the cat covets, where it hides the stash, how it arranges it.
 import { rnd, pick, uid, an, ITEM_TYPES, ITEM_LABEL, ITEM_PLURAL, COLOR_NAMES, mulberry32 } from './util.js';
 import { STASH_SITES, note, journal, dayOf } from './world.js';
-import { feel } from './feelings.js';
+import { feel, affinity } from './feelings.js';
+import { upsetBy } from './upset.js';
 
 export const TASTES = ['pile', 'rows', 'ring', 'rainbow'];
 export const TASTE_LABEL = { pile: 'a loose pile', rows: 'tidy rows by color', ring: 'a ring', rainbow: 'a rainbow line' };
@@ -22,11 +23,28 @@ export function chooseSite(w) {
 export const itemName = (type, color, withColor = true) => (withColor && color ? color + ' ' : '') + ITEM_LABEL[type];
 export const quirkWord = (q, plural = true) => (plural ? ITEM_PLURAL[q.item] : ITEM_LABEL[q.item]);
 
+// everything in the stash, favourite first: what it collects, its colours, and what has made it feel good
+export function stashRank(w) {
+  const c = w.cat, q = c.quirk, t = c.tastes || { color: {}, type: {} }, groups = new Map();
+  for (const it of w.stash.items) { const k = it.type + '|' + it.color; if (!groups.has(k)) groups.set(k, { type: it.type, color: it.color, count: 0 }); groups.get(k).count++; }
+  const rows = [...groups.values()].map(g => {
+    const ac = affinity(w, 'color:' + g.color), at = affinity(w, 'type:' + g.type), why = [];
+    let s = ((t.color[g.color] ?? 0.3) - 0.3) * 1.2 + ((t.type[g.type] ?? 0.3) - 0.3) * 1.2 + ac * 0.6 + at * 0.6 + Math.min(0.2, (g.count - 1) * 0.05);
+    if (g.type === q.item) { s += 0.5; why.push('the thing it collects'); }
+    if (g.color === q.favColor) { s += 0.4; why.push('favourite colour'); }
+    if (ac + at > 0.25) why.push('makes it feel good'); else if (ac + at < -0.15) why.push('it is uneasy about these');
+    if (g.type === 'coin') { s += 3; why.length = 0; why.push('found in the roots of the oak'); }
+    return Object.assign(g, { name: itemName(g.type, g.color), plural: g.count === 1 ? itemName(g.type, g.color) : g.color + ' ' + ITEM_PLURAL[g.type], score: s, strength: Math.max(0, Math.min(1, 0.45 + s / 3)), why });
+  });
+  return rows.sort((a, b) => b.score - a.score || b.count - a.count);
+}
+
 export function stashColors(w) { const m = {}; w.stash.items.forEach(i => (m[i.color] = (m[i.color] || 0) + 1)); return m; }
 export function stashOf(w, type = null) { return type ? w.stash.items.filter(i => i.type === type) : w.stash.items; }
 
 // how badly the cat wants a thing it can see on the ground
 export function itemValue(w, it) {
+  if (it.type === 'twine') return w.cat.inv && w.cat.inv.twine < 12 ? 0.95 : 0; // string is something every cat can use
   const q = w.cat.quirk, have = stashColors(w);
   let v = it.type === q.item ? 1 : 0.1;
   if (it.color === q.favColor) v += 0.55;
@@ -39,7 +57,7 @@ export function itemValue(w, it) {
 export function bestItem(w, from) {
   let best = null, bv = 0.45;
   for (const it of w.items) {
-    const d = Math.hypot(it.x - from.x, it.y - from.y), v = itemValue(w, it) - d / 1400;
+    const d = Math.hypot(it.x - from.x, it.y - from.y), v = itemValue(w, it) - d / 1400 + (it.moon ? 0.6 : 0); // (a wish from the moon is hard to ignore)
     if (v > bv) { bv = v; best = it; }
   }
   return best;
@@ -99,5 +117,6 @@ export function noticeTheft(w) {
   note(w, `${c.name} counted the stash and found ${lost === 1 ? 'one item' : lost + ' items'} missing!`, 'collect');
   journal(w, `Someone has been in my stash. ${lost === 1 ? 'One is' : lost + ' are'} gone. I will remember this.`, 'stash');
   c.needs.fear = Math.min(1, (c.needs.fear || 0) + 0.5);
+  upsetBy(w, 'theft', `${lost === 1 ? 'One treasure is' : lost + ' treasures are'} gone and I did not see who. I keep looking at the fence.`, { level: 0.7, days: 0.5, bond: 0, cool: 0.2, note: 'something was taken from its stash.', hint: 'theft' });
   return lost;
 }

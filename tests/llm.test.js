@@ -15,7 +15,7 @@ const http = async (url, opt) => {
   if (mode === 'http') return { ok: false, status: 401, text: async () => '{"error":"invalid x-api-key"}' };
   if (mode === 'hang') return new Promise((_, rej) => opt.signal.addEventListener('abort', () => rej(new Error('aborted'))));
   const b = JSON.parse(opt.body), u = b.messages[0].content;
-  let text = mode === 'junk' ? 'meow meow, no json here' : u.includes('"say"') ? '{"say": "I was busy with the blue cap. Hello.", "feeling": "happy"}' : u.includes('"theory"') ? '{"theory": "The moon is a lid and the sky is a jar."}' : u.includes('"title"') ? '{"title": "Blue Thoughts", "critique": "The horizon finally behaves."}' : u.includes('"thought"') ? '{"thought": "Is the moon a lid?", "diary": "Checked the stash twice."}' : u.includes('"reaction"') ? '{"reaction": "A fine thing. I will think about it at length."}' : u.includes('"note"') ? '{"note": "Dear human, a twine would improve my week."}' : 'OK';
+  let text = mode === 'junk' ? 'meow meow, no json here' : u.includes('"body"') ? '{"title": "Mice, Mostly", "body": "Today I did a few things and felt rather fine about them. I would still like a blue cap."}' : u.includes('"say"') ? '{"say": "I was busy with the blue cap. Hello.", "feeling": "happy"}' : u.includes('"theory"') ? '{"theory": "The moon is a lid and the sky is a jar."}' : u.includes('"title"') ? '{"title": "Blue Thoughts", "critique": "The horizon finally behaves."}' : u.includes('"thought"') ? '{"thought": "Is the moon a lid?", "diary": "Checked the stash twice."}' : u.includes('"reaction"') ? '{"reaction": "A fine thing. I will think about it at length."}' : u.includes('"note"') ? '{"note": "Dear human, a twine would improve my week."}' : 'OK';
   return { ok: true, status: 200, json: async () => ({ content: [{ type: 'text', text }] }) };
 };
 const brain = new Brain({ getSettings: () => settings, saveSettings: () => {}, http });
@@ -70,6 +70,19 @@ console.log('asks ok');
   assert.match(calls.at(-1).body.messages[0].content, /1 length of twine|twine/); assert.match(digest(w), /Notes you left the human on the tablet \(unanswered\): .*twine/);
   assert.match(digest(w), /Making things:/); assert.match(digest(w), /What makes you feel good/);
   console.log('wish ask ok');
+}
+
+// a blog post: Claude rewrites the title and words; the diary follows; the digest mentions the blog
+{
+  const { ensureBlog, considerBlog, publishPost } = await import('../src/sim/blog.js'); ensureBlog(w); w.cat.mem.known.tablet = 1;
+  for (let i = 0; i < 6; i++) { const { journal } = await import('../src/sim/world.js'); journal(w, `I did thing ${i}.`, 'hunt'); }
+  w.clock = Math.max(w.clock, 6 * w.dayLen); const r = Math.random; Math.random = () => 0; considerBlog(w); Math.random = r;
+  const post = w.blog.draft; assert.ok(post, 'a post was drafted'); publishPost(w, post); const ask = w.asks.find(a => a.type === 'blog'); assert.ok(ask, 'publishing queues a rewrite');
+  const old = post.title; await brain.tick(w, true);
+  assert.equal(post.title, 'Mice, Mostly'); assert.match(post.body, /blue cap/); assert.equal(post.by, 'claude');
+  assert.ok(w.journal.some(e => e.tag === 'blog' && e.text.includes('Mice, Mostly')) && !w.journal.some(e => e.tag === 'blog' && e.text.includes(`"${old}"`)), 'the diary line follows the new title');
+  assert.match(calls.at(-1).body.messages[0].content, /FACTS/); assert.match(digest(w), /You write a blog called/);
+  console.log('blog ask ok');
 }
 
 // cap and key

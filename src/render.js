@@ -82,6 +82,19 @@ function drawFeeder(g, w, t) {
   g.fillStyle = '#9a7650'; rr(g, x - 13, y - 38, 26, 7, 2); g.fill(); g.fillStyle = '#c26a4f'; g.beginPath(); g.moveTo(x - 17, y - 38); g.lineTo(x, y - 49); g.lineTo(x + 17, y - 38); g.closePath(); g.fill();
   g.fillStyle = '#e6c46a'; for (let i = 0; i < 6; i++) g.fillRect(x - 10 + i * 3.6, y - 39.4, 1.8, 1.4);
 }
+function drawCatTree(g, w, t) {
+  const x = w.catTree.x, y = w.catTree.y, top = 52;
+  g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, x, y + 4, 22, 6); g.fill();
+  g.fillStyle = '#7a5a43'; ell(g, x, y + 1, 19, 6); g.fill(); g.fillStyle = '#9a7650'; ell(g, x, y - 1, 19, 5.2); g.fill();      // base
+  g.fillStyle = '#d3bb8e'; g.fillRect(x - 3.5, y - top, 7, top); g.strokeStyle = 'rgba(120,90,50,0.55)'; g.lineWidth = 0.8;        // sisal post
+  for (let i = 0; i < 9; i++) { g.beginPath(); g.moveTo(x - 3.5, y - top + 3 + i * 5.2); g.lineTo(x + 3.5, y - top + 6 + i * 5.2); g.stroke(); }
+  g.fillStyle = '#7a553b'; rr(g, x - 15, y - 36, 30, 22, 3); g.fill(); g.fillStyle = '#a07a58'; rr(g, x - 13, y - 34, 26, 18, 2); g.fill();  // the box
+  g.fillStyle = '#1e1a22'; ell(g, x, y - 23, 6, 6.4); g.fill();
+  g.fillStyle = '#7a5a43'; ell(g, x, y - top + 2, 18, 6); g.fill(); g.fillStyle = '#a07a58'; ell(g, x, y - top, 18, 5.4); g.fill();   // the top
+  g.fillStyle = '#c4a47c'; ell(g, x - 3, y - top - 1, 11, 2.4); g.fill();
+  const sw = Math.sin(t * 1.6) * 1.6; g.strokeStyle = '#d9bf84'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(x + 14, y - top + 1); g.lineTo(x + 18 + sw, y - top + 12); g.stroke();
+  g.fillStyle = '#d8453b'; ell(g, x + 18 + sw, y - top + 14, 2.6, 2.6); g.fill();                                                        // a toy on a string
+}
 function drawChime(g, w, t) {
   const x = 862, y = 262, sway = Math.sin(t * 1.3) * 1.6 + Math.sin(t * 3.1) * 0.8 * (w.weather.cloud + 0.2);
   g.strokeStyle = '#d9bf84'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y - 4); g.lineTo(x, y + 4); g.stroke();
@@ -172,6 +185,10 @@ export function createRenderer(canvas) {
 
   function celestial(g, w, t, h, sun, night, wt, s1) {
     if (night > 0.3) { g.fillStyle = '#fff'; for (const s of stars) { g.globalAlpha = clamp(night - 0.3) * (1 - wt.cloud * 0.8) * (0.55 + 0.45 * Math.sin(t * 1.5 + s.p)); ell(g, s.x, s.y, s.r, s.r); g.fill(); } g.globalAlpha = 1; }
+    const mt = w.meteor; // a shooting star: a bright head and a tail of fading pixels
+    if (mt && night > 0.3) { const p = clamp(mt.t / mt.dur), fade = (p > 0.7 ? (1 - p) / 0.3 : 1) * (1 - wt.cloud * 0.8), hx = mt.x0 + mt.dx * p, hy = mt.y0 + mt.dy * p;
+      for (let i = 0; i < 22; i++) { const f = i / 22; g.globalAlpha = clamp((1 - f * 0.85) * fade); g.fillStyle = f < 0.35 ? '#ffffff' : '#e6f0ff'; const s = Math.max(2, 4.5 - f * 3.5); g.fillRect(Math.round(hx - mt.dx * 0.34 * f - s / 2), Math.round(hy - mt.dy * 0.34 * f - s / 2), s, s); }
+      g.globalAlpha = clamp(0.28 * fade); const gl = g.createRadialGradient(hx, hy, 1, hx, hy, 22); gl.addColorStop(0, 'rgba(255,252,220,0.95)'); gl.addColorStop(1, 'rgba(255,252,220,0)'); g.fillStyle = gl; g.fillRect(hx - 22, hy - 22, 44, 44); g.globalAlpha = 1; }
     if (sun > 0.05 && h > 5.5 && h < 19.5) { const f = clamp((h - 6) / 12.5), x = 80 + f * 800, y = 190 - Math.sin(f * Math.PI) * 136; g.globalAlpha = (1 - wt.cloud * 0.7) * sun; const gl = g.createRadialGradient(x, y, 4, x, y, 56); gl.addColorStop(0, 'rgba(255,240,170,0.9)'); gl.addColorStop(1, 'rgba(255,240,170,0)'); g.fillStyle = gl; g.fillRect(x - 60, y - 60, 120, 120); g.fillStyle = '#fff4b8'; ell(g, x, y, 15, 15); g.fill(); g.globalAlpha = 1; }
     const mp = moonPos(w);
     if (mp) { const lit = moonLight(w), ph = w.mysteries ? ((w.clock / w.dayLen) | 0) % 8 : 0; g.save(); g.globalAlpha = clamp(night * 1.4) * (1 - wt.cloud * 0.6); const gl = g.createRadialGradient(mp.x, mp.y, 6, mp.x, mp.y, 46); gl.addColorStop(0, `rgba(255,250,214,${0.35 * lit + 0.1})`); gl.addColorStop(1, 'rgba(255,250,214,0)'); g.fillStyle = gl; g.fillRect(mp.x - 50, mp.y - 50, 100, 100);
@@ -193,6 +210,23 @@ export function createRenderer(canvas) {
     g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1; for (let i = 0; i < 4; i++) { const x = 600 + i * 28 + Math.sin(t * 0.6 + i) * 6, y = 458 + (i % 2) * 18; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 14, y); g.stroke(); }
     if (w.ripple) { const r = w.ripple, u = r.t / 5, px = o.pond.x + r.dx, py = o.pond.y + r.dy; for (let i = 0; i < 3; i++) { const uu = clamp(u * 1.4 - i * 0.18); if (uu <= 0 || uu >= 1) continue; g.globalAlpha = (1 - uu) * 0.7; g.strokeStyle = '#eaf6ff'; g.lineWidth = 1.4; ell(g, px, py, 6 + uu * 26, 2.5 + uu * 10); g.stroke(); } g.globalAlpha = 1;
       if (r.frog && !w.frog && r.t > 0.4 && r.t < 3.6) { g.fillStyle = '#58a65a'; ell(g, px, py - 2, 6, 4); g.fill(); g.fillStyle = '#6fc06f'; ell(g, px - 3, py - 6, 2.2, 2.2); g.fill(); ell(g, px + 3, py - 6, 2.2, 2.2); g.fill(); g.fillStyle = '#1e1a22'; ell(g, px - 3, py - 6, 0.8, 0.8); g.fill(); ell(g, px + 3, py - 6, 0.8, 0.8); g.fill(); } }
+    // a fish in the pond (the cat can hunt it), and the splash when a swipe lands in the water
+    if (w.fish) {
+      const f = w.fish, dir = f.dir || 1, wag = Math.sin(f.wag || 0) * 1.6, fade = f.spooked ? clamp(1 - (f.t - f.spookT) / 1.4) : clamp(f.t / 1.2) * clamp((f.life - f.t) / 2);
+      g.save(); g.globalAlpha = 0.9 * fade;
+      g.fillStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.ellipse(f.x - dir * 12, f.y + 1, 8, 1.6, 0, 0, 6.283); g.fill(); // wake
+      g.fillStyle = '#e8892e'; ell(g, f.x, f.y, 7.5, 3.2); g.fill();
+      g.beginPath(); g.moveTo(f.x - dir * 6, f.y); g.lineTo(f.x - dir * 12, f.y - 3.4 + wag); g.lineTo(f.x - dir * 12, f.y + 3.4 + wag); g.closePath(); g.fill();
+      g.fillStyle = '#f6c389'; ell(g, f.x + dir * 1, f.y - 0.6, 4, 1.2); g.fill();
+      g.fillStyle = '#1e1a22'; ell(g, f.x + dir * 4.6, f.y - 0.9, 0.8, 0.8); g.fill();
+      g.restore();
+    }
+    for (const sp of w.fx || []) {
+      const u = clamp(sp.t / 1.6); g.save(); g.strokeStyle = '#eaf6ff'; g.fillStyle = '#eaf6ff';
+      for (let i = 0; i < 2; i++) { const uu = clamp(u * 1.3 - i * 0.2); if (uu <= 0 || uu >= 1) continue; g.globalAlpha = (1 - uu) * 0.8; g.lineWidth = 1.4; g.beginPath(); g.ellipse(sp.x, sp.y, 4 + uu * 20, 1.6 + uu * 7, 0, 0, 6.283); g.stroke(); }
+      if (u < 0.55) for (let i = 0; i < 6; i++) { const a = (i / 6) * 6.283 + sp.x, r = u * 18, h = Math.sin(u / 0.55 * Math.PI) * 11; g.globalAlpha = (1 - u / 0.55) * 0.9; g.beginPath(); g.arc(sp.x + Math.cos(a) * r, sp.y - h + Math.sin(a) * r * 0.35, 1.3, 0, 6.283); g.fill(); }
+      g.restore();
+    }
     // the frog that became the cat's friend: on a lily pad at the near edge when it is up
     if (w.frog && w.frog.out) {
       const f = w.frog, fs = frogSpot(w), hop = Math.sin(clamp(f.hop) * Math.PI) * 5, px = fs.fx, py = fs.fy - hop, visiting = w.cat.act.type === 'frog' && w.cat.act.phase === 'do';
@@ -212,10 +246,12 @@ export function createRenderer(canvas) {
     // what the cat has made and gathered
     if (w.deco && w.deco.feeder) drawFeeder(g, w, t);
     if (w.deco && w.deco.chime) drawChime(g, w, t);
+    if (w.catTree) drawCatTree(g, w, t);
     drawPile(g, w);
     const dr = c.act && c.act.type === 'play' && c.act.drop; if (dr) { const u = Math.min(1, c.act.t * 2.4); g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, dr.x, dr.y + 3, 6, 2); g.fill(); MATS[dr.type](g, dr.x, dr.y - (1 - u) * 14 - 1, 1.15, u * 1.3); g.globalAlpha = 0.5 + 0.4 * Math.sin(t * 9); g.fillStyle = '#fff6c0'; ell(g, dr.x + 7, dr.y - 7, 1.6, 1.6); g.fill(); g.globalAlpha = 1; }
     // things on the ground
-    for (const it of w.items) { g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, it.x, it.y + 2, 6, 2); g.fill(); const wob = Math.sin(t * 3 + it.x) * 0.5; drawItem(g, it.type, it.color, it.x, it.y - 1.5, 6.4 * persp(it.y), wob); if (it.age < 4) { g.globalAlpha = 1 - it.age / 4; g.strokeStyle = '#fff'; ell(g, it.x, it.y, 10 + it.age * 6, 5 + it.age * 3); g.stroke(); g.globalAlpha = 1; } }
+    for (const it of w.items) { g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, it.x, it.y + 2, 6, 2); g.fill(); const wob = Math.sin(t * 3 + it.x) * 0.5; if (it.type === 'twine') drawTwine(g, it.x, it.y - 1, 1.1 * persp(it.y)); else drawItem(g, it.type, it.color, it.x, it.y - 1.5, 6.4 * persp(it.y), wob); if (it.moon) { for (let i = 0; i < 4; i++) { const u = (t * 0.8 + i / 4) % 1; g.globalAlpha = Math.sin(u * 3.14); g.fillStyle = '#fff6c8'; const a = i * 1.7 + t * 0.6; g.fillRect(it.x + Math.cos(a) * 11 - 0.8, it.y - 6 - u * 10 + Math.sin(a) * 3, 1.6, 1.6); } g.globalAlpha = 1; }
+      if (it.age < 4) { g.globalAlpha = 1 - it.age / 4; g.strokeStyle = '#fff'; ell(g, it.x, it.y, 10 + it.age * 6, 5 + it.age * 3); g.stroke(); g.globalAlpha = 1; } }
     for (const tr of w.treats) { g.fillStyle = '#e9a05a'; ell(g, tr.x, tr.y, 6, 3.6); g.fill(); g.fillStyle = '#c47a38'; ell(g, tr.x + 1.4, tr.y - 0.6, 2.6, 1.4); g.fill(); }
     const y = o.yarn; g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, y.x, y.y + 6, 9, 3); g.fill(); g.fillStyle = '#d8453b'; ell(g, y.x, y.y, 8, 8); g.fill(); g.strokeStyle = '#f08a80'; g.lineWidth = 1.2; g.beginPath(); g.arc(y.x, y.y, 5, 0.3, 2.6); g.moveTo(y.x - 7, y.y - 2); g.quadraticCurveTo(y.x, y.y + 3, y.x + 7, y.y - 3); g.stroke();
     g.strokeStyle = '#d8453b'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(y.x - 7, y.y + 4); g.quadraticCurveTo(y.x - 18, y.y + 10, y.x - 26, y.y + 6); g.stroke();

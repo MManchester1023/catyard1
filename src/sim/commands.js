@@ -3,7 +3,7 @@
 import { clamp, rnd, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, COATS, PLACE_LABEL } from './util.js';
 import { hourOf, dayOf, clockStr, spot, blocked, setWeather, spawnMouse, spawnItem, note } from './world.js';
 import { stealFromStash, layoutStash, TASTES, TASTE_LABEL, quirkWord, stashColors } from './quirk.js';
-import { levelOf, xpForLevel, LEVEL_NAMES } from './art.js';
+import { levelOf, xpForLevel, LEVEL_NAMES, SUBJECT_IDS, subjectLabel } from './art.js';
 import { start, done, describe, think } from './acts.js';
 import { fulfil, wantText } from './wants.js';
 import { catSays } from './chat.js';
@@ -14,7 +14,17 @@ import { topFeelings } from './feelings.js';
 import { TEMPERS, TEMPER_IDS, temperName } from './temper.js';
 import { meetFrog } from './frog.js';
 import { PACE, paceOf, scaled, MIN_PACE, MAX_PACE } from './pace.js';
+import { foundCatTree, moonWish } from './secrets.js';
+import { startStars, launchMeteor, starWish, wishReady } from './stars.js';
+import { solve, moonFinal, frogVisitsForMoon } from './mysteries.js';
+import { upsetBy } from './upset.js';
 import { wishLabel } from './wishes.js';
+import { ensureBlog, composePost, markBlogRead, blogStarted } from './blog.js';
+import { ensureMemory, memoryTick, strength, when, regulars } from './memory.js';
+import { favourites, favShift } from './finds.js';
+import { ensureChar, MOODS, moodToday, habitLine, rollMood, DO, stubbornness } from './character.js';
+import { intentActive, applyIntent, whim, intentMenu } from './intent.js';
+import { startInterest, finishInterest, interestActive, ensureInterest, TOPIC_NAMES } from './interest.js';
 import { RECIPES, knows } from './recipes.js';
 import { unlockRecipe, startable, INV_CAP } from './craft.js';
 import { MATERIALS, matText } from './util.js';
@@ -32,11 +42,12 @@ const HELP = {
   set: 'set trait <curious|bold|affection|lazy> <0-1>  |  set need <hunger|thirst|tired|fun|dirty|lonely|create|fear> <0-1>  |  set joy <0-1>',
   tp: 'tp <house|bowl|water|cushion|post|pond|flowers|tree|fence|easel|stash|glass|mat|tablet|table>',
   want: 'want list | want add <text> | want done <n> | want clear',
-  quirk: 'quirk item <bottlecap|feather|button|marble> | quirk color <color> | quirk taste <pile|rows|ring|rainbow> | quirk trait <vangogh|hunter|nightowl|none>',
+  quirk: 'quirk item <bottlecap|feather|button|marble> | quirk color <color> | quirk taste <pile|rows|ring|rainbow> | quirk trait <collector|vangogh|hunter|nightowl|techie|garfield|builder|none>',
   frog: 'frog (status) | frog meet (the cat finds the frog now) | frog out | frog hide | frog visit',
+  secret: 'secret status | secret cattree (put the cat tree behind the cabin) | secret peek (the cat wonders what is behind the cabin) | secret oak (it starts wondering about the oak) | secret coin (it finds the coin now) | secret moon (the moon secret is understood) | secret moonwish (a full-moon wish arrives now) | secret stars (it starts wondering about the stars) | secret starsdone (the stars are understood: falling stars grant wishes) | secret meteor (a shooting star falls now, and the cat sees it) | secret starwish (a star wish arrives now) | secret upset <why> (make it upset)',
   pace: 'pace [X] - how slowly the cat works things out (theories, the sparks, the frog, recipes): 1 is the default, 2 is twice as slow, 0.5 twice as fast. Range 0.25 to 4',
   stash: 'stash list | stash add <type> <color> [n] | stash steal [n] | stash clear',
-  art: 'art level <1-12> | art paint | art clear (delete the gallery)',
+  art: 'art level <1-12> | art paint [subject] | art clear (delete the gallery). Subjects: moon pond oak stash sunbeam rain flowers bird yard window, or made-up pictures: swirl splatter waves blocks dots bloom',
   think: 'think <text> - put a thought in the cat\'s head',
   name: 'name <new name>  |  coat <orange|grey|black|calico>',
   clear: 'clear log | clear journal | clear chat | clear history',
@@ -51,13 +62,17 @@ const HELP = {
   inventory: 'inventory - what the cat is carrying, the recipes it knows and what it has made',
   recipes: 'recipes - everything it can make, and what each needs',
   wishes: 'wishes - notes the cat has left you on the tablet',
+  blog: 'blog status | blog post (make the cat write a post now, starting the blog if it has not) | blog read (mark everything read) | blog clear',
   give: 'give <bark|twig|twine> - leave a bundle of material on the mat for the cat (same as offer material)',
   craft: 'craft give <bark|twig|twine> [n] | craft learn <recipe> | craft now <recipe> | craft table',
   wish: 'wish add <type> [color] | wish clear',
   reset: 'reset confirm - start over with a brand new cat',
+  memories: 'memories   (what the cat remembers, how strongly, and who it counts as a regular; works without admin mode)',
+  mind: 'mind | mind mood <kind> | mind intent <what> | mind whim | mind favs   (today\'s mood, habits, what it means to do, favourite things; plain "mind" works without admin mode)',
+  interest: 'interest | interest start [topic] | interest done   (its special interest and what it has read about it)',
   admin: 'admin on | admin off',
 };
-const OPEN = new Set(['help', 'status', 'save', 'saves', 'admin', 'brain', 'offer', 'tastes', 'feelings', 'history', 'export', 'inventory', 'recipes', 'wishes', 'give']);
+const OPEN = new Set(['memories', 'help', 'status', 'save', 'saves', 'admin', 'brain', 'offer', 'tastes', 'feelings', 'history', 'export', 'inventory', 'recipes', 'wishes', 'give']);
 const num = (s, lo, hi) => { const v = parseFloat(s); return Number.isFinite(v) ? clamp(v, lo, hi) : null; };
 const bad = (usage) => ({ lines: ['Usage: ' + usage] });
 
@@ -143,6 +158,24 @@ export function runCommand(w, line, ctx = {}) {
       if (a[0] === 'visit') { f.out = true; f.timer = w.dayLen * 0.08; f.lastVisit = -999; start(w, 'frog'); return L(`${c.name} is going to see ${f.name}.`); }
       return L(`${f.name}: ${f.out ? 'sitting on the lily pad' : 'under the water'}. ${c.name} has sat with ${f.name} ${f.visits} time${f.visits === 1 ? '' : 's'}; bond ${pct(f.bond)}.`);
     }
+    case 'secret': {
+      const sub = (a[0] || 'status').toLowerCase(), m = w.mysteries;
+      if (sub === 'cattree') return L(foundCatTree(w, 'found') ? `A cat tree now stands behind the cabin.` : 'There already is one.');
+      if (sub === 'peek') { c.peekUrge = true; return L(`${c.name} is wondering what is behind the cabin.`); }
+      if (sub === 'oak') { m.tree.interest = true; m.tree.seen = true; return L(`${c.name} has started wondering about the roots of the oak.`); }
+      if (sub === 'coin') { m.tree.interest = true; m.tree.seen = true; if (!m.tree.solved) solve(w, 'tree'); return L(c.coinDay ? 'The coin is found.' : 'The coin is found.'); }
+      if (sub === 'moon') { const mm = m.moon; mm.theory = mm.theory || 'The moon is watching.'; mm.sawPhases = true; if (!w.frog) meetFrog(w); w.frog.visits = Math.max(w.frog.visits, frogVisitsForMoon(w)); return L(moonFinal(w) ? 'The moon secret is understood: full moons now grant a wish.' : 'The moon is already understood.'); }
+      if (sub === 'moonwish') { if (!m.moon.solved) return L('The moon secret has to be understood first (secret moon).'); moonWish(w); return L('Something glittering has appeared by the pond.'); }
+      if (sub === 'stars') { const ok = startStars(w, 'nights'); m.stars.nights = Math.max(m.stars.nights || 0, 4); return L(ok ? `${c.name} has started wondering about the stars.` : 'It is already wondering about the stars (or understands them).'); }
+      if (sub === 'starsdone') { startStars(w, 'nights'); const ms = m.stars; ms.theory = ms.theory || 'The stars are watching.'; ms.enough = true; ms.enoughDay = dayOf(w); ms.read = Math.max(ms.read || 0, 1); if (!ms.solved) solve(w, 'stars'); return L('The stars are understood: on a clear night one may fall, and the cat may ask it for one thing.'); }
+      if (sub === 'meteor') { if (!m.stars.solved) return L('The stars have to be understood first (secret starsdone).'); w.starWishDay = -99; launchMeteor(w, true); return L('A shooting star is falling. If it is dark and clear the cat will see it.'); }
+      if (sub === 'starwish') { if (!m.stars.solved) return L('The stars have to be understood first (secret starsdone).'); starWish(w); return L('Something glittering is lying in the yard.'); }
+      if (sub === 'upset') { const ok = upsetBy(w, 'admin' + Math.random(), 'Somebody made me upset on purpose, I think.', { level: 0.6, days: 0.3, note: 'an admin did it.' }); return L(ok ? `${c.name} is upset.` : 'It would not be upset (the coin?).'); }
+      return L([`cat tree: ${w.catTree ? w.catTree.how + ' on day ' + w.catTree.day : 'not yet'}${c.peekUrge ? ' (wondering what is behind the cabin)' : ''}`,
+        `oak: ${m.tree.solved ? 'coin found' : m.tree.interest ? Math.floor(m.tree.clues) + ' clues' : 'not interested'} | curiosity ${Math.round(c.traits.curious * 100)}${c.traits.curious > 0.9 ? ' (works out the moon and the oak twice as fast)' : ''}`,
+        `stars: ${m.stars.solved ? 'understood, shooting stars grant wishes (' + (w.stats.starWishes || 0) + ' so far' + (wishReady(w) ? ', next one is free' : '') + ')' : m.stars.interest ? Math.floor(m.stars.clues) + ' clues' + (m.stars.enough ? ', needs the tablet' + (m.stars.read ? ' (read)' : '') : '') : 'not interested, ' + (m.stars.nights || 0) + ' nights of looking up'}`,
+        `moon: ${m.moon.solved ? 'understood, wishes on full moons (' + (w.stats.moonWishes || 0) + ' so far)' : 'frog visits ' + (w.frog ? w.frog.visits : 0) + ' of ' + frogVisitsForMoon(w) + (m.moon.sawPhases ? '' : ', phases not all seen yet')}`]);
+    }
     case 'pace': {
       const v = num(a[0], MIN_PACE, MAX_PACE);
       if (v == null) return L(`Discovery pace is ${paceOf(w)} (1 is the default; higher is slower). ${HELP.pace}`);
@@ -157,7 +190,7 @@ export function runCommand(w, line, ctx = {}) {
     }
     case 'art': {
       if (a[0] === 'level') { const l = Math.round(num(a[1], 1, 12) || 0); if (!l) return bad(HELP.art); c.art.xp = xpForLevel(l); return L(`Painting level ${l}: ${LEVEL_NAMES[l]}.`); }
-      if (a[0] === 'paint') { start(w, 'paint'); return L(`${c.name} is heading to the easel.`); }
+      if (a[0] === 'paint') { const sub = (a[1] || '').toLowerCase(); if (sub && !SUBJECT_IDS.includes(sub)) return bad(HELP.art); start(w, 'paint', sub ? { subject: sub } : {}); return L(`${c.name} is heading to the easel${sub ? ` to paint ${subjectLabel(sub)}` : ''}.`); }
       if (a[0] === 'clear') { c.art.works = []; c.art.count = 0; c.art.best = 0; c.art.hung = null; w.easel = null; return L('Gallery cleared. Skill level kept.'); }
       return bad(HELP.art);
     }
@@ -193,6 +226,33 @@ export function runCommand(w, line, ctx = {}) {
       return L([`carrying: ${t.mats.join(', ') || 'nothing'} (it can hold ${INV_CAP} of each)`, `table: ${t.table ? 'built, the stash lives on it' : 'not built yet'}`, `made so far: ${t.crafted.length ? t.crafted.slice(0, 6).map(x => x.name).join(', ') : 'nothing'}`]);
     }
     case 'recipes': return L(thingsSummary(w).recipes.map(r => `${r.name}: ${r.known ? 'knows how' : 'has to look it up on the tablet'} - needs ${r.cost}${r.made ? ` (made ${r.made})` : ''}`));
+    case 'blog': {
+      ensureBlog(w); const b = w.blog, sub = (a[0] || 'status').toLowerCase();
+      if (sub === 'status') return L(blogStarted(w) ? [`"${b.title}", started day ${b.started}: ${b.posts.length} post${b.posts.length === 1 ? '' : 's'}${b.draft ? ', one being drafted' : ''}`, ...b.posts.slice(0, 5).map(p => `day ${p.day} [${p.mood}] ${p.title}`)] : b.draft ? 'It has a first post drafted and will write it up at the tablet.' : 'It has not started a blog yet.');
+      if (sub === 'post' || sub === 'start') { c.mem.known.tablet = 1; ensureTablet(w); if (!b.draft) { b.draft = composePost(w); b.seenId = b.draft.upTo; } start(w, 'tablet'); return L(`${c.name} is heading to the tablet to write ${blogStarted(w) ? 'a post' : `the first post of "${b.title}"`}.`); }
+      if (sub === 'read') return L(`${markBlogRead(w)} post(s) marked read.`);
+      if (sub === 'clear') { w.blog = null; ensureBlog(w); return L('Blog deleted.'); }
+      return bad(HELP.blog);
+    }
+    case 'memories': {
+      ensureMemory(w.cat); memoryTick(w); const ms = c.memories.slice().sort((x, y) => strength(w, y) - strength(w, x)).slice(0, 12), rg = regulars(w);
+      return L([`${c.memories.length} kept. Regulars: ${rg.map(r => `${r.name} (${r.n} days)`).join(', ') || 'nobody yet'}.`, ...ms.map(m => `[${(strength(w, m) * 100).toFixed(0)}] ${when(w, m)}: ${m.text}${m.recalled ? ` (thought of ${m.recalled}x)` : ''}`)]);
+    }
+    case 'mind': {
+      ensureChar(c); const sub = (a[0] || 'status').toLowerCase();
+      if (sub === 'mood') { if (!ctx.admin) return L('Admin mode is off. Type /admin on first.'); const k = (a[1] || '').toLowerCase(); if (!MOODS[k]) return bad(`kinds: ${Object.keys(MOODS).join(', ')}`); c.dayMood = { day: dayOf(w), kind: k }; return L(`Mood of the day: ${MOODS[k].label}.`); }
+      if (sub === 'intent') { if (!ctx.admin) return L('Admin mode is off. Type /admin on first.'); const k = (a[1] || '').toLowerCase(); if (!DO[k]) return bad(`things: ${Object.keys(DO).join(', ')}`); applyIntent(w, k, 'An admin put the idea in its head.', 'whim'); return L(`${c.name} means to ${DO[k]}.`); }
+      if (sub === 'whim') { if (!ctx.admin) return L('Admin mode is off. Type /admin on first.'); const m = whim(w); if (!m) return L('Nothing to choose from right now.'); applyIntent(w, m.key, m.why, 'whim'); return L(`${c.name} means to ${DO[m.key]}: ${m.why}`); }
+      if (sub === 'favs') { if (!ctx.admin) return L('Admin mode is off. Type /admin on first.'); favShift(w); }
+      const fv = favourites(w), i = c.intent, hs = c.habits.map(habitLine), ch = Object.keys(c.base).map(k => `${k} ${c.traits[k].toFixed(2)} (started ${c.base[k].toFixed(2)})`);
+      return L([`mood today: ${moodToday(w).label}; stubbornness ${(stubbornness(c) * 100).toFixed(0)}%${c.stub && w.clock < c.stub.until ? `; a notion: ${DO[c.stub.key]}` : ''}`, `habits: ${hs.join('; ') || 'none yet'}`, `meaning to: ${intentActive(w) ? `${i.label} (${i.by}): ${i.why}` : 'nothing in particular'}`, `favourite things: ${fv.map(f => `${f.name} (${(f.v * 100).toFixed(0)}%, ${f.n}x)`).join(', ') || 'none yet'}`, `traits: ${ch.join(', ')}`, `could do now: ${intentMenu(w, 12).map(m => m.label).join(', ') || '(not looked yet)'}`]);
+    }
+    case 'interest': {
+      ensureInterest(c); const sub = (a[0] || 'status').toLowerCase(), i = c.interest;
+      if (sub === 'start') { const t = a.slice(1).join(' ').trim() || null; if (t && !TOPIC_NAMES.some(x => x.toLowerCase() === t.toLowerCase())) return bad(`topics include: ${TOPIC_NAMES.slice(0, 14).join(', ')}...`); if (interestActive(w)) finishInterest(w, 'enough'); startInterest(w, t ? TOPIC_NAMES.find(x => x.toLowerCase() === t.toLowerCase()) : null); c.mem.known.tablet = 1; return L(`${c.name} has a new special interest: ${c.interest.topic}.`); }
+      if (sub === 'done') { if (!interestActive(w)) return L('No interest in progress.'); finishInterest(w, 'enough'); return L('Finished.'); }
+      return L([i ? `${i.topic} (${i.state}): ${i.pages} page(s) read${i.misses ? `, ${i.misses} miss(es)` : ''}` : 'no special interest right now', ...(i ? i.facts.map(f => `  ${f.title}: ${f.text}`) : []), ...c.interests.slice(0, 6).map(x => `earlier: ${x.topic} (day ${x.day}-${x.end}, ${x.pages} pages)`)]);
+    }
     case 'wishes': { const ws = c.wishes.filter(x => x.state !== 'draft'); return L(ws.length ? ws.slice(0, 10).map(x => `day ${x.day} [${x.state}] ${wishLabel(x)}: "${x.text}"`) : 'It has not left any notes yet.'); }
     case 'wish': {
       if (a[0] === 'clear') { c.wishes = []; return L('Wishes cleared.'); }
@@ -207,9 +267,10 @@ export function runCommand(w, line, ctx = {}) {
     case 'craft': {
       const sub = (a.shift() || '').toLowerCase();
       if (sub === 'give') { const m = (a[0] || '').toLowerCase(); if (!MATERIALS.includes(m)) return bad(HELP.craft); const k = Math.round(num(a[1], 1, INV_CAP) || 1); c.inv[m] = Math.min(INV_CAP, c.inv[m] + k); return L(`${c.name} now has ${matText(m, c.inv[m])}.`); }
-      if (sub === 'learn') { const id = (a[0] || '').toLowerCase(); if (!RECIPES[id]) return bad(HELP.craft); return L(unlockRecipe(w, id, '', 'itself') ? `${c.name} now knows how to make a ${RECIPES[id].name}.` : 'It already knew.'); }
+      if (sub === 'learn') { const id = (a[0] || '').toLowerCase(); if (!RECIPES[id]) return bad(HELP.craft); return L(unlockRecipe(w, id, '', 'itself') ? (RECIPES[id].knowledge ? `${c.name} now knows where string comes from.` : `${c.name} now knows how to make a ${RECIPES[id].name}.`) : 'It already knew.'); }
       if (sub === 'now' || sub === 'table') {
         const id = sub === 'table' ? 'table' : (a[0] || '').toLowerCase(); if (!RECIPES[id]) return bad(HELP.craft);
+        if (RECIPES[id].knowledge) return L('That is something it knows, not something it makes.');
         for (const [m, n] of Object.entries(RECIPES[id].cost)) c.inv[m] = Math.max(c.inv[m], n);
         if (!knows(w, id)) unlockRecipe(w, id, '', 'itself');
         if (!startable(w, id)) return L('That cannot be made right now (it may already exist).');

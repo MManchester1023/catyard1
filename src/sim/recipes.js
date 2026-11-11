@@ -24,6 +24,17 @@ export const RECIPES = {
     can: w => !w.deco.chime, desire: w => (w.cat.mem.known.tablet && dayNo(w) >= 4 ? 0.8 + w.cat.needs.fear * 2 : 0),
   },
 };
+// the two things below are not made at the bench. 'string' is a way of getting twine (it is only knowledge), and the
+// cat tree is built like the others but takes a lot more.
+RECIPES.string = {
+  name: 'way to get string', knowledge: true, cost: {}, topic: 'Twine', match: /twine|string|thread|cordage|yarn|fib(?:er|re)|rope/i,
+  why: 'I keep needing string, and the human is not always here', learnText: 'work out where string comes from',
+  can: w => !knows(w, 'string'), desire: w => (w.cat.mem.known.cushion && ['chime', 'cattree'].some(id => knows(w, id) && RECIPES[id].can(w)) && (w.cat.inv.twine || 0) < 1 ? 1.5 : 0),
+};
+RECIPES.cattree = {
+  name: 'cat tree', cost: { bark: 8, twig: 5, twine: 3 }, topic: 'Cat tree', match: /cat tree|cat furniture|cat condo|cat tower|scratching post/i, why: 'somewhere tall that is mine',
+  can: w => !w.catTree, desire: w => (w.cat.mem.known.tablet && dayNo(w) >= 5 && w.table ? 1.0 : 0),
+};
 export const RECIPE_IDS = Object.keys(RECIPES);
 export const knows = (w, id) => !!RECIPES[id].preset || !!(w.cat.recipes[id] && w.cat.recipes[id].known);
 export const costText = cost => Object.entries(cost).map(([m, n]) => matText(m, n)).join(' + ');
@@ -34,6 +45,7 @@ export function ensureCraft(w) {
   if (!c.inv) c.inv = {}; for (const m of MATERIALS) if (typeof c.inv[m] !== 'number') c.inv[m] = 0;
   if (!c.recipes) c.recipes = {}; if (!c.crafted) c.crafted = []; if (!c.wishes) c.wishes = [];
   if (c.lastWishAt == null) c.lastWishAt = -999;
+  if (c.upset === undefined) c.upset = null; if (!c.upAt) c.upAt = {}; if (typeof c.missStreak !== 'number') c.missStreak = 0;
   if (w.table === undefined) w.table = null; if (!w.deco) w.deco = {};
   if (!w.hist) w.hist = []; if (!w.days) w.days = {};
   for (const k of ['crafted', 'gathered', 'wishes']) if (!w.stats[k]) w.stats[k] = 0;
