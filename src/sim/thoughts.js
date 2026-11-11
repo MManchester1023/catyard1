@@ -162,6 +162,7 @@ const MORE = {
   wash: ['Scrub, scrub. A new cat emerges.', 'This is the good kind of wet.'],
   matSee: ['{Aitem}, just lying there. That is useful.', 'A bird left {aitem}. I can build with that.', 'Building material, right there on the grass.'],
   matFound: ['A bird brought me something to build with. I did not even have to ask.', 'Good. One more for the pile.', 'Bark and twigs come from the sky too, apparently.'],
+  easelCraving: ['My paws itch and there is nothing to paint on. Bark first.', 'I need an easel. I need it the way I need breakfast.', 'Everything in me wants to make something. So: wood.', 'No canvas, no stand. I will fix that with this tree.'],
   twineFound: ['A bit of string. Excellent.', 'String is everything. String is a chime.', 'I could use this. I will use this.'],
   solved: ['I knew it. I always suspected.', 'The mystery is solved. The wonder remains.', 'Now I understand. Mostly.'],
 };

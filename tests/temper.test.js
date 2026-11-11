@@ -124,7 +124,7 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
   // but it is not only painting: over days it still eats, sleeps and explores
   const wl = fresh('vangogh'); const secs = {}; for (let i = 0; i < 6 * wl.dayLen / 0.5; i++) { tick(wl, 0.5); secs[wl.cat.act.type] = (secs[wl.cat.act.type] || 0) + 1; }
   const tot = Object.values(secs).reduce((x, y) => x + y, 0), share = k => (secs[k] || 0) / tot;
-  assert.ok(share('paint') > 0.09 && share('paint') < 0.3, 'paints a lot but not all day: ' + share('paint').toFixed(2));
+  assert.ok(share('paint') > 0.07 && share('paint') < 0.3, 'paints a lot but not all day (about 0.11 on average; the yarn and zoomies take some of the urge): ' + share('paint').toFixed(2));
   assert.ok(share('sleep') > 0.2 && share('eat') > 0.01, 'still sleeps and eats');
   ok(`over 6 days it paints ${(share('paint') * 100).toFixed(0)}% of the time and still sleeps (${(share('sleep') * 100).toFixed(0)}%) and eats`);
 }

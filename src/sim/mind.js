@@ -14,7 +14,7 @@ import { interestActive } from './interest.js';
 import { wishPending } from './wishes.js';
 import { blogPending } from './blog.js';
 import { deepNightOf } from './temper.js';
-import { knows } from './recipes.js';
+import { knows, easelUrge } from './recipes.js';
 import { clueRoom, frogRoom, gatherRoom } from './pace.js';
 import { darkSky, wishReady, starsNeedsReading } from './stars.js';
 import { isUpset, upsetLevel } from './upset.js';
@@ -179,10 +179,10 @@ export const ACTIVITIES = [
   { key: 'gather', // scratch the oak for bark and twigs when something it means to build needs them
     prep: x => { x.gn = x.dry && x.k.tree && gatherRoom(x.w) ? gatherNeed(x.w) : null; },
     when: x => x.gn && x.awake && x.fit && x.n.hunger < 0.9,
-    score: x => 0.36 + wantPull(x.w, ['craft']) * 0.55 + x.T.curious * 0.12 + (x.bob ? 0.3 : 0) + x.N() },
+    score: x => 0.36 + wantPull(x.w, ['craft']) * 0.55 + x.T.curious * 0.12 + (x.bob ? 0.3 : 0) + easelUrge(x.w) * 0.6 + x.N() },
   { key: 'craft', prep: x => { x.nc = x.dry ? nextCraft(x.w) : null; if (x.nc) x.opts.craft = { recipe: x.nc }; },
     when: x => x.nc && x.awake && x.fit,
-    score: x => 0.78 + wantPull(x.w, ['craft']) * 0.5 + (x.bob ? 0.35 : 0) + x.N() },
+    score: x => 0.78 + wantPull(x.w, ['craft']) * 0.5 + (x.bob ? 0.35 : 0) + (x.nc === 'easel' ? easelUrge(x.w) * 0.5 : 0) + x.N() },
 
   // ----- behind the cabin, and the yard's furniture (each used for its own reasons) -----
   { key: 'peek', when: x => x.c.peekUrge && !x.w.catTree && x.dry && x.awake && x.n.tired < 0.88 && x.out, score: x => 1.25 + x.N() },

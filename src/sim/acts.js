@@ -11,7 +11,7 @@ import { thoughtFor } from './thoughts.js';
 import { offerSpot, inspectOffer, finishOffer, offerLabel } from './offerings.js';
 import { tabletTick, describeTablet } from './tablet.js';
 import { scratchTree, scratchBed, collectDrop, finishCraft, startable, INV_CAP } from './craft.js';
-import { RECIPES } from './recipes.js';
+import { RECIPES, easelUrge } from './recipes.js';
 import { feel } from './feelings.js';
 import { shiftOf, deepNightOf, birdChance } from './temper.js';
 import { frogSpot, frogName, frogDrop, frogVisited } from './frog.js';
@@ -75,7 +75,7 @@ export function start(w, type, opts = {}) {
       a.kind = opts.kind || (kinds.length ? pick(kinds) : 'yarn');
       if (a.kind === 'post' || a.kind === 'tree') aim(a.kind); else if (a.kind === 'bed') aim('cushion'); else a.phase = 'do';
       if (a.kind === 'post') c.postAt = w.clock;
-      a.dur = rnd(9, 16); a.swat = 0; think(w, a.kind); break;
+      a.dur = rnd(9, 16); a.swat = 0; think(w, a.kind === 'tree' && easelUrge(w) > 0.4 && random() < 0.6 ? 'easelCraving' : a.kind); break;
     }
     case 'hunt': a.dur = 40; c.huntCool = 0; think(w, 'stalk'); break;
     case 'beg': aim('bowl'); c.begAt = w.clock; a.dur = 14; think(w, 'beg'); note(w, `The bowl is empty. ${c.name} is waiting nearby, looking tragic.`, 'food'); break;
@@ -177,7 +177,7 @@ export function actTick(w, dt) {
       if (a.phase === 'go') { c.pose = 'walk'; if (arrive(a.spd)) toDo(); } else { c.pose = 'sit'; if (a.t > a.dur) done(w); }
       break;
     case 'zoom':
-      c.pose = 'run'; n.fun = clamp(n.fun - dt * 0.15);
+      c.pose = 'run'; n.fun = clamp(n.fun - dt * 0.15); n.create = clamp(n.create - dt * 0.02 * (c.temper === 'vangogh' ? 0.5 : 1)); // (a burst of running burns some of the urge to make things off: about 0.13 over a full run)
       if (a.t > 14 || a.i >= a.pts.length) { c.pose = 'stand'; done(w); break; }
       if (walk(w, c, a.pts[a.i].x, a.pts[a.i].y, 250, dt)) a.i++;
       break;
@@ -241,6 +241,7 @@ export function actTick(w, dt) {
         break;
       }
       n.fun = clamp(n.fun - (a.kind === 'yarn' ? 0.055 : 0.1) * dt); // (the yarn is the long game)
+      if (a.kind === 'yarn') n.create = clamp(n.create - dt * 0.012 * (c.temper === 'vangogh' ? 0.5 : 1)); // (batting the yarn works some of the urge to make things out: about 0.11 per go)
       if (a.swat > 0) { a.swat -= dt; c.pose = 'swat'; break; }
       const tgt = a.kind === 'yarn' ? o.yarn : w.flies.filter(f => f.on).sort((p, r) => dist(p, c) - dist(r, c))[0];
       if (!tgt || a.t > a.dur) { c.pose = 'stand'; done(w); break; }

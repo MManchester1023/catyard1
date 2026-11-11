@@ -13,6 +13,16 @@ export const frameTotal = w => Object.keys(BUILT).reduce((s, id) => { const r = 
 export const frameDemand = w => Math.max(0, frameTotal(w) - (w.cat.inv.frame || 0));
 export const frameSpare = w => Math.max(0, (w.cat.inv.frame || 0) - frameTotal(w));
 
+// How badly it wants to make something. Zero once it has an easel (or before it has found the oak); otherwise it climbs
+// with the creative urge, from nothing at half full (a Van Gogh feels it sooner) to everything at full. It drives the
+// gathering and the building of the easel (mind.js), the oak's daily allowance (pace.js) and the want itself, below.
+// Playing it off (yarn, zoomies: acts.js) lowers it, since the urge it is made from goes down.
+export const easelUrge = w => {
+  const c = w.cat; if (w.easelMade || !c.mem.known.tree) return 0;
+  const from = c.temper === 'vangogh' ? 0.35 : 0.5;
+  return Math.max(0, Math.min(1, (c.needs.create - from) / (1 - from)));
+};
+
 // preset recipes are things it already knows how to make. the others it has to look up on the tablet first.
 export const RECIPES = {
   frame: {
@@ -21,7 +31,7 @@ export const RECIPES = {
   },
   easel: {
     name: 'easel', cost: { frame: 2 }, preset: true, why: 'I cannot paint on nothing',
-    can: w => !w.easelMade, desire: w => (w.cat.mem.known.tree ? 2.4 + (w.cat.temper === 'vangogh' ? 1.4 : 0) + w.cat.needs.create * 1.2 : 0),
+    can: w => !w.easelMade, desire: w => (w.cat.mem.known.tree ? 2.4 + (w.cat.temper === 'vangogh' ? 1.4 : 0) + w.cat.needs.create * 1.2 + easelUrge(w) * 4 : 0),
   },
   table: {
     name: 'bark table', cost: { frame: 2, bark: 2 }, preset: true, why: 'a proper place to keep my things where I can see them',

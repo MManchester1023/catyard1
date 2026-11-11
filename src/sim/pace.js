@@ -5,6 +5,7 @@
 // all night, but it only learns a handful of things from it; the rest has to wait for tomorrow. That is what makes
 // the big discoveries take days instead of minutes, however busy the cat is.
 import { dayOf } from './world.js';
+import { easelUrge } from './recipes.js';
 
 export const PACE = {
   theoryClues: 8,                                  // clues before the first theory (was 3)
@@ -30,7 +31,8 @@ export const PACE = {
   barkPerDay: 2,                                   // bits of bark or twig the oak gives it in a day, however long it scratches (was unlimited)
   discoverRadius: 100,                             // how close it has to get to a part of the yard to notice it (was 190)
   placesPerDay: 3,                                 // parts of the yard it can take in on one day, however much it wanders (was: all of them in the first half day)
-  barkLuck: 0.5,                                   // multiplies the chance that scratching the oak gives something
+  urgeExtra: 2,                                    // most extra pieces a day the oak gives a cat that is desperate to build its easel
+  barkLuck: 0.5,                                  // multiplies the chance that scratching the oak gives something
   selfTaughtDays: 4,                               // days before it works a recipe out alone when the tablet is off (was 2)
 };
 
@@ -43,7 +45,8 @@ export const clueCap = (w, id) => Math.max(0.5, PACE.perDay[id] * quick(w, id) /
 export const barkLuck = w => Math.min(1, PACE.barkLuck / paceOf(w));
 export const discoverRadius = w => Math.max(60, Math.min(190, PACE.discoverRadius / Math.sqrt(paceOf(w))));
 export const placeCap = w => Math.max(1, Math.round(PACE.placesPerDay / paceOf(w)));
-export const gatherCap = w => Math.max(1, Math.round((PACE.barkPerDay + (w.cat && w.cat.temper === 'builder' ? 2 : 0)) / paceOf(w))); // Bob the Builder gets two more pieces a day
+// Bob the Builder gets two more pieces a day, and a cat that is desperate to paint (easelUrge) gets up to two more until the easel is up
+export const gatherCap = w => Math.max(1, Math.round((PACE.barkPerDay + (w.cat && w.cat.temper === 'builder' ? 2 : 0) + (w.cat ? Math.round(easelUrge(w) * PACE.urgeExtra) : 0)) / paceOf(w)));
 // has the oak anything left to give today?
 export const gatherRoom = w => { const c = w.cat; return (c.gDay === dayOf(w) ? c.gToday || 0 : 0) < gatherCap(w); };
 
