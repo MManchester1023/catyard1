@@ -4,7 +4,7 @@ import { hourOf, isNight, moonPhase, dayOf } from './world.js';
 import { LEVEL_NAMES, levelOf, subjectLabel } from './art.js';
 import { BLOG_THOUGHTS } from './blog.js';
 import { coinActive } from './secrets.js';
-import { isUpset } from './upset.js';
+import { isUpset, upsetVoice, upsetAbout, upsetReason } from './upset.js';
 import { stashColors } from './quirk.js';
 import { MYSTERY_INFO } from './mysteries.js';
 import { starsInterest } from './stars.js';
@@ -66,6 +66,7 @@ const T = {
   bark: ['A piece came off. A gift from the oak.', 'Bark! Useful bark.', 'I did not know trees gave things back.'],
   craftGo: ['I have enough. Time to make something.', 'Paws are for making, not just scratching.', 'To the workbench.'],
   craftDone: ['I made that. Me. With paws.', 'It looks better than I expected.', 'Good. Now what else can I make?'],
+  easelDone: ['An easel. Mine. Now, where did I put the paint?', 'It stands up by itself. I am so proud.', 'A canvas. A real one. Move over, everyone.'],
   tableDone: ['A table. My things can be seen now.', 'No more hiding. A proper place for the collection.', 'I made a table. I am a cat who makes tables.'],
   wishWrite: ['I will leave the human a note. Politely.', 'Typing with one paw. This will take a while.'],
   wishGranted: ['The human listened. I did not expect that.', 'It came. I asked and it came.'],
@@ -96,6 +97,8 @@ const T = {
   'upset:alone': ['Nobody is looking. Good. I did not want to be looked at.', 'I do not need anyone. I am just checking whether anyone is there.'],
   'upset:misses': ['It is not me. It is the mice. They cheat.', 'Three in a row. I need a minute.'],
   'upset:theft': ['Someone took what was mine. I will not forget.'],
+  'notice:moon': ['It changes. Every night, a little different. Who is doing that?', 'The moon was thinner. I looked twice.'],
+  'notice:ripples': ['The pond moved. Nobody touched it.', 'Something is down there. I felt it.'],
   'upset:words': ['That was unkind. I read it twice to be sure.'],
   sulk: ['I am not sulking. I am sitting facing the fence on purpose.', 'Do not look at me.', 'Fine. Fine.', 'I will come around. Eventually. Maybe.'],
   paintVg: ['Just one more. Then I will stop. I will not stop.', 'The canvas cannot wait. I cannot wait.', 'It will never look like what I see. That is why I must keep going.'],
@@ -156,6 +159,8 @@ const MORE = {
   listenGo: ['I can hear the chime from here. Calling.', 'A little music before the next problem.', 'The chime wants company.'],
   washGo: ['I am a mess. Time to fix that.', 'A proper wash. A proper reason.', 'Water, then sun, then dignity.'],
   wash: ['Scrub, scrub. A new cat emerges.', 'This is the good kind of wet.'],
+  matSee: ['{Aitem}, just lying there. That is useful.', 'A bird left {aitem}. I can build with that.', 'Building material, right there on the grass.'],
+  matFound: ['A bird brought me something to build with. I did not even have to ask.', 'Good. One more for the pile.', 'Bark and twigs come from the sky too, apparently.'],
   twineFound: ['A bit of string. Excellent.', 'String is everything. String is a chime.', 'I could use this. I will use this.'],
   solved: ['I knew it. I always suspected.', 'The mystery is solved. The wonder remains.', 'Now I understand. Mostly.'],
 };
@@ -214,6 +219,7 @@ for (const [t, arr] of Object.entries({
 const MEMORY_KINDS = new Set(['idle', 'explore', 'gaze', 'groom', 'sleep', 'perch', 'loungeBeam', 'loungeBed', 'wash', 'paint']);
 export function thoughtFor(w, kind, extra = {}) {
   const v = Object.assign(vars(w), extra), c = w.cat;
+  if (!extra.id && isUpset(w) && Math.random() < 0.4) { const u = T['upset:' + w.cat.upset.hint]; const ab = upsetAbout(w); return u ? pick(u) : ab ? pick([`I am still upset about ${ab}.`, `${ab[0].toUpperCase() + ab.slice(1)}. I have not forgotten.`]) : `I am upset: ${upsetReason(w)}.`; } // (an upset cat says what it is upset about)
   if (!extra.id && MEMORY_KINDS.has(kind) && Math.random() < 0.12) { const s = Math.random() < 0.25 && regularLine(w) || memoryThought(w); if (s) return s; } // something from before comes back to it
   if (kind === 'idle' || kind === 'explore') {
     const r = Math.random();
@@ -247,7 +253,7 @@ export function offlineReply(w, text) {
   else if (has(/blog|do you write|writing/)) body = w.blog && w.blog.started ? `I write ${w.blog.title} on the tablet. ${w.blog.posts.length} post${w.blog.posts.length === 1 ? '' : 's'} so far.${w.blog.posts.some(x => !x.read) ? ' You have not read the latest one. I noticed.' : ' Thank you for reading it. I noticed that too.'}` : c.mem.known.tablet ? 'A blog? I have been thinking about it. I will start when I have enough to say.' : 'A blog is a kind of diary that other people can read. I would need a tablet.';
   else if (has(/cat tree|behind the (house|cabin)|climb/)) body = w.catTree ? pick(['The cat tree behind the cabin is mine. Do not tell the crows.', 'Up there I can see everything. I am very pleased with the cat tree.', 'The cat tree is the best thing in the yard. I will not discuss it further.']) : 'Behind the cabin? I have not looked properly. There might be something back there.';
   else if (has(/coin|shiny|gold|treasure hunt/)) body = coinActive(w) ? 'THE COIN. I have the coin. Nothing can go wrong today.' : w.stash.items.some(i => i.type === 'coin') ? 'I found a coin once. I have not stopped thinking about it.' : 'A coin? I do not have one. Yet. A cat can hope.';
-  else if (has(/upset|angry|mad at|sulk|annoyed|cross with|are you sad/)) body = isUpset(w) ? c.upset.why : pick(['No. I am fine. Mostly.', 'Not today. Ask me when something goes wrong.', 'I am not upset. I am just thinking loudly.']);
+  else if (has(/upset|angry|mad at|sulk|annoyed|cross with|are you sad/)) body = isUpset(w) ? upsetVoice(w) : pick(['No. I am fine. Mostly.', 'Not today. Ask me when something goes wrong.', 'I am not upset. I am just thinking loudly.']);
   else if (has(/bath|wash|clean|dirty|groom|lick/)) body = n.dirty > 0.6 ? 'I am a bit grubby. I will see to it. A cat does not rush hygiene.' : n.dirty < 0.2 ? 'I have just washed. I am spotless. Do not touch me.' : pick(['A cat is never dirty. A cat is temporarily untidy.', 'I wash when I decide to. That is the whole policy.']);
   else if (has(/fish|splash/)) body = w.stats.fish ? `I have caught ${w.stats.fish === 1 ? 'a fish' : w.stats.fish + ' fish'} from the pond. I do not want to talk about how wet I got.` : 'Something shiny moves in the pond sometimes. I am working on it.';
   else if (has(/weather|rain|sunny|cloud|storm|snow/)) body = w.weather.rain > 0.3 ? 'It is raining. I am watching from the cabin like a sensible cat.' : w.weather.cloud > 0.65 ? 'Clouds. The sun is hiding. I do not blame it.' : 'The sun is out. Everything is acceptable.';
@@ -269,5 +275,6 @@ export function offlineReply(w, text) {
   else if (has(/bye|goodnight|good night|see you|gotta go/)) body = pick(['Go. I will be here. I am always here.', '*slow blink* Come back.']);
   else if (has(/thank/)) body = 'You are welcome. I did nothing, but you are welcome.';
   if (!body) return greet ? pick(['*blinks slowly* Hello.', 'Oh. You. Hello.', '*chirrups* You came back.']) : has(/\?/) ? pick(['Hm. I will think about it. Later.', 'I do not know. Ask the moon.', '*tilts head* I understand about half of that.']) : pick(['*tilts head*', 'Mrrp.', '*stares, ears twitching*', 'I am listening. Mostly.']);
+  if (isUpset(w) && !has(/upset|angry|mad at|sulk|annoyed|cross with|are you sad/) && upsetAbout(w) && Math.random() < 0.5) body += ' ' + pick([`I am still upset about ${upsetAbout(w)}.`, `You should know I am upset about ${upsetAbout(w)}.`]);
   return greet ? pick(['Hello.', 'Oh. You.']) + ' ' + body : body;
 }

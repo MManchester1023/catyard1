@@ -20,8 +20,8 @@ export const COAT_LABEL = { orange: 'orange tabby', grey: 'grey tabby', black: '
 
 // things a collector cat can fall for
 export const ITEM_TYPES = ['bottlecap', 'feather', 'button', 'marble'];
-export const ITEM_LABEL = { bottlecap: 'bottle cap', feather: 'feather', button: 'button', marble: 'marble', twine: 'bit of string', coin: 'coin' };
-export const ITEM_PLURAL = { bottlecap: 'bottle caps', feather: 'feathers', button: 'buttons', marble: 'marbles', twine: 'bits of string', coin: 'coins' };
+export const ITEM_LABEL = { bottlecap: 'bottle cap', feather: 'feather', button: 'button', marble: 'marble', twine: 'bit of string', bark: 'piece of bark', twig: 'twig', coin: 'coin' };
+export const ITEM_PLURAL = { bottlecap: 'bottle caps', feather: 'feathers', button: 'buttons', marble: 'marbles', twine: 'bits of string', bark: 'pieces of bark', twig: 'twigs', coin: 'coins' };
 export const COLORS = {
   red: '#d9453b', orange: '#ee8a2e', yellow: '#f0cd3d', green: '#58a95b', teal: '#2fa5a0',
   blue: '#3f76d6', purple: '#8a5bc8', pink: '#e780ab', white: '#f1eee6', black: '#2b2830',
@@ -35,9 +35,11 @@ export const PLACE_LABEL = {
   easel: 'the easel', stash: 'the stash', glass: 'the glass', mat: 'the mat', tablet: 'the tablet', table: 'the bark table', craft: 'the workbench',
 };
 
-// things the cat gathers and makes with. bark and twigs fall from the oak; twine only ever comes from the human
+// things the cat gathers and makes with. bark and twigs come from the oak, and birds sometimes drop any of the three;
+// twine is otherwise only given by the human (or pulled from the cushion once it has worked out how)
 export const MATERIALS = ['bark', 'twig', 'twine'];
-export const MAT_LABEL = { bark: 'piece of bark', twig: 'twig', twine: 'length of twine' };
-export const MAT_PLURAL = { bark: 'pieces of bark', twig: 'twigs', twine: 'lengths of twine' };
+export const MAT_CAP = 12; // how many of each it can carry
+export const MAT_LABEL = { bark: 'piece of bark', twig: 'twig', twine: 'length of twine', frame: 'oak frame' };
+export const MAT_PLURAL = { bark: 'pieces of bark', twig: 'twigs', twine: 'lengths of twine', frame: 'oak frames' };
 export const MAT_GIFT = { bark: 2, twig: 2, twine: 1 }; // how many one offering of it is worth
 export const matText = (type, n = 1) => `${n} ${n === 1 ? MAT_LABEL[type] : MAT_PLURAL[type]}`;

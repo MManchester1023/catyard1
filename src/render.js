@@ -63,7 +63,7 @@ function drawTable(g, w) {
   g.fillStyle = '#6b4a35'; rr(g, x - 36, y - 8, 72, 14, 3); g.fill();
   g.fillStyle = '#9a7650'; rr(g, x - 35, y - 9, 70, 10, 3); g.fill();
   g.strokeStyle = 'rgba(60,38,22,0.45)'; g.lineWidth = 0.9; g.beginPath(); for (let i = -3; i <= 3; i++) { g.moveTo(x + i * 10 - 3, y - 7); g.lineTo(x + i * 10 + 3, y - 1); } g.stroke();
-  const frames = c.crafted.filter(m => m.recipe === 'frame').slice(0, 3);
+  const frames = c.crafted.filter(m => m.recipe === 'frame' && m.work).slice(0, 3); // (only the ones hung round a painting)
   frames.forEach((m, i) => { const fx = x - 24 + i * 24, fy = y - 21, hu = hueOf(m.work || 'x'); g.fillStyle = '#5d3f2b'; g.fillRect(fx - 7, fy - 2, 14, 12); g.fillStyle = `hsl(${hu},45%,62%)`; g.fillRect(fx - 5.2, fy - 0.4, 10.4, 8.8); g.fillStyle = `hsl(${(hu + 70) % 360},50%,45%)`; g.fillRect(fx - 5.2, fy + 4, 10.4, 4.4); g.fillStyle = '#5d3f2b'; g.fillRect(fx - 1, fy + 9, 2, 3); });
   const items = w.stash.items.slice().sort((a, b) => a.oy - b.oy).slice(-60);
   for (const it of items) drawItem(g, it.type, it.color, x + it.ox, y + it.oy - 4, 4.3, it.rot);
@@ -164,8 +164,7 @@ export function createRenderer(canvas) {
     g.fillStyle = 'rgba(0,0,0,0.16)'; ell(g, 258, 492, 22, 7); g.fill(); g.fillStyle = '#8a6a4b'; ell(g, 258, 490, 19, 6); g.fill(); g.fillStyle = '#c9b184'; g.fillRect(251, 440, 14, 50);
     g.strokeStyle = '#a28b60'; g.lineWidth = 1.4; for (let y = 444; y < 490; y += 5) { g.beginPath(); g.moveTo(251, y); g.lineTo(265, y + 3); g.stroke(); } g.fillStyle = '#8a6a4b'; ell(g, 258, 440, 11, 4); g.fill();
     drawMat(g, o_mat); drawTabletStand(g, o_tab);
-    // easel legs
-    g.strokeStyle = '#8a6244'; g.lineWidth = 3.2; g.lineCap = 'round'; g.beginPath(); g.moveTo(498, 424); g.lineTo(508, 346); g.moveTo(542, 424); g.lineTo(532, 346); g.moveTo(520, 416); g.lineTo(520, 440); g.stroke();
+    // (the easel is drawn with the moving things, because the cat has to build it first)
     // tree
     g.fillStyle = 'rgba(0,0,0,0.16)'; ell(g, 826, 326, 46, 10); g.fill();
     g.fillStyle = '#6b4a35'; g.beginPath(); g.moveTo(808, 328); g.quadraticCurveTo(814, 280, 812, 200); g.lineTo(834, 200); g.quadraticCurveTo(832, 280, 842, 328); g.fill();
@@ -250,7 +249,7 @@ export function createRenderer(canvas) {
     drawPile(g, w);
     const dr = c.act && c.act.type === 'play' && c.act.drop; if (dr) { const u = Math.min(1, c.act.t * 2.4); g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, dr.x, dr.y + 3, 6, 2); g.fill(); MATS[dr.type](g, dr.x, dr.y - (1 - u) * 14 - 1, 1.15, u * 1.3); g.globalAlpha = 0.5 + 0.4 * Math.sin(t * 9); g.fillStyle = '#fff6c0'; ell(g, dr.x + 7, dr.y - 7, 1.6, 1.6); g.fill(); g.globalAlpha = 1; }
     // things on the ground
-    for (const it of w.items) { g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, it.x, it.y + 2, 6, 2); g.fill(); const wob = Math.sin(t * 3 + it.x) * 0.5; if (it.type === 'twine') drawTwine(g, it.x, it.y - 1, 1.1 * persp(it.y)); else drawItem(g, it.type, it.color, it.x, it.y - 1.5, 6.4 * persp(it.y), wob); if (it.moon) { for (let i = 0; i < 4; i++) { const u = (t * 0.8 + i / 4) % 1; g.globalAlpha = Math.sin(u * 3.14); g.fillStyle = '#fff6c8'; const a = i * 1.7 + t * 0.6; g.fillRect(it.x + Math.cos(a) * 11 - 0.8, it.y - 6 - u * 10 + Math.sin(a) * 3, 1.6, 1.6); } g.globalAlpha = 1; }
+    for (const it of w.items) { g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, it.x, it.y + 2, 6, 2); g.fill(); const wob = Math.sin(t * 3 + it.x) * 0.5; if (MATS[it.type]) MATS[it.type](g, it.x, it.y - 1, 1.1 * persp(it.y)); else drawItem(g, it.type, it.color, it.x, it.y - 1.5, 6.4 * persp(it.y), wob); if (it.moon) { for (let i = 0; i < 4; i++) { const u = (t * 0.8 + i / 4) % 1; g.globalAlpha = Math.sin(u * 3.14); g.fillStyle = '#fff6c8'; const a = i * 1.7 + t * 0.6; g.fillRect(it.x + Math.cos(a) * 11 - 0.8, it.y - 6 - u * 10 + Math.sin(a) * 3, 1.6, 1.6); } g.globalAlpha = 1; }
       if (it.age < 4) { g.globalAlpha = 1 - it.age / 4; g.strokeStyle = '#fff'; ell(g, it.x, it.y, 10 + it.age * 6, 5 + it.age * 3); g.stroke(); g.globalAlpha = 1; } }
     for (const tr of w.treats) { g.fillStyle = '#e9a05a'; ell(g, tr.x, tr.y, 6, 3.6); g.fill(); g.fillStyle = '#c47a38'; ell(g, tr.x + 1.4, tr.y - 0.6, 2.6, 1.4); g.fill(); }
     const y = o.yarn; g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, y.x, y.y + 6, 9, 3); g.fill(); g.fillStyle = '#d8453b'; ell(g, y.x, y.y, 8, 8); g.fill(); g.strokeStyle = '#f08a80'; g.lineWidth = 1.2; g.beginPath(); g.arc(y.x, y.y, 5, 0.3, 2.6); g.moveTo(y.x - 7, y.y - 2); g.quadraticCurveTo(y.x, y.y + 3, y.x + 7, y.y - 3); g.stroke();
@@ -276,11 +275,14 @@ export function createRenderer(canvas) {
       else { g.fillStyle = '#2a1818'; rr(g, sx, sy, 20, 28, 2); g.fill(); g.strokeStyle = '#e0604f'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(sx + 6, sy + 9); g.lineTo(sx + 14, sy + 19); g.moveTo(sx + 14, sy + 9); g.lineTo(sx + 6, sy + 19); g.stroke(); }
     }
 
-    // easel canvas
+    // the easel, once it has been built: legs, then the canvas
+    if (w.easelMade) {
+    g.strokeStyle = '#8a6244'; g.lineWidth = 3.2; g.lineCap = 'round'; g.beginPath(); g.moveTo(498, 424); g.lineTo(508, 346); g.moveTo(542, 424); g.lineTo(532, 346); g.moveTo(520, 416); g.lineTo(520, 440); g.stroke();
     const ops = cache(w), ew = 64, eh = 48, ex0 = o.easel.x - ew / 2, ey0 = o.easel.y - 78;
     g.fillStyle = '#7a553b'; g.fillRect(ex0 - 4, ey0 - 4, ew + 8, eh + 8);
     if (ops) { const prog = w.easel.progress, kk = w.easel.work.id + ':' + Math.round(prog * 60); if (kk !== easelKey) { easelKey = kk; ex.clearRect(0, 0, 240, 180); drawPainting(ex, 240, 180, ops, prog); } g.fillStyle = '#f4efe4'; g.fillRect(ex0, ey0, ew, eh); g.drawImage(easelC, ex0, ey0, ew, eh); } else { g.fillStyle = '#f4efe4'; g.fillRect(ex0, ey0, ew, eh); }
     g.fillStyle = '#7a553b'; g.fillRect(ex0 - 4, ey0 + eh + 4, ew + 8, 4);
+    }
 
     // sorted actors
     const list = [];

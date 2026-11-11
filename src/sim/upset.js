@@ -7,6 +7,13 @@ import { feel } from './feelings.js';
 
 export const isUpset = w => !!(w.cat.upset && w.cat.upset.until > w.clock);
 export const upsetLevel = w => (isUpset(w) ? w.cat.upset.level : 0);
+// what it is upset about, so it can say so. REASON is how the game words it, ABOUT how the cat would ("I am upset about ...")
+const REASON = { hungry: 'the bowl has been empty a long time', alone: 'it has been alone too long', misses: 'too many misses in a row', wish: 'nobody has answered its note', wish2: 'its note was never answered', theft: 'something was taken from its stash', words: 'it did not like that note' };
+const ABOUT = { hungry: 'the bowl being empty for so long', alone: 'being left alone for so long', misses: 'missing so many catches in a row', wish: 'nobody answering my note', wish2: 'my note never being answered', theft: 'someone taking things from my stash', words: 'that unkind note' };
+export const upsetReason = w => { const u = isUpset(w) ? w.cat.upset : null; return u ? (String(u.note || '').replace(/\.$/, '') || REASON[u.why] || REASON[u.hint] || (/\s/.test(u.why || '') ? u.why.replace(/\.$/, '') : 'something it would rather not say')) : ''; };
+export const upsetAbout = w => { const u = isUpset(w) ? w.cat.upset : null; return u ? ABOUT[u.why] || ABOUT[u.hint] || '' : ''; };
+// the cat's own words about it (an old save only kept a short code, so fall back to the cause)
+export const upsetVoice = w => { const u = isUpset(w) ? w.cat.upset : null; if (!u) return ''; if (u.text) return u.text; if (/\s/.test(u.why || '')) return u.why; const a = upsetAbout(w); return a ? `I am upset about ${a}.` : `I am upset, and I will not say why.`; };
 
 // o: { level 0..1, days (how long it lasts), cool (days before the same thing can upset it again), bond, keys, note, lonely, hint }
 export function upsetBy(w, why, text, o = {}) {
@@ -16,7 +23,8 @@ export function upsetBy(w, why, text, o = {}) {
   if (c.upAt[why] != null && w.clock - c.upAt[why] < w.dayLen * (o.cool == null ? 0.6 : o.cool)) return false;
   c.upAt[why] = w.clock;
   const until = w.clock + days * w.dayLen, was = isUpset(w) ? c.upset : null;
-  c.upset = { why, level: was ? Math.max(level, was.level) : level, until: was ? Math.max(until, was.until) : until, since: was ? was.since : w.clock };
+  const cause = !was || level >= was.level ? { why, text, note: o.note || '', hint: o.hint || why } : { why: was.why, text: was.text, note: was.note, hint: was.hint }; // (the worse thing is what it is upset about)
+  c.upset = Object.assign(cause, { level: was ? Math.max(level, was.level) : level, until: was ? Math.max(until, was.until) : until, since: was ? was.since : w.clock });
   feel(w, o.keys || [], { joy: -0.22 * level, lonely: o.lonely || 0 }, 'let down');
   c.bond = clamp(c.bond - (o.bond == null ? 0.02 : o.bond));
   journal(w, text, 'upset');

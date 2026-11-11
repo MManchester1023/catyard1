@@ -9,7 +9,7 @@ export const TEMPERS = {
   hunter: { name: 'Hunter', line: 'Hunts whenever it can. It notices mice and birds from far off, stalks them whether or not it is hungry, tries again almost at once, and is a better bet for the lucky bird.' },
   nightowl: { name: 'Night owl', line: 'Stays up late. Its day runs about three hours behind: lively well into the night, asleep through the early morning.' },
   techie: { name: 'Techie', line: 'Goes to the tablet first. Whenever it cannot work something out (a recipe, a mystery, a word) it looks it up before it tries anything else.' },
-  garfield: { name: 'Garfield', line: 'Loves to eat and to lie around. Hungry sooner, eats at the first excuse, naps in the sun and on the cushion, and would much rather do that than paint, play or explore.' },
+  garfield: { name: 'Garfield', line: 'Loves to eat and to lie around. Hungry sooner, bored sooner, eats at the first excuse, and naps in the sun and on the cushion, but only when it is actually tired. It would still rather do that than paint, play or explore.' },
   builder: { name: 'Bob the Builder', line: 'Focused on making things. It gathers more from the oak each day, always has a project, builds faster, and would rather craft than just about anything.' },
 };
 export const TEMPER_IDS = Object.keys(TEMPERS);

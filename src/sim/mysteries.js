@@ -14,6 +14,18 @@ export const MYSTERY_INFO = {
   tree: { name: 'the old oak', short: 'oak', secret: true }, // only shown once the cat has started wondering about it
   stars: { name: 'the stars', short: 'stars', secret: true }, // likewise: after enough nights spent looking up
 };
+// a mystery is only part of the cat's life once it has noticed it (a clue, a theory, a wondering or an answer)
+export const discovered = m => !!(m && (m.seen || m.interest || m.solved || m.theory || m.clues > 0));
+const NOTICE = {
+  moon: { text: 'has started to wonder about the moon.', diary: 'The moon is not the same every night. It grows, it shrinks, it goes away. Something is going on up there and I would like to know what.' },
+  ripples: { text: 'has started to wonder about the ripples in the pond.', diary: 'Something moves the water, and there is nothing there. I looked. I am going to keep looking.' },
+};
+// the first time it learns anything about one, it says so (and that is when it shows up on the Cat tab)
+function noticed(w, id) {
+  const m = w.mysteries[id]; if (m.seen) return; m.seen = true;
+  const x = NOTICE[id]; if (!x) return;
+  note(w, `${w.cat.name} ${x.text}`, 'wonder'); journal(w, x.diary, 'mystery'); w.cat.thoughtHint = 'notice:' + id;
+}
 const blank = () => ({ clues: 0, theory: null, conf: 0, solved: false, revised: 0, phases: [] });
 export const makeMysteries = () => ({ moon: blank(), ripples: blank(), sparks: blank(), tree: blank(), stars: blank() });
 
@@ -45,7 +57,7 @@ export function clue(w, id, amt = 1, phase = null) {
   const room = clueCap(w, id) - (m.today || 0);
   if (room <= 0.001) { if (id === 'moon') moonPhasesCheck(w, id, m); return; }
   amt = Math.min(amt, room); m.today = (m.today || 0) + amt;
-  m.clues += amt;
+  m.clues += amt; noticed(w, id);
   if (!m.theory && m.clues >= sc(PACE.theoryClues, 2)) { setTheory(w, id, pick(THEORIES[id](w.cat.quirk))); m.conf = 0.3; return; }
   if (!m.theory) { if (id === 'moon') moonPhasesCheck(w, id, m); return; }
   m.conf = Math.min(0.95, m.conf + (PACE.confPerClue / pm) * amt);

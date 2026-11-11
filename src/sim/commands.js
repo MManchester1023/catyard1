@@ -190,7 +190,7 @@ export function runCommand(w, line, ctx = {}) {
     }
     case 'art': {
       if (a[0] === 'level') { const l = Math.round(num(a[1], 1, 12) || 0); if (!l) return bad(HELP.art); c.art.xp = xpForLevel(l); return L(`Painting level ${l}: ${LEVEL_NAMES[l]}.`); }
-      if (a[0] === 'paint') { const sub = (a[1] || '').toLowerCase(); if (sub && !SUBJECT_IDS.includes(sub)) return bad(HELP.art); start(w, 'paint', sub ? { subject: sub } : {}); return L(`${c.name} is heading to the easel${sub ? ` to paint ${subjectLabel(sub)}` : ''}.`); }
+      if (a[0] === 'paint') { if (!w.easelMade) return L(`${c.name} has no easel yet. (craft now easel builds one at once.)`); const sub = (a[1] || '').toLowerCase(); if (sub && !SUBJECT_IDS.includes(sub)) return bad(HELP.art); start(w, 'paint', sub ? { subject: sub } : {}); return L(`${c.name} is heading to the easel${sub ? ` to paint ${subjectLabel(sub)}` : ''}.`); }
       if (a[0] === 'clear') { c.art.works = []; c.art.count = 0; c.art.best = 0; c.art.hung = null; w.easel = null; return L('Gallery cleared. Skill level kept.'); }
       return bad(HELP.art);
     }

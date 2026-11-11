@@ -4,7 +4,7 @@ import { makeWorld, tick } from '../src/sim/sim.js';
 import { Brain, DEFAULTS, digest } from '../src/sim/llm.js';
 import { userSpeaks } from '../src/sim/chat.js';
 
-const w = makeWorld('Testy');
+const w = makeWorld('Testy'); w.easelMade = { x: w.o.easel.x, y: w.o.easel.y, day: 1 }; // (the cat has to build its easel before it can paint; this test needs finished works to ask about)
 for (let i = 0; i < 3 * w.dayLen * 10; i++) tick(w, 0.1);
 console.log(digest(w).split('\n').slice(0, 4).join('\n'), '\n...');
 

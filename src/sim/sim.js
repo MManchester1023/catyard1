@@ -18,7 +18,7 @@ import { considerWish, wishTick } from './wishes.js';
 import { isUpset, upsetLevel, upsetTick } from './upset.js';
 import { secretsRoll, moonWishTick, coinActive } from './secrets.js';
 import { meteorTick } from './stars.js';
-import { selfTaught } from './craft.js';
+import { selfTaught, hangSpareFrames } from './craft.js';
 import { makeTemper } from './temper.js';
 import { frogTick } from './frog.js';
 import { discoverRadius, placeCap } from './pace.js';
@@ -50,7 +50,7 @@ export function makeWorld(name) {
     weather: { type: 'clear', rain: 0, cloud: 0.15, timer: rnd(160, 300), forced: null },
     o: makeObjects(), mice: [], birds: [], flies: [], sparks: [], treats: [], items: [], offers: [], tablet: null, netq: [], netOn: false,
     table: null, deco: {}, hist: [], days: {}, lastThoughtId: 0, lastDid: null, frog: null, pace: 1, catTree: null, moonWishDay: -99, starWishDay: -99, meteor: null, meteorPlan: null,
-    stash: { site: null, items: [], seed: 1, known: null }, easel: null, ripple: null, rippleT: rnd(50, 100), thief: null, thiefT: dayLen * rnd(2, 4),
+    stash: { site: null, items: [], seed: 1, known: null }, easel: null, easelMade: null, ripple: null, rippleT: rnd(50, 100), thief: null, thiefT: dayLen * rnd(2, 4),
     mysteries: makeMysteries(), fed: 0, mouseT: rnd(30, 70), itemT: rnd(20, 50), wantT: 30, createdAt: Date.now(),
     stats: { meals: 0, naps: 0, mice: 0, misses: 0, treats: 0, zoomies: 0, gifts: 0, scratch: 0, collected: 0, found: 0, paintings: 0, wants: 0, offerings: 0, crafted: 0, gathered: 0, wishes: 0, birds: 0, frogVisits: 0, fish: 0 },
   };
@@ -96,8 +96,8 @@ export function tick(w, dt) {
   const asleep = c.pose === 'sleep' || c.pose === 'inside';
   n.hunger = clamp(n.hunger + dt / 380 * (asleep ? 0.45 : 1) * (c.temper === 'garfield' ? 1.3 : 1));
   n.thirst = clamp(n.thirst + dt / 560 * (asleep ? 0.4 : 1));
-  n.tired = clamp(n.tired + (asleep ? -dt / 300 : (dt / 1500) * (c.act.type === 'zoom' ? 3 : 1)));
-  n.fun = clamp(n.fun + dt / 380 * (asleep ? 0.2 : 1));
+  n.tired = clamp(n.tired + (asleep ? -dt / 220 : (dt / 1500) * (c.act.type === 'zoom' ? 3 : 1)));
+  n.fun = clamp(n.fun + dt / 380 * (asleep ? 0.2 : 1) * (c.temper === 'garfield' ? 1.6 : 1)); // (Garfield is bored sooner)
   n.dirty = clamp(n.dirty + dt / 1100);
   n.lonely = clamp(n.lonely + dayDt / 1.5 * (0.7 + c.bond * 0.8) * (asleep ? 0.3 : 1));
   n.create = clamp(n.create + dayDt / 1.0 * (asleep ? 0.2 : 1) * (c.temper === 'vangogh' ? 1.5 : 1));
@@ -110,7 +110,10 @@ export function tick(w, dt) {
   // senses
   if (!c.hidden) {
     const dd = dayOf(w); if (c.mem.dDay !== dd) { c.mem.dDay = dd; c.mem.dToday = 0; }
-    if (c.mem.dToday < placeCap(w)) for (const id of PLACES) if (!c.mem.known[id] && Math.hypot(c.x - o[id].x, c.y - o[id].y) < discoverRadius(w)) { discover(w, id); c.mem.dToday++; if (c.mem.dToday >= placeCap(w)) break; } // pace.js: only so much of the yard sinks in per day
+    for (const id of PLACES) { // pace.js: only so much of the yard sinks in per day (a techie's tablet does not use up the day's share)
+      const techTablet = id === 'tablet' && c.temper === 'techie';
+      if ((c.mem.dToday < placeCap(w) || techTablet) && !c.mem.known[id] && (id !== 'easel' || w.easelMade) && Math.hypot(c.x - o[id].x, c.y - o[id].y) < discoverRadius(w)) { discover(w, id); if (!techTablet) c.mem.dToday++; }
+    }
     if (bm.on && !c.mem.known.beam && Math.hypot(c.x - bm.x, c.y - bm.y) < 55) discover(w, 'beam', `${c.name} found a warm patch of sunlight.`);
   }
 
@@ -153,7 +156,7 @@ export function tick(w, dt) {
   offerTick(w); upsetTick(w, dt);
 
   // wants
-  w.wantT -= dt; if (w.wantT <= 0) { w.wantT = w.dayLen / 6; characterTick(w); intentTick(w); interestTick(w); memoryTick(w); genWants(w); selfTaught(w); considerWish(w); wishTick(w); considerBlog(w); refreshFavourites(w); favShift(w); secretsRoll(w); }
+  w.wantT -= dt; if (w.wantT <= 0) { w.wantT = w.dayLen / 6; characterTick(w); intentTick(w); interestTick(w); memoryTick(w); genWants(w); selfTaught(w); hangSpareFrames(w); considerWish(w); wishTick(w); considerBlog(w); refreshFavourites(w); favShift(w); secretsRoll(w); }
   moonWishTick(w); meteorTick(w, dt);
   wantsTick(w, dayDt);
 

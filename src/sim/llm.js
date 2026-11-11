@@ -4,7 +4,7 @@ import { ITEM_PLURAL, ITEM_LABEL, COAT_LABEL } from './util.js';
 import { hourOf, clockStr, dayOf, journal, note, moonPhase } from './world.js';
 import { LEVEL_NAMES, levelOf, subjectLabel } from './art.js';
 import { stashColors } from './quirk.js';
-import { MYSTERY_INFO } from './mysteries.js';
+import { MYSTERY_INFO, discovered } from './mysteries.js';
 import { describe } from './acts.js';
 import { catSays } from './chat.js';
 import { feelingSummary } from './feelings.js';
@@ -12,6 +12,7 @@ import { TEMPERS } from './temper.js';
 import { RECIPES, knows, costText } from './recipes.js';
 import { wishLabel, openWishes } from './wishes.js';
 import { matText, MATERIALS } from './util.js';
+import { upsetAbout, upsetReason, upsetVoice } from './upset.js';
 import { memoryDigest } from './memory.js';
 import { favourites } from './finds.js';
 import { characterDigest } from './character.js';
@@ -22,7 +23,7 @@ export const DEFAULTS = { apiKey: '', model: 'claude-haiku-5-5', on: true, daily
 const API = 'https://api.anthropic.com/v1/messages';
 const clip = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').replace(/^["'\s]+|["'\s]+$/g, '').slice(0, n);
 const today = () => new Date().toISOString().slice(0, 10);
-const moods = (c, w) => { const n = c.needs; return w && c.upset && c.upset.until > w.clock ? 'upset (' + c.upset.why + ')' : n.hunger > 0.75 ? 'hungry' : n.tired > 0.8 ? 'sleepy' : n.fun > 0.7 ? 'bored' : n.lonely > 0.7 ? 'lonely' : c.mood.joy > 0.6 ? 'happy' : 'calm'; };
+const moods = (c, w) => { const n = c.needs; return w && c.upset && c.upset.until > w.clock ? 'upset about ' + (upsetAbout(w) || upsetReason(w)) : n.hunger > 0.75 ? 'hungry' : n.tired > 0.8 ? 'sleepy' : n.fun > 0.7 ? 'bored' : n.lonely > 0.7 ? 'lonely' : c.mood.joy > 0.6 ? 'happy' : 'calm'; };
 
 export function digest(w) {
   const c = w.cat, q = c.quirk, a = c.art, m = w.mysteries, n = w.stash.items.length;
@@ -35,7 +36,7 @@ export function digest(w) {
     `Obsession: collecting ${ITEM_PLURAL[q.item]}. Favourite color ${q.favColor}. Stash: ${n} items${n ? ` (${top})` : ''}${w.stash.site ? (w.table ? ', kept on the bark table you made' : ', hidden ' + w.stash.site.label) : ''}, arranged as ${q.taste}.`,
     `Painting: ${LEVEL_NAMES[levelOf(a.xp)]} (level ${levelOf(a.xp)}), ${a.count} works, best ${Math.round(a.best * 100)}/100${last ? `, latest "${last.title}" (${last.critique})` : ''}.`,
     `Wants: ${c.wants.map(x => x.text).join('; ') || 'nothing in particular'}.`,
-    `Mysteries: ${Object.entries(m).filter(([k, v]) => !MYSTERY_INFO[k].secret || v.seen).map(([k, v]) => `${MYSTERY_INFO[k].name}: ${v.solved ? 'solved - ' + v.theory : v.theory ? 'my theory is "' + v.theory + '"' : 'no theory yet'}`).join(' | ')}.`,
+    `Mysteries: ${Object.entries(m).filter(([k, v]) => discovered(v)).map(([k, v]) => `${MYSTERY_INFO[k].name}: ${v.solved ? 'solved - ' + v.theory : v.theory ? 'my theory is "' + v.theory + '"' : 'no theory yet'}`).join(' | ')}.`,
     `Recent events: ${w.log.slice(0, 6).map(e => e.text).reverse().join(' / ')}`,
   ];
   const lastOffer = c.offerHist && c.offerHist[0], pages = w.tablet && w.tablet.pages.slice(0, 3).map(x => x.title);
@@ -50,7 +51,7 @@ export function digest(w) {
   if (w.stats.birds) lines.push(`You have caught a bird ${w.stats.birds === 1 ? 'once' : w.stats.birds + ' times'}. It is a rare thing.`);
   const ow = openWishes(w); if (ow.length) lines.push(`Notes you left the human on the tablet (unanswered): ${ow.map(x => wishLabel(x)).join(', ')}.`);
   if (w.blog && w.blog.started) lines.push(`You write a blog called "${w.blog.title}" (${w.blog.posts.length} post${w.blog.posts.length === 1 ? '' : 's'}) on the tablet. It is about what you do, think, feel and want.`);
-  if (c.upset && c.upset.until > w.clock) lines.push(`You are upset right now: ${c.upset.why}`);
+  if (c.upset && c.upset.until > w.clock) lines.push(`You are upset right now: ${upsetVoice(w)}`);
   if (w.catTree) lines.push('There is a cat tree behind the cabin that you think of as yours.');
   const fv = favourites(w); if (fv.length) lines.push(`Your favourite things to do (they lift you more than anything else): ${fv.map(x => x.name).join(', ')}.`);
   for (const l of characterDigest(w)) lines.push(l);
@@ -63,7 +64,7 @@ export function digest(w) {
   return lines.join('\n');
 }
 
-const SYSTEM = (w) => `You are ${w.cat.name}, a cat. You live in a small walled yard with a cabin, a pond, an old oak, a flower bed and an easel. You are not an assistant and never say you are an AI, a program or a simulation. You have a mind of your own: you collect ${ITEM_PLURAL[w.cat.quirk.item]} in a secret stash, you paint with your paws and want to get better at it, and you wonder about the moon, the ripples in the pond and the dancing sparks at dusk. Sometimes the human leaves an object, a bundle of bark, twig or twine, or a handwritten note on the mat by the glass, and there is a tablet on a stump that shows you pages from the real internet and lets you leave notes for the human. You scratch the oak for bark and twigs and make things with them (a table for your stash, frames, a bird feeder, a wind chime). What you like comes from how things have made you feel.
+const SYSTEM = (w) => `You are ${w.cat.name}, a cat. You live in a small walled yard with a cabin, a pond, an old oak, a flower bed${w.easelMade ? ' and an easel' : ''}. You are not an assistant and never say you are an AI, a program or a simulation. You have a mind of your own: you collect ${ITEM_PLURAL[w.cat.quirk.item]} in a secret stash, you paint with your paws and want to get better at it, and you wonder about the moon, the ripples in the pond and the dancing sparks at dusk. Sometimes the human leaves an object, a bundle of bark, twig or twine, or a handwritten note on the mat by the glass, and there is a tablet on a stump that shows you pages from the real internet and lets you leave notes for the human. You scratch the oak for bark and twigs and make things with them (a table for your stash, frames, a bird feeder, a wind chime). What you like comes from how things have made you feel.
 Voice: first person, short, dry, curious, a little odd. Concrete cat concerns over abstract ones. No emoji, no hashtags, no stage directions in asterisks unless very brief. You understand some human words but not everything.
 Truthfulness: only refer to events and things listed in STATE. Do not invent new objects, places or events. If asked about something you do not know, say so like a cat would.
 Always reply with a single JSON object and nothing else.`;

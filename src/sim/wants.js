@@ -47,8 +47,8 @@ export function genWants(w) {
   }
   const n = w.stash.items.length;
   if (!has(w, 'fill')) cand.push({ kind: 'fill', target: n < 10 ? Math.max(5, Math.ceil((n + 1) / 5) * 5) : Math.ceil((n + 1) / 10) * 10, w: 0.8 });
-  if (!has(w, 'master') && c.art.xp >= 0) cand.push({ kind: 'master', target: clamp(Math.max(0.4, c.art.best + 0.08), 0, 0.95), w: 0.9 });
-  for (const id of Object.keys(w.mysteries)) { const m = w.mysteries[id]; if ((id === 'sparks' && !(m.seen || m.clues > 0)) || ((id === 'tree' || id === 'stars') && !m.interest)) continue; /* it cannot want to catch what it has not seen */ if (!m.solved && m.conf < 0.8 && !has(w, 'solve', id)) cand.push({ kind: 'solve', key: id, mystery: id, w: 1.0 }); }
+  if (!has(w, 'master') && w.easelMade && c.art.xp >= 0) cand.push({ kind: 'master', target: clamp(Math.max(0.4, c.art.best + 0.08), 0, 0.95), w: 0.9 });
+  for (const id of Object.keys(w.mysteries)) { const m = w.mysteries[id]; if ((id !== 'tree' && id !== 'stars' && !(m.seen || m.clues > 0)) || ((id === 'tree' || id === 'stars') && !m.interest)) continue; /* it cannot want to catch what it has not seen */ if (!m.solved && m.conf < 0.8 && !has(w, 'solve', id)) cand.push({ kind: 'solve', key: id, mystery: id, w: 1.0 }); }
   if (c.needs.lonely > 0.65 && !has(w, 'attention')) cand.push({ kind: 'attention', w: 1.4 });
   if (dayOf(w) >= 2) { // goals for the hunt
     if (!has(w, 'catch', 'mouse')) cand.push({ kind: 'catch', key: 'mouse', prey: 'mouse', target: 5, w: 0.8 + (c.temper === 'hunter' ? 0.6 : 0) });

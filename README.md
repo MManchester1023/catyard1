@@ -139,7 +139,7 @@ The **oak frame** is a building part: two pieces of bark make one, and bigger th
 
 Until the easel and the table exist, the bark it finds goes to them first. A save made before this change keeps the easel it already had.
 
-When it wants to make something it does not know, it goes to the tablet and looks the topic up; the page it reads is what unlocks the recipe. If the tablet turns up nothing twice it works it out itself, and with no connection it does the same after about four days. **Twine can only come from you** (leave it on the mat, or use `/give twine`); it cannot be found in the yard.
+When it wants to make something it does not know, it goes to the tablet and looks the topic up; the page it reads is what unlocks the recipe. If the tablet turns up nothing twice it works it out itself, and with no connection it does the same after about four days. **Twine is scarce**: it comes from you (leave it on the mat, or use `/give twine`), now and then from a bird, and from the cushion once the cat has worked out where string comes from.
 
 ## The yard, washing and being upset
 
@@ -147,7 +147,7 @@ When it wants to make something it does not know, it goes to the tablet and look
 - **Sleep, eating and grooming.** Eating makes it sleepy: a full meal adds 0.3 to tiredness (a small snack, proportionally less), and it always grooms itself after eating. It does not go to bed or nap unless it is actually tired (a little tired is enough for the night, properly tired for a nap in the sun), it wakes when it has slept itself out in the daytime, and once in bed for the night it sleeps on to the morning. Waiting out the rain in the cabin when it is not tired is sitting about, not a nap. One consequence is that cats sleep somewhat more overall than before, since every meal adds tiredness (an ordinary cat around 40% of the time, Garfield around 48%, down from about 56%).
 - **Washing.** It has a proper routine now: it gets dirty, and it washes (front paws, face, then the rest) instead of a quick lick.
 - **It can get upset.** Being left hungry for too long, being alone for too long, a hunt that fails again and again, a collection raided by the crow, and a note on the tablet that nobody answers all upset it. The Cat tab shows *Upset* and what it is upset about, and the cat says so itself, in its own words, in its thoughts, in chat, on its blog and to Claude; it sulks and avoids things for a while, and it is soothed by what it likes: a gift on the mat, a visit with the frog, being fed, a wish granted.
-- **Birds leave things.** Items turn up in the yard because a bird dropped them, not at random.
+- **Birds leave things.** Items turn up in the yard because a bird dropped them, not at random. What a bird leaves is always either a trinket (a marble, button, feather or bottle cap, in a colour, and often the kind the cat collects) or a crafting part (a piece of bark, a twig or a bit of string). About four drops in ten are crafting parts, and the part the cat is shortest of is the likeliest; it will not be dropped one it is already carrying a full load of. The cat picks them up like any other find, straight into what it is carrying.
 - **Hunting.** Every cat can catch a bird now (about one every five days for an ordinary cat, about one every two for a Hunter). It can also fish in the pond when a fish shows itself, and a caught mouse fills hunger and takes a bit off boredom. Wants like "catch 5 mice" or "catch 5 birds" come up.
 - **The glass.** It comes to the glass for attention much less often than it used to.
 

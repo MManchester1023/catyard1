@@ -101,7 +101,7 @@ const calm = (w, hour = 10) => {
   assert.ok(w.journal.some(j => /cat tree/.test(j.text)) && w.log.some(e => /cat tree/.test(e.text)));
   const w2 = mk(); w2.cat.needs.lonely = 0; w2.catTree = { x: 50, y: 300, how: 'found', day: 1 }; let sat = 0; run(w2, 12000 * 2); assert.ok((w2.stats.catTreeSits || 0) >= 2, 'it sits in it: ' + w2.stats.catTreeSits);
   assert.ok(!foundCatTree(w2, 'found'), 'there is only one');
-  const m = calm(mk()); unlockRecipe(m, 'cattree', 'Cat tree'); m.table = { x: 1, y: 1, day: 1 }; Object.assign(m.cat.inv, { bark: 8, twig: 5, twine: 3 }); addWant(m, { kind: 'craft', key: 'cattree', recipe: 'cattree' });
+  const m = calm(mk()); unlockRecipe(m, 'cattree', 'Cat tree'); m.table = { x: 1, y: 1, day: 1 }; Object.assign(m.cat.inv, { frame: 3, bark: 2, twig: 5, twine: 3 }); addWant(m, { kind: 'craft', key: 'cattree', recipe: 'cattree' });
   assert.ok(knows(m, 'cattree')); assert.ok(finishCraft(m, 'cattree') && m.catTree && m.catTree.how === 'made' && m.cat.inv.bark === 0, 'it builds one from bark, twigs and twine');
   assert.ok(!m.cat.wants.some(x => x.recipe === 'cattree'), 'and stops wanting one');
   const r = deserialize(serialize(m)); assert.ok(r.catTree && r.catTree.how === 'made', 'saved');
@@ -160,7 +160,7 @@ const calm = (w, hour = 10) => {
   const src = ['acts', 'mysteries', 'craft', 'wants', 'tablet', 'frog', 'offerings', 'upset', 'secrets', 'wishes'].map(f => fs.readFileSync(new URL(`../src/sim/${f}.js`, import.meta.url), 'utf8')).join('\n');
   const keys = new Set([...src.matchAll(/think\(w, '([A-Za-z]+)'/g)].map(m => m[1]).concat([...src.matchAll(/thoughtHint = '([A-Za-z]+)/g)].map(m => m[1])));
   const w = mk(); const idle = new Set(Array.from({ length: 200 }, () => thoughtFor(w, 'idle')));
-  const missing = [...keys].filter(k => k !== 'idle' && k !== 'theory' && k !== 'explore' && (() => true)()).filter(k => { const seen = new Set(Array.from({ length: 60 }, () => thoughtFor(w, k))); return [...seen].every(s => idle.has(s)); });
+  const missing = [...keys].filter(k => k !== 'idle' && k !== 'theory' && k !== 'notice' && k !== 'explore' && (() => true)()).filter(k => { const seen = new Set(Array.from({ length: 60 }, () => thoughtFor(w, k))); return [...seen].every(s => idle.has(s)); });
   assert.deepEqual(missing, [], 'these fall back to idle lines: ' + missing);
   const w2 = mk(); const all = new Set(); for (const t of ['collector', 'vangogh', 'hunter', 'nightowl', 'techie', 'garfield', 'builder']) { w2.cat.temper = t; for (let i = 0; i < 80; i++) all.add(thoughtFor(w2, 'idle')); }
   assert.ok(all.size > 45, 'plenty of variety across quirks: ' + all.size);

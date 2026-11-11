@@ -63,16 +63,16 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
 
 // ---- the table: needs bark, moves the stash out of hiding and onto itself, and is made only once
 {
-  const w = makeWorld('Fern'), c = w.cat; calm(w); knowAll(w);
+  const w = makeWorld('Fern'), c = w.cat; calm(w); knowAll(w); w.easelMade = { day: 1 }; // (the easel is tested on its own below)
   for (let i = 0; i < 7; i++) w.stash.items.push({ id: 'i' + i, type: c.quirk.item, color: ['red', 'blue', 'green'][i % 3], ox: 0, oy: 0, rot: 0 });
   w.stash.site = { x: 52, y: 318, label: 'behind the cabin' };
-  assert(knows(w, 'table') && !startable(w, 'table') && shortfall(w, 'table').bark === 4, 'a preset recipe, but it has no bark yet');
-  assert.deepEqual(gatherNeed(w), { bark: 4, twig: 0 }, 'so it knows it needs to gather bark');
-  c.art.count = 1; c.art.works.unshift({ id: 'p0', title: 'First', score: 0.5, subject: 'moon', level: 1, day: 1, when: 'Night', critique: 'x' }); c.inv = { bark: 3, twig: 2, twine: 0 };
-  assert.equal(nextCraft(w), null, 'it saves its bark for the table instead of spending it on a frame'); c.art.count = 0; c.art.works = [];
-  c.inv.bark = 4; assert.equal(nextCraft(w), 'table');
+  assert(knows(w, 'table') && !startable(w, 'table') && shortfall(w, 'table').bark === 2 && shortfall(w, 'table').frame === 2, 'a preset recipe, but it has no frames or bark yet');
+  assert.deepEqual(gatherNeed(w), { bark: 6, twig: 0 }, 'so it knows it needs to gather bark: two for the table and four for the frames');
+  c.art.count = 1; c.art.works.unshift({ id: 'p0', title: 'First', score: 0.5, subject: 'moon', level: 1, day: 1, when: 'Night', critique: 'x' }); c.inv = { bark: 3, twig: 2, twine: 0, frame: 0 };
+  assert.equal(nextCraft(w), 'frame', 'the table is built from frames, so it makes those first'); c.art.count = 0; c.art.works = [];
+  c.inv.bark = 4; assert(finishCraft(w, 'frame') && finishCraft(w, 'frame') && c.inv.frame === 2 && c.inv.bark === 0, 'two frames made out of four bark (and kept: nothing to frame)'); assert.equal(nextCraft(w), null, 'still short of bark for the table itself'); c.inv.bark = 2; assert.equal(nextCraft(w), 'table');
   start(w, 'craft', { recipe: 'table' }); for (let i = 0; i < 1200 && !w.table; i++) { c.reeval = 1e9; tick(w, 0.1); }
-  assert(w.table, 'it built the table'); assert.equal(c.inv.bark, 0, 'and spent the bark');
+  assert(w.table, 'it built the table'); assert.equal(c.inv.bark, 0, 'and spent the bark'); assert.equal(c.inv.frame, 0, 'and the frames');
   assert(w.stash.site.table && w.stash.site.x === w.o.table.x, 'the stash moved onto the table');
   assert(w.stash.items.every(i => Math.abs(i.ox) <= 40 && Math.abs(i.oy) <= 12), 'laid out on the tabletop: ' + JSON.stringify(w.stash.items.slice(0, 2)));
   assert(w.journal.some(e => /table/.test(e.text) && e.tag === 'craft'), 'in its diary');
@@ -84,18 +84,19 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
   ok('table: bark gathered, built once, stash moves onto it, tabletop layout, obstacle');
 }
 
-// ---- other recipes: frames need a painting; feeder and chime have to be looked up first
+// ---- other recipes: a spare frame goes round a painting; feeder and chime have to be looked up first
 {
-  const w = makeWorld('Fern'), c = w.cat; calm(w); knowAll(w); c.inv = { bark: 12, twig: 12, twine: 12 };
-  assert(!startable(w, 'frame'), 'no painting to frame yet');
+  const w = makeWorld('Fern'), c = w.cat; calm(w); knowAll(w); c.inv = { bark: 12, twig: 12, twine: 12, frame: 0 }; w.easelMade = { day: 1 }; w.table = { x: 1, y: 1, day: 1 };
+  assert(!startable(w, 'frame'), 'nothing needs a frame and there is no painting to frame');
   c.art.count = 2; c.art.works.unshift({ id: 'p1', title: 'Moon Dip', score: 0.8, subject: 'moon', level: 3, day: 1, when: 'Night', critique: 'x' }); const xp = c.art.xp;
-  assert(startable(w, 'frame')); const m = finishCraft(w, 'frame'); assert(m && m.work === 'Moon Dip' && c.art.xp > xp && c.inv.bark === 10 && c.inv.twig === 11, JSON.stringify(m));
+  assert(startable(w, 'frame')); const m = finishCraft(w, 'frame'); assert(m && c.crafted.some(x => x.recipe === 'frame' && x.work === 'Moon Dip') && c.art.xp > xp && c.inv.bark === 10 && c.inv.twig === 12 && c.inv.frame === 0, 'with nothing to build it is hung round the best painting: ' + JSON.stringify(c.crafted[0]));
+  c.inv.frame = 1;
   assert(!knows(w, 'feeder') && !startable(w, 'feeder') && !startable(w, 'chime'), 'unknown recipes cannot be made');
   assert.equal(finishCraft(w, 'feeder'), false, 'and finishing one it does not know does nothing');
   unlockRecipe(w, 'feeder', 'Bird feeder'); assert(knows(w, 'feeder') && startable(w, 'feeder'));
   finishCraft(w, 'feeder'); assert(w.deco.feeder && !startable(w, 'feeder'));
   assert.equal(w.stats.crafted, 2);
-  ok('recipes: frame needs a painting, feeder and chime need the tablet, results persist as decorations');
+  ok('recipes: a spare frame goes round a painting, feeder and chime need the tablet, results persist as decorations');
 }
 
 // ---- looking a recipe up on the tablet (fake Wikipedia), and working it out alone when the tablet cannot help
@@ -195,7 +196,7 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
   c.wishes.push({ id: 'k', state: 'open', day: 2, kind: 'item', type: 'marble', color: 'teal', text: 'A teal marble.', written: { day: 2, time: '09:00' } });
   feel(w, ['color:teal'], { joy: 0.2 }, 'warm');
   const w2 = deserialize(serialize(w)), c2 = w2.cat;
-  assert.deepEqual(c2.inv, c.inv); assert(knows(w2, 'chime') && w2.deco.chime === true);
+  assert.deepEqual(c2.inv, { frame: 0, ...c.inv }); assert(knows(w2, 'chime') && w2.deco.chime === true);
   assert.deepEqual(w2.hist.slice(0, w.hist.length), w.hist, 'the whole timeline came back (loading adds at most the first moment of the new session)'); assert.deepEqual(Object.keys(w2.days), Object.keys(w.days)); assert.deepEqual(c2.crafted, c.crafted);
   assert(c2.assoc['color:teal'] && c2.wishes.some(x => x.id === 'k' && x.state === 'open'));
   assert.equal(!!w2.table, !!w.table); if (w.table) assert(w2.stash.site.table, 'the stash is still on the table');

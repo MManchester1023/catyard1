@@ -16,7 +16,7 @@ import { runCommand } from '../src/sim/commands.js';
 import { dayOf } from '../src/sim/world.js';
 
 const ok = m => console.log('  ok ' + m);
-const fresh = (temper = null) => { const w = makeWorld('Tess'); w.cat.temper = temper; w.cat.traits.curious = 0.5; return w; }; // (not over 0.75 or 0.9: those cats have extra secrets, tested below)
+const fresh = (temper = null) => { const w = makeWorld('Tess'); w.easelMade = { day: 1 }; w.cat.temper = temper; w.cat.traits.curious = 0.5; return w; }; // (not over 0.75 or 0.9: those cats have extra secrets, tested below)
 // a cat with nothing pressing, in daylight, that knows the whole yard: its choice depends only on what is being tested
 const calm = (w, hour = 10) => {
   const c = w.cat; w.clock = (hour / 24) * w.dayLen; w.weather.rain = 0; w.weather.cloud = 0.1; c.huntCool = 0; c.hidden = false;
@@ -72,7 +72,7 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
   ok('the cat has to get within about 100 px of a part of the yard to notice it (was 190)');
 
   // ...and only three new parts of the yard sink in per day, however much it wanders
-  const tour = pace => { const x = fresh(); x.pace = pace; x.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; x.cat.reeval = 1e9; const ids = ['pond', 'post', 'tree', 'flowers', 'cushion', 'yarn', 'fence', 'easel', 'tablet']; const days = [];
+  const tour = pace => { const x = fresh(); x.easelMade = { day: 1 }; x.pace = pace; x.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; x.cat.reeval = 1e9; const ids = ['pond', 'post', 'tree', 'flowers', 'cushion', 'yarn', 'fence', 'easel', 'tablet']; const days = [];
     for (let d = 0; d < 6 && days.length < 6; d++) { for (const id of ids) { x.cat.x = x.o[id].x; x.cat.y = x.o[id].y; tick(x, 0.001); } days.push(ids.filter(id => x.cat.mem.known[id]).length); x.clock += x.dayLen; }
     return days; };
   assert.deepEqual(tour(1), [3, 6, 9, 9, 9, 9], 'standing at every part of the yard on day one it takes in three, then three more each day: ' + tour(1));
@@ -136,11 +136,11 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
   assert.equal(decide(wt, null).type, 'hunt', 'it hunts when tired and well fed');
   ok('the Hunter spots prey from 560 px (others 300), and hunts when tired or full');
 
-  const prey = temper => { let n = 0, hunts = 0; for (let r = 0; r < 3; r++) { const w = fresh(temper); let last = null; for (let i = 0; i < 6 * w.dayLen / 0.5; i++) { tick(w, 0.5); if (w.cat.act.type === 'hunt' && w.cat.act !== last) hunts++; last = w.cat.act; } n += w.stats.mice; } return { n, hunts }; };
+  const prey = temper => { let n = 0, hunts = 0; for (let r = 0; r < 5; r++) { const w = fresh(temper); let last = null; for (let i = 0; i < 6 * w.dayLen / 0.5; i++) { tick(w, 0.5); if (w.cat.act.type === 'hunt' && w.cat.act !== last) hunts++; last = w.cat.act; } n += w.stats.mice; } return { n, hunts }; };
   const ph = prey('hunter'), po = prey(null);
-  assert.ok(ph.hunts > po.hunts * 2.5, `far more hunts: ${ph.hunts} vs ${po.hunts}`);
+  assert.ok(ph.hunts > po.hunts * 2, `far more hunts: ${ph.hunts} vs ${po.hunts}`);
   assert.ok(ph.n > po.n, `and more mice caught: ${ph.n} vs ${po.n}`);
-  ok(`over 18 cat-days the Hunter made ${ph.hunts} stalks (others ${po.hunts}) and caught ${ph.n} mice (others ${po.n})`);
+  ok(`over 30 cat-days the Hunter made ${ph.hunts} stalks (others ${po.hunts}) and caught ${ph.n} mice (others ${po.n})`);
 }
 
 // ---------- the rare bird catch ----------

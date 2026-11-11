@@ -53,6 +53,7 @@ ok('a generated work is titled, filed in the gallery and survives a save');
 // the paint act and the admin command can be told what to make
 const w3 = makeWorld('Tess'); w3.cat.art.xp = xpForLevel(5); w3.cat.mem.known.easel = 1;
 const run = l => runCommand(w3, l, { admin: true }).lines.join(' ');
+assert(/no easel yet/.test(run('art paint bloom')) && w3.cat.act.type !== 'paint', 'with no easel there is nothing to paint on'); w3.easelMade = { day: 1 };
 assert(/a bloom/.test(run('art paint bloom')), 'the command names the subject');
 assert.equal(w3.cat.act.type, 'paint'); assert.equal(w3.cat.act.subject, 'bloom'); assert.equal(w3.cat.act.work.subject, 'bloom');
 assert(/Usage/.test(run('art paint nonsense')), 'an unknown subject is refused');

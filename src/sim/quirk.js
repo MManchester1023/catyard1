@@ -1,5 +1,5 @@
 // The collector quirk: what the cat covets, where it hides the stash, how it arranges it.
-import { rnd, pick, uid, an, ITEM_TYPES, ITEM_LABEL, ITEM_PLURAL, COLOR_NAMES, mulberry32 } from './util.js';
+import { rnd, pick, uid, an, ITEM_TYPES, ITEM_LABEL, ITEM_PLURAL, COLOR_NAMES, MATERIALS, MAT_CAP, mulberry32 } from './util.js';
 import { STASH_SITES, note, journal, dayOf } from './world.js';
 import { feel, affinity } from './feelings.js';
 import { upsetBy } from './upset.js';
@@ -44,7 +44,7 @@ export function stashOf(w, type = null) { return type ? w.stash.items.filter(i =
 
 // how badly the cat wants a thing it can see on the ground
 export function itemValue(w, it) {
-  if (it.type === 'twine') return w.cat.inv && w.cat.inv.twine < 12 ? 0.95 : 0; // string is something every cat can use
+  if (MATERIALS.includes(it.type)) return w.cat.inv && w.cat.inv[it.type] < MAT_CAP ? (it.type === 'twine' ? 0.95 : 0.85) : 0; // building parts are something every cat can use
   const q = w.cat.quirk, have = stashColors(w);
   let v = it.type === q.item ? 1 : 0.1;
   if (it.color === q.favColor) v += 0.55;

@@ -1,5 +1,5 @@
 // Deciding what to do next: needs, personality, wants and curiosity all pull on the choice.
-import { rnd, clamp, dist } from './util.js';
+import { rnd, clamp, dist, MATERIALS } from './util.js';
 import { hourOf, sunOf, moonPos, moonLight, beamOf } from './world.js';
 import { bestItem, itemValue } from './quirk.js';
 import { wantPull } from './wants.js';
@@ -21,7 +21,11 @@ import { isUpset, upsetLevel } from './upset.js';
 import { coinActive } from './secrets.js';
 
 const FEATURES = ['pond', 'post', 'tree', 'flowers', 'cushion', 'yarn', 'fence', 'easel', 'tablet'];
-export const unknownPlaces = w => FEATURES.filter(id => !w.cat.mem.known[id]);
+export const unknownPlaces = w => FEATURES.filter(id => !w.cat.mem.known[id] && (id !== 'easel' || w.easelMade)); // (there is no easel to find until the cat has built one)
+// a cat that is less tired than this does not lie down: not for the night, and not for a nap
+export const SLEEPY = 0.3;
+// and a daytime nap, in the sun or on the cushion, wants a cat that is properly tired
+export const NAPPY = 0.42;
 
 export function interest(w) {
   const c = w.cat; let best = null, bd = 420;
@@ -52,14 +56,14 @@ export function decide(w, cur) {
   const unk = unknownPlaces(w), S = {}, N = () => rnd(0, 0.1), opts = {};
   const dry = rain < 0.4;
   S.idle = 0.2 + T.lazy * 0.22 - (bob ? 0.1 : 0) + N();
-  S.explore = (0.1 + T.curious * 0.38) * (1 - T.lazy * 0.35) * (1 - night * 0.7 * nd) * (unk.length ? 1.5 : 1) * (gf ? 0.55 : 1) * (bob ? 0.85 : 1) + N();
+  S.explore = (0.1 + T.curious * 0.38) * (1 - T.lazy * 0.35) * (1 - night * 0.7 * nd) * (unk.length ? 1.5 : 1) * (tech && unk.includes('tablet') ? 1.8 : 1) * (gf ? 0.7 : 1) * (bob ? 0.85 : 1) + N(); // (a techie goes looking for the tablet)
   S.eat = o.bowl.food > 0.02 && n.hunger > (gf ? 0.18 : 0.35) ? (n.hunger - (gf ? 0.02 : 0.15)) * 2.1 + N() : 0;
   S.drink = n.thirst > 0.35 ? (n.thirst - 0.2) * 1.9 + N() : 0;
-  S.groom = (c.groomNext ? 0.9 : 0) + (n.dirty > 0.45 && n.dirty <= 0.58 ? (n.dirty - 0.3) * 1.5 : 0);
+  S.groom = (c.groomNext ? 3 : 0) + (n.dirty > 0.45 && n.dirty <= 0.58 ? (n.dirty - 0.3) * 1.5 : 0);
   // a proper wash when it is properly dirty: to the water, a good scrub, then drying off in the sun if there is some
   S.wash = (n.dirty > 0.58 || (n.wet > 0.5 && rain < 0.3)) && w.clock - (c.washAt || -1e9) > w.dayLen * 0.15 && !deepNight ? 0.7 + (n.dirty - 0.5) * 1.6 + N() : 0;
-  S.sleep = (n.tired > 0.55 ? (n.tired - 0.4) * 2 + T.lazy * 0.2 : 0) + deepNight * (1.1 + n.tired * 0.3) + night * 0.12 + (gf && n.hunger < 0.55 && rain < 0.4 ? 0.42 + T.lazy * 0.3 : 0) + N(); // (Garfield lies around)
-  S.play = n.fun > 0.3 ? (n.fun - 0.15) * 1.7 * (0.65 + T.curious * 0.5) * (1 - night * 0.8 * nd) * (rain > 0.3 ? 0.3 : 1) * (gf ? 0.4 : bob ? 0.8 : 1) + N() : 0;
+  S.sleep = n.tired < (deepNight ? 0.2 : SLEEPY) ? 0 : (n.tired > 0.55 ? (n.tired - 0.4) * 2 + T.lazy * 0.2 : 0) + deepNight * (1.1 + n.tired * 0.3) + night * 0.12 + 0 + N(); // (not tired, no sleep: Garfield only drops off a little sooner)
+  S.play = n.fun > 0.3 ? (n.fun - 0.15) * 1.7 * (0.65 + T.curious * 0.5) * (1 - night * 0.8 * nd) * (rain > 0.3 ? 0.3 : 1) * (gf ? 0.55 : bob ? 0.8 : 1) + N() : 0;
   const prey = w.mice.filter(m => !m.dead && m.state !== 'flee').concat(w.birds.filter(b => b.state === 'ground' && b.alert < 0.5));
   let target = null, td = hunter ? 560 : 300; prey.forEach(p => { const d = dist(c, p); if (d < td) { td = d; target = p; } });
   S.hunt = target && c.huntCool <= 0 && n.tired < (hunter ? 0.93 : 0.85) && !c.hidden ? (hunter ? 1.25 + T.bold * 0.2 + (n.hunger > 0.5 ? 0.25 : 0) : 0.3 + T.bold * 0.5 + (n.hunger > 0.5 ? 0.5 : 0) + dusk * 0.2 - (target.kind === 'bird' ? 0.25 : 0)) * (1 - deepNight * 0.4) * (gf ? 0.6 : 1) + wantPull(w, ['catch']) * 0.45 + N() : 0;
@@ -72,10 +76,10 @@ export function decide(w, cur) {
 
   // ----- what makes this cat this cat -----
   const it = dry ? bestItem(w, c) : null;
-  if (it) { S.collect = (0.5 + itemValue(w, it) * 0.45 + wantPull(w, ['find']) * 0.5 + T.curious * 0.15) * (1 - deepNight * 0.7) * (col || it.type === 'twine' || it.moon ? 1 : 0.3); opts.collect = { item: it }; } else S.collect = 0; // only a Collector goes out of its way for things
+  if (it) { S.collect = (0.5 + itemValue(w, it) * 0.45 + wantPull(w, ['find']) * 0.5 + T.curious * 0.15) * (1 - deepNight * 0.7) * (col || MATERIALS.includes(it.type) || it.moon ? 1 : 0.3); opts.collect = { item: it }; } else S.collect = 0; // only a Collector goes out of its way for things
   const since = (w.clock - (q.lastVisit || 0)) / w.dayLen;
   S.stashvisit = w.stash.site && !deepNight && dry ? clamp((since - 0.12) * 2.2, 0, 0.95) * (col ? 1 : 0.4) + wantPull(w, ['guard']) * 0.9 + (n.fear || 0) * 0.7 * (col ? 1 : 0.5) + N() : 0;
-  S.paint = n.create > (vg ? 0.25 : 0.4) && sun > 0.15 && dry && n.tired < (vg ? 0.93 : 0.85) && !deepNight ? (vg ? (n.create - 0.1) * 2 + 0.2 : (n.create - 0.25) * 1.9) + wantPull(w, ['master']) * 0.6 + T.curious * 0.1 + N() : 0;
+  S.paint = w.easelMade && n.create > (vg ? 0.25 : 0.4) && sun > 0.15 && dry && n.tired < (vg ? 0.93 : 0.85) && !deepNight ? (vg ? (n.create - 0.1) * 2 + 0.2 : (n.create - 0.25) * 1.9) + wantPull(w, ['master']) * 0.6 + T.curious * 0.1 + N() : 0;
   if (gf) S.paint *= 0.45;
   const mp = moonPos(w), m = w.mysteries.moon, sm = w.mysteries.stars, skyOk = w.weather.cloud < 0.7 && rain < 0.3 && n.hunger < 0.85 && n.tired < 0.92 && !deepNight;
   const gMoon = mp && moonLight(w) > 0.12 && skyOk ? 0.28 + (1 - m.conf) * 0.4 + T.curious * 0.2 + (w.cat.wants.some(x => x.kind === 'solve' && x.mystery === 'moon') ? 0.7 : 0) + N() : 0;
@@ -119,7 +123,7 @@ export function decide(w, cur) {
   S.post = k.post && dry && !deepNight && n.tired < 0.85 && !c.hidden ? clamp((clawSince - 0.07) * 2.4, 0, 0.95) + T.bold * 0.1 + (hunter ? 0.12 : 0) + N() : 0; // claws need doing every so often
   S.yarn = k.yarn && dry && !deepNight && n.fun > 0.14 && n.tired < 0.8 && !c.hidden ? (0.2 + (n.fun - 0.12) * 1.7) * (0.7 + T.curious * 0.5) * (gf ? 0.4 : bob ? 0.8 : 1) * (1 - night * 0.6 * nd) + N() : 0;
   const bm = beamOf(w), spots = []; if (bm.on && k.beam) spots.push('beam'); if (k.cushion) spots.push('cushion');
-  S.lounge = spots.length && dry && !deepNight && !c.hidden && n.tired > 0.16 && n.tired < 0.9 && loungeSince > 0.1 ? 0.14 + (n.tired - 0.15) * 0.9 + T.lazy * 0.35 + (gf ? 0.4 : 0) + (bm.on && k.beam ? 0.14 : 0) - (vg || bob ? 0.1 : 0) + N() : 0;
+  S.lounge = spots.length && dry && !deepNight && !c.hidden && n.tired > NAPPY && n.tired < 0.9 && loungeSince > (gf ? 0.26 : 0.16) ? 0.14 + (n.tired - 0.15) * 0.9 + T.lazy * 0.35 + (bm.on && k.beam ? 0.14 : 0) - (vg || bob ? 0.1 : 0) + N() : 0;
   if (S.lounge) { const nap = c.mem.nap; const sp = spots.map(s => [s, (s === 'beam' ? 1 : 0.7) + (nap[s] || 0) * 0.04 + rnd(0, 0.4) + placeLove(w, s) * 0.3]).sort((a, b) => b[1] - a[1])[0][0]; opts.lounge = { spot: sp, lounge: true }; }
   // once it knows the cushion has string in it, it pulls at it when a recipe needs some
   S.stringbed = k.cushion && dry && !deepNight && n.tired < 0.85 && n.hunger < 0.9 && stringWanted(w) && bedRoom(w) ? 0.62 + wantPull(w, ['craft']) * 0.5 + (bob ? 0.3 : 0) + T.curious * 0.1 + N() : 0;

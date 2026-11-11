@@ -37,7 +37,8 @@ const withRandom = (v, f) => { const r = Math.random; Math.random = () => v; try
   for (const t of [null, ...TEMPER_IDS]) {
     const w = fresh(t); w.clock = 5 * w.dayLen; lives(w); w.cat.wants.push({ kind: 'find', text: 'find a green button', strength: 0.9 }); w.cat.thought = 'I wonder about the moon.'; w.cat.thoughtAt = w.clock;
     const p = composePost(w);
-    assert(p.title && p.body.length > 120 && p.body.includes('How I feel:') && p.body.includes('green button') && p.body.includes('wonder about the moon') && p.body.includes('Entry'), `${t}: has what happened, a feeling, a thought and a want`);
+    assert(p.title && p.body.length > 120 && !/How I feel:|On my mind:|What I want is to/.test(p.body) && !/…/.test(p.body), `${t}: reads as prose, with no labelled sections and nothing cut off`);
+    assert(p.body.includes('Entry') || p.body.split('\n\n').length >= 3, `${t}: has what happened and how it feels`);
     assert(w.blog.title && p.body.includes(w.blog.title), `${t}: the first post welcomes readers to the blog by name`);
   }
   const a = fresh('garfield'), b = fresh('hunter'); a.clock = b.clock = 5 * a.dayLen; lives(a); lives(b); ensureBlog(a); ensureBlog(b);

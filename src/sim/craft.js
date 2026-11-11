@@ -1,24 +1,33 @@
 // Making things. The cat gathers bark and twigs by scratching the oak, works toward the recipes it wants, and
 // builds them. The first is a table: building it moves the stash out of hiding and onto the tabletop.
-import { rnd, uid, an, MAT_LABEL } from './util.js';
+import { rnd, uid, an, MAT_LABEL, MAT_CAP } from './util.js';
 import { note, journal, dayOf, clockStr } from './world.js';
-import { RECIPES, knows, costText } from './recipes.js';
+import { RECIPES, knows, costText, frameDemand, frameSpare, paintingToFrame } from './recipes.js';
 import { feel } from './feelings.js';
 import { onEvent } from './wants.js';
 import { layoutStash } from './quirk.js';
 import { PACE, paceOf, barkLuck, gatherRoom } from './pace.js';
 import { foundCatTree } from './secrets.js';
+import { foundPlace } from './finds.js';
 
-export const INV_CAP = 12;
+export const INV_CAP = MAT_CAP;
 export const have = (w, m) => w.cat.inv[m] || 0;
 export const craftWant = (w, id) => w.cat.wants.find(x => x.kind === 'craft' && x.recipe === id) || null;
 
 // the recipes it is working toward right now: ones it can make, wants to make, and has not made yet
-export const goals = w => Object.keys(RECIPES).filter(id => RECIPES[id].can(w) && knows(w, id) && (id === 'table' || craftWant(w, id)));
+export const goals = w => Object.keys(RECIPES).filter(id => RECIPES[id].can(w) && knows(w, id) && (id === 'table' || id === 'easel' || (id === 'frame' && frameDemand(w) > 0) || craftWant(w, id)));
 export function shortfall(w, id) { const out = {}; for (const [m, n] of Object.entries(RECIPES[id].cost)) if (have(w, m) < n) out[m] = n - have(w, m); return out; }
+// the raw materials a goal still needs, counting the frames it is short of (the frames themselves are made out of bark)
+export function rawShortfall(w, id) {
+  const s = shortfall(w, id), out = { bark: s.bark || 0, twig: s.twig || 0, twine: s.twine || 0 };
+  if (s.frame) for (const [m, n] of Object.entries(RECIPES.frame.cost)) out[m] = (out[m] || 0) + n * s.frame;
+  return out;
+}
 // what it still has to scratch off the tree, or null
 export function gatherNeed(w) {
-  const need = { bark: 0, twig: 0 }; for (const id of goals(w)) { const s = shortfall(w, id); need.bark += s.bark || 0; need.twig += s.twig || 0; }
+  const need = { bark: 0, twig: 0 }; for (const id of goals(w)) { if (id === 'frame') continue; const s = rawShortfall(w, id); need.bark += s.bark; need.twig += s.twig; }
+  const f = goals(w).includes('frame') ? Math.max(0, frameDemand(w) - goals(w).filter(g => g !== 'frame').reduce((m, g) => m + (shortfall(w, g).frame || 0), 0)) : 0; // (frames wanted but not yet counted against a goal)
+  if (f) for (const [m, n] of Object.entries(RECIPES.frame.cost)) need[m] = (need[m] || 0) + n * f;
   return need.bark || need.twig ? need : null;
 }
 // what only the human can supply (twine), for goals it actually wants
@@ -27,18 +36,20 @@ export function humanNeed(w) {
   const need = {}; for (const id of goals(w)) { if (!craftWant(w, id)) continue; const n = shortfall(w, id).twine; if (n) need.twine = Math.max(need.twine || 0, n); }
   return Object.keys(need).length ? need : null;
 }
-// what it would make right now. until the table exists, bark is saved for it rather than spent on smaller things
+// what it would make right now. until the easel and the table exist, bark is saved for them (and for the frames they are
+// built from) rather than spent on smaller things
+const CORE = new Set(['easel', 'table', 'frame']);
 export function nextCraft(w) {
-  const gs = goals(w), tableFirst = gs.includes('table');
+  const gs = goals(w), coreFirst = gs.includes('table') || gs.includes('easel');
   for (const id of gs) {
     if (Object.keys(shortfall(w, id)).length) continue;
-    if (tableFirst && id !== 'table' && RECIPES[id].cost.bark) continue;
+    if (coreFirst && !CORE.has(id) && RECIPES[id].cost.bark) continue;
     return id;
   }
   return null;
 }
 // is this material something the cat is short of? (it likes being given what it needs)
-export const neededMat = (w, m) => goals(w).some(id => (shortfall(w, id)[m] || 0) > 0);
+export const neededMat = (w, m) => goals(w).some(id => (rawShortfall(w, id)[m] || 0) > 0) || (m === 'bark' && frameDemand(w) > 0 && (w.cat.inv.bark || 0) < 2);
 
 // ---------- the oak ----------
 export function scratchTree(w) {
@@ -80,21 +91,43 @@ function buildTable(w) {
   note(w, `${w.cat.name} built a bark table and moved its collection onto it.`, 'craft');
 }
 
+// a spare oak frame goes round a painting
+export function hangSpareFrames(w) {
+  const c = w.cat; let n = 0;
+  while (frameSpare(w) > 0 && paintingToFrame(w)) {
+    const hung = c.crafted.filter(x => x.recipe === 'frame' && x.work).map(x => x.work);
+    const best = c.art.works.slice().sort((a, b) => b.score - a.score).find(x => !hung.includes(x.title)) || c.art.works[0];
+    c.inv.frame--; c.crafted.unshift({ id: uid(), recipe: 'frame', name: 'framed painting', work: best ? best.title : 'a painting', day: dayOf(w), time: clockStr(w) }); if (c.crafted.length > 16) c.crafted.pop();
+    c.art.xp += 6; n++;
+    journal(w, `I put a frame round "${best ? best.title : 'a painting'}". It looks like it matters now.`, 'craft'); note(w, `${c.name} framed "${best ? best.title : 'a painting'}".`, 'craft');
+  }
+  return n;
+}
+function buildEasel(w) {
+  const c = w.cat, o = w.o.easel; w.easelMade = { x: o.x, y: o.y, day: dayOf(w) };
+  if (!c.mem.known.easel) { c.mem.known.easel = 1; foundPlace(w, 'easel'); }
+  c.needs.create = Math.max(c.needs.create, 0.5);
+  journal(w, 'I built an easel. Two frames and a lot of determination. There is a canvas on it and my paws are already twitching.', 'craft');
+  note(w, `${c.name} built an easel and set up a blank canvas.`, 'craft');
+}
+
 export function finishCraft(w, id) {
   const c = w.cat, r = RECIPES[id]; if (!startable(w, id)) return false;
   for (const [m, n] of Object.entries(r.cost)) c.inv[m] -= n;
   const made = { id: uid(), recipe: id, name: r.name, day: dayOf(w), time: clockStr(w) };
   if (id === 'table') buildTable(w);
+  else if (id === 'easel') buildEasel(w);
   else if (id === 'frame') {
-    const best = c.art.works.slice().sort((a, b) => b.score - a.score)[0]; made.work = best ? best.title : 'a painting'; c.art.xp += 6;
-    journal(w, `I made a frame for "${made.work}". It looks like it matters now.`, 'craft'); note(w, `${c.name} framed "${made.work}".`, 'craft');
+    c.inv.frame = (c.inv.frame || 0) + 1;
+    journal(w, frameDemand(w) > 0 || frameSpare(w) === 0 ? 'I made an oak frame. Bigger things are built out of these.' : 'I made an oak frame. There is nothing to build with it, so it can go round a painting.', 'craft'); note(w, `${c.name} made an oak frame.`, 'craft');
+    hangSpareFrames(w);
   } else if (id === 'feeder') { w.deco.feeder = true; journal(w, 'I hung a bird feeder by the oak. This is not hunting. This is hospitality with a purpose.', 'craft'); note(w, `${c.name} put up a bird feeder.`, 'craft'); }
   else if (id === 'cattree') foundCatTree(w, 'made');
   else if (id === 'chime') { w.deco.chime = true; journal(w, 'The chime sings when the air moves. I hung it where I can hear it from the cushion.', 'craft'); note(w, `${c.name} hung a wind chime in the oak.`, 'craft'); }
   c.crafted.unshift(made); if (c.crafted.length > 16) c.crafted.pop(); w.stats.crafted++;
   feel(w, ['act:craft', 'craft:' + id], { joy: 0.28, fun: -0.2, fear: id === 'chime' ? -0.1 : 0 }, 'proud');
   onEvent(w, 'built', { id });
-  c.thoughtHint = id === 'table' ? 'tableDone' : 'craftDone';
+  c.thoughtHint = id === 'table' ? 'tableDone' : id === 'easel' ? 'easelDone' : 'craftDone';
   return made;
 }
 

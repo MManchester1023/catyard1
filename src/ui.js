@@ -3,17 +3,18 @@ import { COLORS, COLOR_NAMES, ITEM_TYPES, ITEM_LABEL, ITEM_PLURAL, COAT_LABEL } 
 import { levelOf, xpForLevel, LEVEL_NAMES, buildOps, drawPainting, subjectLabel } from './sim/art.js';
 import { stashColors, stashRank, TASTE_LABEL } from './sim/quirk.js';
 import { drawItem } from './draw_cat.js';
-import { MYSTERY_INFO } from './sim/mysteries.js';
+import { MYSTERY_INFO, discovered } from './sim/mysteries.js';
 import { describe } from './sim/sim.js';
 import { ditherCanvas } from './dither.js';
 import { dayOf, clockStr } from './sim/world.js';
 import { topTastes, offerLabel, MAX_ON_MAT, NOTE_MAX } from './sim/offerings.js';
 import { topFeelings } from './sim/feelings.js';
-import { isUpset } from './sim/upset.js';
+import { isUpset, upsetReason, upsetVoice } from './sim/upset.js';
 import { MATERIALS, MAT_LABEL, MAT_GIFT, matText } from './sim/util.js';
 import { thingsSummary, timeline, daySummary, daysList, spentText, KINDS, KIND_IDS } from './sim/history.js';
 import { wishLabel } from './sim/wishes.js';
 import { INV_CAP } from './sim/craft.js';
+import { RECIPES } from './sim/recipes.js';
 import { TEMPERS } from './sim/temper.js';
 import { moodToday, ensureChar, habitLine, DO } from './sim/character.js';
 import { favourites } from './sim/finds.js';
@@ -71,14 +72,18 @@ function mindSections(w) {
   return out;
 }
 
-// ----- Cat tab -----
+// ----- Cat tab: Overview, Mind, and (once it has noticed something strange) Wondering -----
 function meter(v) { return h('div', { class: 'bar' }, h('i', { style: `width:${pct(v)}%` })); }
-export function renderCat(el, w) {
+const CAT_SUBS = [['overview', 'Overview'], ['mind', 'Mind'], ['wondering', 'Wondering']];
+let catSub = 'overview';
+const wonderFound = w => Object.values(w.mysteries).some(discovered);
+
+function overviewSections(w) {
   const c = w.cat, q = c.quirk, a = c.art, lvl = levelOf(a.xp), next = xpForLevel(lvl + 1), cur = xpForLevel(lvl);
-  const cols = Object.entries(stashColors(w)).sort((x, y) => y[1] - x[1]);
   const secs = [];
   secs.push(h('div', { class: 'sec' }, h('div', { class: 'big', text: c.name }), h('div', { class: 'muted', text: `${c.age}-year-old ${COAT_LABEL[c.coat]} · ${moodLabel(w)}` }), h('div', { class: 'small', text: describe(w) }),
     h('div', { style: 'margin-top:10px' }, ...[['Curious', 'curious'], ['Bold', 'bold'], ['Affectionate', 'affection'], ['Lazy', 'lazy']].map(([l, k]) => h('div', { class: 'trait' }, h('span', { text: l }), meter(c.traits[k]), h('span', { class: 'muted', text: pct(c.traits[k]) }))))));
+  if (isUpset(w)) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Upset' }), h('div', { text: 'About: ' + upsetReason(w) }), h('div', { class: 'theory', text: '“' + upsetVoice(w) + '”' }), h('div', { class: 'muted small', text: 'Something it likes, or being listened to, will help.' })));
   const tp = TEMPERS[c.temper];
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Quirk: ' + (tp ? tp.name : 'none') }), h('div', { class: 'muted small', text: tp ? tp.line : 'No temperament. (Admin: quirk trait <collector|vangogh|hunter|nightowl|techie|garfield|builder>)' }),
     h('div', { class: 'muted small', style: 'margin-top:6px', text: ({
@@ -90,6 +95,7 @@ export function renderCat(el, w) {
       nightowl: 'Best seen after dark.',
       collector: `${w.stash.items.length} treasure${w.stash.items.length === 1 ? '' : 's'} so far (see the Stash tab).`,
     })[c.temper] || '' }),
+    h('div', { class: 'muted small', style: 'margin-top:4px', text: `Fondest of ${ITEM_PLURAL[q.item]}, and of the color ${q.favColor}.` }),
     c.temper !== 'hunter' && (w.stats.birds || w.stats.fish) ? h('div', { class: 'muted small', style: 'margin-top:4px', text: `Has caught ${[w.stats.birds ? w.stats.birds + ' bird' + (w.stats.birds === 1 ? '' : 's') : '', w.stats.fish ? w.stats.fish + ' fish' : ''].filter(Boolean).join(' and ')}.` }) : null,
     w.catTree ? h('div', { class: 'muted small', style: 'margin-top:4px', text: `Has a cat tree behind the cabin (${w.catTree.how === 'made' ? 'built it itself' : 'found it'} on day ${w.catTree.day}).` }) : null,
     c.coinUntil > w.clock ? h('div', { class: 'small', style: 'margin-top:4px', text: 'Delighted: it found a shiny coin.' }) : null));
@@ -97,32 +103,64 @@ export function renderCat(el, w) {
     h('div', { text: f.out ? `${f.name} is up on the lily pad.` : `${f.name} is under the water.` }),
     h('div', { class: 'muted small', text: `Met on day ${f.day}. ${c.name} has sat with ${f.name} ${f.visits} time${f.visits === 1 ? '' : 's'}. Visits are the best cure for loneliness it has.` }),
     h('div', { class: 'trait' }, h('span', { text: 'Bond' }), meter(f.bond), h('span', { class: 'muted', text: pct(f.bond) })))); }
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: c.temper === 'collector' ? 'Quirk: collector' : 'Keepsakes' }),
-    h('div', { text: c.temper === 'collector' ? `Collects ${ITEM_PLURAL[q.item]}. Favourite color: ${q.favColor}.` : `Fondest of ${ITEM_PLURAL[q.item]}, and of the color ${q.favColor}. It keeps what it loves, but only a Collector goes out of its way to hoard.` }),
-    h('div', { class: 'muted small', text: w.stash.site ? `${w.stash.items.length} in the stash, ${w.table ? 'kept on the bark table it made' : 'hidden ' + w.stash.site.label}, arranged as ${TASTE_LABEL[q.taste]}. Checked ${q.visits} time${q.visits === 1 ? '' : 's'}.` : 'No stash yet. It is still looking for the right spot.' }),
-    cols.length ? h('div', { class: 'dots' }, ...cols.flatMap(([col, n]) => Array.from({ length: Math.min(n, 12) }, () => h('span', { class: 'dot', style: `background:${COLORS[col]}`, title: col })))) : null));
-  const th = thingsSummary(w), fl = topFeelings(w, 5);
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Making things' }),
-    h('div', { class: 'mats' }, ...MATERIALS.map(m => h('div', { class: 'mat' + (c.inv[m] ? '' : ' none'), title: `${MAT_LABEL[m]}: it can carry ${INV_CAP}` }, h('b', { text: String(c.inv[m]) }), h('span', { text: m })))),
-    h('div', { class: 'muted small', text: 'It scratches the oak for bark and twigs. Twine is the one thing it cannot find in the yard: leave some on the mat in the Outside tab.' }),
-    h('div', { style: 'margin-top:8px' }, ...th.recipes.map(r => h('div', { class: 'kv' }, h('span', {}, cap(r.name), r.made ? h('span', { class: 'chip', text: 'made ' + r.made }) : null), h('span', { class: 'muted small', text: (r.known ? '' : 'needs the tablet · ') + r.cost })))),
-    th.crafted.length ? h('div', { class: 'muted small', style: 'margin-top:6px', text: 'Made so far: ' + th.crafted.slice(0, 6).map(x => `${x.name} (day ${x.day})`).join(', ') }) : null));
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What makes it feel good' }),
-    fl.good.length || fl.bad.length ? [...fl.good.map(r => tasteRow(r.name, Math.min(1, r.score), null, r.label)), ...fl.bad.map(r => h('div', { class: 'kv' }, h('span', { text: r.name }), h('span', { class: 'chip bad', text: r.label })))] : h('div', { class: 'muted', text: 'Too early to tell. It learns what it likes from how things make it feel.' }),
-    h('div', { class: 'muted small', style: 'margin-top:6px', text: 'Nobody told it what to like. These come from gifts, pages, paintings and what it has made.' })));
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Wants' }),
     c.wants.length ? c.wants.map(x => h('div', { class: 'item' }, h('div', { text: cap(x.text) }), h('div', { class: 'muted small', text: `since day ${x.day}` }), meter(x.strength))) : h('div', { class: 'muted', text: 'Nothing right now.' }),
     h('div', { class: 'muted small', text: `${c.doneWants} fulfilled so far` })));
-  secs.push(...mindSections(w));
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Wondering about' }), Object.entries(w.mysteries).filter(([id, m]) => !MYSTERY_INFO[id].secret || m.seen).map(([id, m]) => h('div', { class: 'item' },
+  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Painting' }),
+    w.easelMade ? [h('div', { class: 'big', text: `Level ${lvl}: ${LEVEL_NAMES[lvl]}` }),
+      lvl < 12 ? [meter((a.xp - cur) / (next - cur)), h('div', { class: 'muted small', text: `${Math.round(next - a.xp)} xp to ${LEVEL_NAMES[lvl + 1]}` })] : null,
+      h('div', { class: 'muted small', style: 'margin-top:6px', text: `${a.count} painting${a.count === 1 ? '' : 's'}${a.count ? `, best ${pct(a.best)}/100` : ''}` })]
+      : h('div', { class: 'muted', text: 'No easel yet, so nothing to paint on. It has to build one first (see the Crafting tab).' })));
+  return secs;
+}
+function mindTab(w) {
+  const fl = topFeelings(w, 5);
+  return [...mindSections(w), h('div', { class: 'sec' }, h('h3', { text: 'What makes it feel good' }),
+    fl.good.length || fl.bad.length ? [...fl.good.map(r => tasteRow(r.name, Math.min(1, r.score), null, r.label)), ...fl.bad.map(r => h('div', { class: 'kv' }, h('span', { text: r.name }), h('span', { class: 'chip bad', text: r.label })))] : h('div', { class: 'muted', text: 'Too early to tell. It learns what it likes from how things make it feel.' }),
+    h('div', { class: 'muted small', style: 'margin-top:6px', text: 'Nobody told it what to like. These come from gifts, pages, paintings and what it has made.' }))];
+}
+// only the things it has actually noticed are listed: the rest are none of its business yet
+function wonderingTab(w) {
+  return [h('div', { class: 'sec' }, h('h3', { text: 'Wondering about' }), Object.entries(w.mysteries).filter(([, m]) => discovered(m)).map(([id, m]) => h('div', { class: 'item' },
     h('div', { text: cap(MYSTERY_INFO[id].name) + (m.solved ? ' (solved)' : '') }),
-    m.theory ? h('div', { class: 'theory', text: '“' + m.theory + '”' }) : h('div', { class: 'muted small', text: m.clues ? `${Math.floor(m.clues)} clues so far, no theory yet.` : 'Has not noticed this yet.' }),
+    m.theory ? h('div', { class: 'theory', text: '“' + m.theory + '”' }) : h('div', { class: 'muted small', text: m.clues ? `${Math.floor(m.clues)} clues so far, no theory yet.` : 'Just started to wonder.' }),
     m.theory && !m.solved ? h('div', { class: 'muted small', text: `Confidence ${pct(m.conf)}%` + (m.revised ? ` · changed its mind ${m.revised}×` : '') }) : null,
     id === 'stars' && m.interest && !m.solved && m.enough ? h('div', { class: 'muted small', text: 'It has watched enough. Now it wants to read about them.' }) : null,
-    id === 'stars' && m.solved ? h('div', { class: 'muted small', text: `A star may fall on a clear night. ${w.stats.starWishes || 0} wish${w.stats.starWishes === 1 ? '' : 'es'} so far${wishReady(w) ? '' : ', and it is waiting for the next'}.` }) : null))));
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Painting' }), h('div', { class: 'big', text: `Level ${lvl}: ${LEVEL_NAMES[lvl]}` }),
-    lvl < 12 ? [meter((a.xp - cur) / (next - cur)), h('div', { class: 'muted small', text: `${Math.round(next - a.xp)} xp to ${LEVEL_NAMES[lvl + 1]}` })] : null,
-    h('div', { class: 'muted small', style: 'margin-top:6px', text: `${a.count} painting${a.count === 1 ? '' : 's'}${a.count ? `, best ${pct(a.best)}/100` : ''}` })));
+    id === 'stars' && m.solved ? h('div', { class: 'muted small', text: `A star may fall on a clear night. ${w.stats.starWishes || 0} wish${w.stats.starWishes === 1 ? '' : 'es'} so far${wishReady(w) ? '' : ', and it is waiting for the next'}.` }) : null)))];
+}
+// the tab bar is built once (so it can be clicked while the page underneath is redrawn)
+export function renderCat(el, w) {
+  if (catSub === 'wondering' && !wonderFound(w)) catSub = 'overview';
+  if (!el._cat) {
+    const bar = h('div', { class: 'subtabs', role: 'tablist' }), body = h('div', { class: 'subbody' });
+    for (const [id, label] of CAT_SUBS) bar.append(h('button', { type: 'button', role: 'tab', 'data-sub': id, text: label, onclick: () => { catSub = id; renderCat(el, el._cat.w); } }));
+    el._cat = { bar, body, w }; el.replaceChildren(bar, body);
+  }
+  const k = el._cat; k.w = w;
+  for (const b of k.bar.children) { b.setAttribute('aria-selected', String(b.dataset.sub === catSub)); b.hidden = b.dataset.sub === 'wondering' && !wonderFound(w); }
+  k.body.replaceChildren(...(catSub === 'mind' ? mindTab(w) : catSub === 'wondering' ? wonderingTab(w) : overviewSections(w)));
+}
+
+// ----- Crafting tab: what it carries, what it is building and what it has made -----
+export function craftingSig(w) { const c = w.cat; return JSON.stringify([c.inv, !!w.easelMade, !!w.table, !!w.catTree, w.deco, c.crafted.length, Object.keys(c.recipes || {}), c.mem.known.tree, c.art.count > 0]); }
+const BUILT_AT = { easel: w => w.easelMade, table: w => w.table, feeder: w => w.deco && w.deco.feeder && { day: null }, chime: w => w.deco && w.deco.chime && { day: null }, cattree: w => w.catTree };
+export function renderCrafting(el, w) {
+  const c = w.cat, th = thingsSummary(w), secs = [];
+  const partChip = (key, label, title) => h('div', { class: 'mat' + (c.inv[key] ? '' : ' none'), title }, h('b', { text: String(c.inv[key] || 0) }), h('span', { text: label }));
+  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What it is carrying' }),
+    h('div', { class: 'mats' }, ...MATERIALS.map(m => partChip(m, m, `${MAT_LABEL[m]}: it can carry ${INV_CAP}`)), partChip('frame', 'oak frames', 'Made from 2 pieces of bark. Easels, tables and bigger things are built out of them.')),
+    h('div', { class: 'muted small', text: 'It scratches the oak for bark and twigs, and birds sometimes drop bark, twigs or a bit of string in the yard. Twine is scarce, so you can leave some on the mat in the Outside tab.' })));
+  if (!w.easelMade) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'No easel yet' }), h('div', { class: 'muted', text: 'It cannot paint until it has built an easel, and an easel is made from two oak frames. The urge to paint keeps building while it waits.' })));
+  const row = id => {
+    const r = RECIPES[id], rec = th.recipes.find(x => x.id === id) || {}, built = BUILT_AT[id] ? BUILT_AT[id](w) : null;
+    const lines = Object.entries(r.cost).map(([m, n]) => `${matText(m, n)}${built ? '' : ` (has ${c.inv[m] || 0})`}`).join(' + ');
+    const state = r.knowledge ? null : built ? (built.legacy ? 'was already here' : built.day ? 'built day ' + built.day : 'built') : rec.made ? 'made ' + rec.made : null;
+    return h('div', { class: 'kv' }, h('span', {}, cap(r.name), state ? h('span', { class: 'chip', text: state }) : null), h('span', { class: 'muted small', text: (rec.known ? '' : 'needs the tablet · ') + (r.knowledge ? 'pulled from the cushion' : lines) }));
+  };
+  const ids = Object.keys(RECIPES), todo = ids.filter(id => !(BUILT_AT[id] && BUILT_AT[id](w))), done = ids.filter(id => BUILT_AT[id] && BUILT_AT[id](w));
+  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What it can make' }), ...todo.map(row), !todo.length ? h('div', { class: 'muted', text: 'Everything it knows how to make is built.' }) : null));
+  if (done.length) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Built' }), ...done.map(row)));
+  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Made so far' }), th.crafted.length ? th.crafted.map(x => h('div', { class: 'kv' }, h('span', { text: cap(x.name) }), h('span', { class: 'muted small', text: `day ${x.day}` }))) : h('div', { class: 'muted', text: 'Nothing yet.' }), h('div', { class: 'muted small', style: 'margin-top:6px', text: `${w.stats.crafted || 0} made in all, ${w.stats.gathered || 0} bits gathered.` })));
   el.replaceChildren(...secs);
 }
 

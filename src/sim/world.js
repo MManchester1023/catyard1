@@ -1,5 +1,5 @@
 // Yard layout, time, weather, geometry helpers, and the creatures that share the yard.
-import { W, H, GY0, GY1, rnd, ri, clamp, pick, dist, sstep, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, FEATHER_COLORS, uid, an } from './util.js';
+import { W, H, GY0, GY1, rnd, ri, clamp, pick, dist, sstep, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, FEATHER_COLORS, MATERIALS, MAT_CAP, uid, an } from './util.js';
 
 export const hourOf = w => ((w.clock % w.dayLen) / w.dayLen) * 24;
 export const dayOf = w => Math.floor(w.clock / w.dayLen) + 1;
@@ -80,7 +80,7 @@ export function blocked(w, x, y) {
   if (x > f.x0 && x < f.x1 && y > f.y0 && y < f.y1) return true;
   if (((x - p.x) / p.rx) ** 2 + ((y - p.y) / p.ry) ** 2 < 1) return true;
   if (Math.hypot(x - o.tree.x, (y - o.tree.y) * 1.4) < o.tree.r + 6) return true;
-  if (Math.abs(x - o.easel.x) < 26 && Math.abs(y - o.easel.y) < 10) return true;
+  if (w.easelMade && Math.abs(x - o.easel.x) < 26 && Math.abs(y - o.easel.y) < 10) return true;
   if (Math.abs(x - o.tablet.x) < 15 && Math.abs(y - o.tablet.y) < 7) return true;
   if (w.table && Math.abs(x - o.table.x) < 30 && Math.abs(y - o.table.y) < 9) return true;
   return false;
@@ -273,13 +273,23 @@ export function dropFromBird(w, b, sure = false) {
   if (w.items.length >= 7) return null;
   const q = w.cat.quirk; let type, color = null;
   if (gift) { type = gift.type; color = gift.color; }
-  else if (Math.random() < 0.18) type = 'twine';
+  else if (Math.random() < 0.45 && (type = birdMaterial(w))) { /* a crafting part: bark, a twig or a bit of string */ }
   else { type = Math.random() < 0.45 ? q.item : pick(ITEM_TYPES); color = type === 'feather' ? pick(FEATHER_COLORS) : pick(COLOR_NAMES.filter(c => c !== 'black')); }
   let x = clamp(b.x + rnd(-8, 8), 30, W - 30), y = clamp(b.y + rnd(2, 10), GY0 + 24, GY1 - 12);
   if (blocked(w, x, y)) { const p = randomOpenPoint(w, x - 60, x + 60, GY0 + 24, GY1 - 12); x = p.x; y = p.y; }
   const it = { id: uid(), type, color, x, y, age: 0, from: 'bird' }; w.items.push(it);
   note(w, `A bird dropped ${an((color ? color + ' ' : '') + ITEM_LABEL[type])} before it flew off.`, 'bird');
   return it;
+}
+
+// what a bird might drop as a crafting part. Whichever of bark, twigs and string the cat is shortest of is the likelier one;
+// null when it is already carrying all it can hold.
+function birdMaterial(w) {
+  const inv = w.cat.inv || {}, wt = { bark: 1, twig: 1, twine: 0.85 };
+  const room = MATERIALS.map(m => [m, wt[m] * Math.max(0, 1 - (inv[m] || 0) / MAT_CAP)]), total = room.reduce((a, r) => a + r[1], 0);
+  if (total <= 0) return null;
+  let r = Math.random() * total; for (const [m, v] of room) { r -= v; if (r <= 0) return m; }
+  return room[room.length - 1][0];
 }
 
 // a fish now and then glides through the pond. The cat can try for it (acts.js 'fish').

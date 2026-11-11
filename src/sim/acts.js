@@ -1,7 +1,7 @@
 // Acts: how each activity starts, moves the cat, and finishes.
-import { rnd, ri, clamp, pick, dist, an, uid, GY0, FEATHER_COLORS } from './util.js';
+import { rnd, ri, clamp, pick, dist, an, uid, GY0, FEATHER_COLORS, MATERIALS, MAT_CAP } from './util.js';
 import { spot, walk, randomOpenPoint, note, journal, hourOf, sunOf, beamOf, birdLeave, moonPos, moonPhase, clockStr, pushHist } from './world.js';
-import { decide, interest, pickSleepSpot, unknownPlaces } from './mind.js';
+import { decide, interest, pickSleepSpot, unknownPlaces, SLEEPY } from './mind.js';
 import { itemName, chooseSite, addToStash, tidyStash, noticeTheft } from './quirk.js';
 import { onEvent } from './wants.js';
 import { clue, frogSighting } from './mysteries.js';
@@ -37,7 +37,7 @@ export function start(w, type, opts = {}) {
     case 'idle': a.phase = 'do'; a.dur = a.sulk ? rnd(10, 22) : rnd(3, 8) * (0.7 + c.traits.lazy); a.stand = a.sulk ? false : Math.random() < 0.35; if (a.sulk) { const s = spot(w, 'fence'); a.tx = s.x; a.ty = s.y; a.phase = 'go'; think(w, 'sulk'); } else think(w, 'idle'); break;
     case 'explore': {
       const unk = unknownPlaces(w);
-      if (unk.length && Math.random() < 0.55 + c.traits.curious * 0.4) { a.target = pick(unk); aim(a.target); }
+      if (unk.length && Math.random() < 0.55 + c.traits.curious * 0.4 + (c.temper === 'techie' && unk.includes('tablet') ? 0.4 : 0)) { a.target = c.temper === 'techie' && unk.includes('tablet') && Math.random() < 0.8 ? 'tablet' : pick(unk); aim(a.target); } // (a techie heads for the glow)
       else { const p = randomOpenPoint(w); a.tx = p.x; a.ty = p.y; }
       a.spd = 62; a.dur = rnd(1.5, 4); think(w, 'explore'); break;
     }
@@ -57,7 +57,7 @@ export function start(w, type, opts = {}) {
       if (!a.spot) a.spot = pickSleepSpot(w, false);
       aim(a.spot); a.spd = 62;
       if (a.reason === 'rain') { a.dur = rnd(40, 90); think(w, 'shelter'); note(w, `${c.name} ducked into the cabin to wait out the rain.`, 'weather'); }
-      else if (a.lounge) { a.dur = rnd(w.dayLen * 0.02, w.dayLen * 0.045); c.loungeAt = w.clock; think(w, a.spot === 'beam' ? 'loungeBeam' : 'loungeBed'); }
+      else if (a.lounge) { a.dur = Math.max(w.dayLen * 0.03, (n.tired - 0.1) * 300 * rnd(0.6, 1)); /* long enough to sleep most of it off */ c.loungeAt = w.clock; think(w, a.spot === 'beam' ? 'loungeBeam' : 'loungeBed'); }
       else {
         const h = hourOf(w), sh = shiftOf(c), dark = sh ? deepNightOf(c, h) : sunOf(h) < 0.2, toDawn = ((5.3 + sh - h + 24) % 24) * (w.dayLen / 24);
         a.dur = dark ? clamp(toDawn * rnd(0.9, 1.05), 30, w.dayLen * 0.4) : rnd(w.dayLen * 0.03, w.dayLen * 0.08);
@@ -80,7 +80,7 @@ export function start(w, type, opts = {}) {
     case 'beg': aim('bowl'); c.begAt = w.clock; a.dur = 14; think(w, 'beg'); note(w, `The bowl is empty. ${c.name} is waiting nearby, looking tragic.`, 'food'); break;
     case 'perch': a.spot = (k.tree && (!k.fence || Math.random() < 0.55)) ? 'tree' : 'fence'; aim(a.spot); a.dur = rnd(14, 30); think(w, 'perch'); break;
     case 'gift': aim('house'); a.sf = 1; think(w, 'gift'); break;
-    case 'collect': a.tx = a.item.x; a.ty = a.item.y; { const nm = itemName(a.item.type, a.item.color), A = an(nm); think(w, 'collect', { aitem: A, Aitem: A[0].toUpperCase() + A.slice(1) }); } break;
+    case 'collect': a.tx = a.item.x; a.ty = a.item.y; { const nm = itemName(a.item.type, a.item.color), A = an(nm); think(w, MATERIALS.includes(a.item.type) ? 'matSee' : 'collect', { aitem: A, Aitem: A[0].toUpperCase() + A.slice(1) }); } break;
     case 'stash':
       chooseSite(w); aim('stash'); a.dur = rnd(5, 9);
       if (c.carry) think(w, 'carry'); else think(w, 'count');
@@ -196,9 +196,9 @@ export function actTick(w, dt) {
         } else if (a.from === 'prey') { n.hunger = clamp(n.hunger - 0.06 * dt); a.eaten += 0.06 * dt; if (a.t > 6) finished = true; }
         else if (a.t > 2.5) finished = true;
         if (finished) {
-          if (a.from !== 'treat' && a.eaten > 0.12) { w.stats.meals++; c.mem.lastMeal = clockStr(w); note(w, a.from === 'bowl' ? `${c.name} ate at the bowl.` : `${c.name} finished off the catch.`, 'food'); }
+          if (a.from !== 'treat' && a.eaten > 0.12) { n.tired = clamp(n.tired + 0.3 * Math.min(1, a.eaten / 0.55)); /* a full stomach makes a cat sleepy: 0.3 for a proper meal, less for a snack */ w.stats.meals++; c.mem.lastMeal = clockStr(w); note(w, a.from === 'bowl' ? `${c.name} ate at the bowl.` : `${c.name} finished off the catch.`, 'food'); }
           if (a.from === 'bowl' && o.bowl.food <= 0.001 && n.hunger > 0.3) note(w, 'The food bowl ran empty.', 'food');
-          c.groomNext = Math.random() < 0.5; done(w);
+          c.groomNext = true; done(w); // (a cat always washes after eating)
         }
       }
       break;
@@ -212,12 +212,12 @@ export function actTick(w, dt) {
       if (a.phase === 'go') { c.pose = 'walk'; if (arrive(a.spd)) { if (inside) { a.phase = 'enter'; a.t = 0; c.face = 1; } else { toDo(); c.pose = 'sleep'; } } }
       else if (a.phase === 'enter') { c.pose = 'walk'; c.y -= 14 * dt; if (a.t > 0.9) { c.hidden = true; a.phase = 'do'; a.t = 0; } }
       else {
-        c.pose = inside ? (a.reason === 'rain' && n.tired < 0.25 ? 'peek' : 'inside') : 'sleep';
+        c.pose = inside ? (a.reason === 'rain' && n.tired < SLEEPY ? 'peek' : 'inside') : 'sleep'; if (c.pose !== 'peek') a.slept = true; // (waiting out the rain awake is not a nap)
         const wakeHungry = n.hunger > 0.93, wetOut = !inside && w.weather.rain > 0.5 && n.wet > 0.45;
         const rainOver = a.reason === 'rain' && w.weather.rain < 0.15 && a.t > 10;
-        const mouse = !inside && w.mice.some(m => !m.dead && dist(m, c) < 90) && c.traits.bold > 0.3;
-        if (a.t > a.dur || wakeHungry || wetOut || rainOver || mouse) {
-          if (a.t > 15) { c.mem.nap[a.spot] = (c.mem.nap[a.spot] || 0) + 1; w.stats.naps++; }
+        const mouse = !inside && w.mice.some(m => !m.dead && dist(m, c) < 90) && c.traits.bold > 0.3, rested = a.t > 6 && n.tired < 0.04 && a.reason !== 'rain' && !deepNightOf(c, hourOf(w)); // (a rested cat does not stay asleep by day, but once it is in bed for the night it sleeps on to the morning)
+        if (a.t > a.dur || wakeHungry || wetOut || rainOver || mouse || rested) {
+          if (a.t > 15 && a.slept) { c.mem.nap[a.spot] = (c.mem.nap[a.spot] || 0) + 1; w.stats.naps++; }
           if (inside) { c.hidden = false; c.y = spot(w, 'house').y; if (a.t > w.dayLen * 0.05) note(w, `${c.name} woke up and stretched.`, 'sleep'); }
           c.pose = 'stand'; done(w);
         }
@@ -326,7 +326,7 @@ export function actTick(w, dt) {
         if (a.t > 0.7) {
           if (w.items.includes(it)) {
             w.items = w.items.filter(x => x !== it);
-            if (it.type === 'twine') { c.inv.twine = Math.min(INV_CAP, c.inv.twine + 1); w.stats.gathered++; note(w, `${c.name} picked up a bit of string.`, 'craft'); feel(w, ['act:collect', 'mat:twine'], { joy: 0.12 }, 'content'); think(w, 'twineFound'); done(w); }
+            if (MATERIALS.includes(it.type)) { c.inv[it.type] = Math.min(INV_CAP, (c.inv[it.type] || 0) + 1); w.stats.gathered++; note(w, `${c.name} picked up ${an(itemName(it.type, null))}${it.from === 'bird' ? ' the bird had dropped' : ''}.`, 'craft'); feel(w, ['act:collect', 'mat:' + it.type], { joy: 0.12 }, 'content'); think(w, it.type === 'twine' ? 'twineFound' : 'matFound'); done(w); }
             else { c.carry = { type: it.type, color: it.color }; w.stats.found++; foundThing(w, it); start(w, 'stash'); }
           } else done(w);
         }

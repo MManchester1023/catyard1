@@ -11,13 +11,13 @@ import { clockStr, dayOf } from './sim/world.js';
 import { exportText, exportName } from './sim/history.js';
 import { storage, isDesktop } from './storage.js';
 import { blogStarted, unreadPosts, markBlogRead } from './sim/blog.js';
-import { h, buildNeeds, updateNeeds, renderCat, renderStash, renderBlog, renderHistory, renderGallery, renderSettings, renderOutside, paintingModal, moodLabel } from './ui.js';
+import { h, buildNeeds, updateNeeds, renderCat, renderCrafting, craftingSig, renderStash, renderBlog, renderHistory, renderGallery, renderSettings, renderOutside, paintingModal, moodLabel } from './ui.js';
 
 const $ = id => document.getElementById(id);
 const T = window.__TAURI__;
 let w, settings, brain, net, outsideUpdate = null, historyUpdate = null, renderer, where = '', adminMode = false, activeTab = 'chat';
 let blogSig = '', blogFresh = new Set();
-let lastSave = Date.now(), saveChain = Promise.resolve(), lastDrive = performance.now(), lastDraw = 0, lastHud = 0, focused = true, histSt = { mode: 'today', kinds: new Set(['did', 'thought', 'event']), q: '', limit: 120 }, gallerySig = '', stashSig = '';
+let lastSave = Date.now(), saveChain = Promise.resolve(), lastDrive = performance.now(), lastDraw = 0, lastHud = 0, focused = true, histSt = { mode: 'today', kinds: new Set(['did', 'thought', 'event']), q: '', limit: 120 }, gallerySig = '', craftSig = '', stashSig = '';
 let bubbleId = -1, bubbleUntil = 0, chatSig = '', pendingCat = false;
 
 // ---------- settings ----------
@@ -79,6 +79,7 @@ function hud(now) {
   updateNeeds($('needs'), w); updateSavedLabel(); bubble(now);
   { const bt = document.querySelector('#tabs [data-tab="blog"]'), on = blogStarted(w); if (bt.hidden === on) bt.hidden = !on; const lab = 'Blog' + (on && activeTab !== 'blog' && unreadPosts(w) ? ' •' : ''); if (bt.textContent !== lab) bt.textContent = lab; }
   if (activeTab === 'cat') renderCat($('tab-cat'), w);
+  else if (activeTab === 'crafting') { const sig = craftingSig(w); if (sig !== craftSig) { craftSig = sig; renderCrafting($('tab-crafting'), w); } }
   else if (activeTab === 'outside') { if (outsideUpdate) outsideUpdate(); }
   else if (activeTab === 'stash') { const sig = w.stash.items.length + ':' + Object.keys(w.cat.assoc || {}).length + ':' + w.cat.quirk.favColor + w.cat.quirk.item + (w.stash.site ? w.stash.site.label : ''); if (sig !== stashSig) { stashSig = sig; renderStash($('tab-stash'), w); } }
   else if (activeTab === 'blog') { const sig = (w.blog ? w.blog.posts.length + ':' + (w.blog.draft ? 1 : 0) + ':' + w.blog.title + ':' + w.blog.posts.map(x => x.title).join('|').length : ''); if (sig !== blogSig) { blogSig = sig; const f = new Set((w.blog ? w.blog.posts : []).filter(x => !x.read).map(x => x.id)); renderBlog($('tab-blog'), w, new Set([...blogFresh, ...f])); f.forEach(id => blogFresh.add(id)); markBlogRead(w); } }
@@ -188,11 +189,12 @@ function resetModal() {
 function showTab(name) {
   activeTab = name;
   for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
-  for (const id of ['chat', 'cat', 'stash', 'blog', 'outside', 'history', 'gallery', 'settings']) $('tab-' + id).hidden = id !== name;
-  histSt.sig = ''; gallerySig = ''; stashSig = ''; blogSig = ''; blogFresh = new Set();
+  for (const id of ['chat', 'cat', 'crafting', 'stash', 'blog', 'outside', 'history', 'gallery', 'settings']) $('tab-' + id).hidden = id !== name;
+  histSt.sig = ''; gallerySig = ''; stashSig = ''; craftSig = ''; blogSig = ''; blogFresh = new Set();
   if (name === 'stash') renderStash($('tab-stash'), w);
   if (name === 'blog') hud(performance.now());
   if (name === 'cat') renderCat($('tab-cat'), w);
+  if (name === 'crafting') { craftSig = craftingSig(w); renderCrafting($('tab-crafting'), w); }
   if (name === 'history') historyUpdate = renderHistory($('tab-history'), w, histSt, { actions: { export: exportStory } });
   if (name === 'outside') outsideUpdate = renderOutside($('tab-outside'), w, { net, actions: { leave: spec => leaveOffering(w, spec) } });
   if (name === 'settings') renderSettings($('tab-settings'), { settings, brain, net, where, w, actions: { saveSettings: persistSettings, saveNow: () => saveNow('main'), loadSaved: reloadLast, exportSave, importSave, reset: resetModal } });
