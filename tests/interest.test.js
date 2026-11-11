@@ -11,10 +11,11 @@ import { digest } from '../src/sim/llm.js';
 import { runCommand } from '../src/sim/commands.js';
 import { TEMPER_IDS } from '../src/sim/temper.js';
 import { composePost, ensureBlog } from '../src/sim/blog.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const fresh = (temper = null) => { const w = makeWorld('Int'); w.cat.temper = temper; w.cat.mem.known.tablet = 1; w.netOn = true; return w; };
-const withRandom = (v, f) => { const r = Math.random; Math.random = () => v; try { return f(); } finally { Math.random = r; } };
 const pg = (title, extract) => ({ title, extract: extract || `${title} is a subject people have written a good deal about over many years. It has a long history.`, url: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(title) });
 
 // ---- when and how it starts

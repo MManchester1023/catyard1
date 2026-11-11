@@ -3,6 +3,7 @@ import { rnd, pick, clamp, uid, mulberry32, COLORS } from './util.js';
 import { hourOf, dayOf, sunOf, isNight, moonPos, note, journal } from './world.js';
 import { stashColors } from './quirk.js';
 import { onEvent } from './wants.js';
+import { random } from './rng.js';
 
 export const LEVEL_NAMES = ['', 'Scribbler', 'Smudger', 'Dabbler', 'Student', 'Colorist', 'Painter', 'Stylist', 'Impressionist', 'Virtuoso', 'Master', 'Grandmaster', 'Legend'];
 export const levelOf = xp => clamp(1 + Math.floor(Math.sqrt(xp / 8)), 1, 12);
@@ -40,7 +41,7 @@ export function pickSubject(w) {
     const mood = g === 'swirl' ? (night ? 1.6 : 1) * (vg ? 8 : 1) : g === 'bloom' ? 1 + c.mood.joy : g === 'waves' ? 1 + c.needs.tired + (w.weather.rain > 0.4 ? 1 : 0) : g === 'splatter' ? 1 + c.needs.create : g === 'dots' ? 1 + c.traits.curious * 0.5 : 1;
     opts.push([g, 0.4 * mood]);
   }
-  let r = Math.random() * opts.reduce((s, o) => s + o[1], 0);
+  let r = random() * opts.reduce((s, o) => s + o[1], 0);
   for (const [s, wt] of opts) { r -= wt; if (r <= 0) return s; }
   return 'yard';
 }
@@ -64,7 +65,7 @@ function palette(w, tier, rng) {
 
 export function paintWork(w, subject) {
   const c = w.cat, a = c.art, level = levelOf(a.xp), tier = tierOf(level);
-  const inspire = clamp(0.25 + c.mood.joy * 0.25 + (c.thoughtHint ? 0.1 : 0) + (subject === 'moon' ? w.mysteries.moon.conf * 0.2 : 0) + Math.random() * 0.15, 0, 0.7);
+  const inspire = clamp(0.25 + c.mood.joy * 0.25 + (c.thoughtHint ? 0.1 : 0) + (subject === 'moon' ? w.mysteries.moon.conf * 0.2 : 0) + random() * 0.15, 0, 0.7);
   const score = clamp(level * 0.062 + inspire * 0.35 + rnd(-0.07, 0.09), 0.05, 0.98);
   const seed = Math.floor(rnd(1, 2 ** 31));
   const pal = palette(w, tier, mulberry32(seed));

@@ -13,10 +13,11 @@ import { timeline, daySummary, daysList, exportText, KIND_IDS } from '../src/sim
 import { dayOf, HIST_MAX, DAYS_MAX, pushHist } from '../src/sim/world.js';
 import { runCommand } from '../src/sim/commands.js';
 import { serialize, deserialize } from '../src/sim/save.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = name => console.log('  ok', name);
 const run = (w, s, dt = 0.1) => { for (let t = 0; t < s; t += dt) tick(w, dt); };
-const withRandom = (v, f) => { const real = Math.random; Math.random = typeof v === 'function' ? v : () => v; try { return f(); } finally { Math.random = real; } };
 const LONG = ' It has been studied for a very long time by many careful people who wrote down everything they learned about it.';
 const page = (title, extract) => ({ query: { pages: [{ title, extract: extract + LONG, fullurl: 'https://en.wikipedia.org/wiki/' + title.replace(/ /g, '_') }] } });
 const fakeHttp = search => async url => ({ ok: true, status: 200, json: async () => (url.includes('generator=search') ? search[decodeURIComponent(url.match(/gsrsearch=([^&]*)/)[1])] || { query: { pages: [] } } : { query: { pages: [] } }) });

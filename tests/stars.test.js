@@ -14,9 +14,10 @@ import { digest } from '../src/sim/llm.js';
 import { offlineReply } from '../src/sim/thoughts.js';
 import { runCommand } from '../src/sim/commands.js';
 import { memoryTick } from '../src/sim/memory.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
-const withRandom = (v, f) => { const r = Math.random; Math.random = () => v; try { return f(); } finally { Math.random = r; } };
 const at = (w, day, hour) => { w.clock = (day - 1 + hour / 24) * w.dayLen; };
 const fresh = (temper = null) => { const w = makeWorld('Sky'); w.cat.temper = temper; w.cat.mem.known.tablet = 1; setWeather(w, 'clear'); at(w, 5, 22); return w; };
 const solved = w => { const m = w.mysteries.stars; startStars(w); m.theory = 'x'; m.enough = true; m.enoughDay = dayOf(w); m.read = 1; solve(w, 'stars'); return w; };

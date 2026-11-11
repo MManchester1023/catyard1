@@ -1,5 +1,6 @@
 // Yard layout, time, weather, geometry helpers, and the creatures that share the yard.
 import { W, H, GY0, GY1, rnd, ri, clamp, pick, dist, sstep, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, FEATHER_COLORS, MATERIALS, MAT_CAP, uid, an } from './util.js';
+import { random } from './rng.js';
 
 export const hourOf = w => ((w.clock % w.dayLen) / w.dayLen) * 24;
 export const dayOf = w => Math.floor(w.clock / w.dayLen) + 1;
@@ -206,7 +207,7 @@ export function weatherTick(w, dt) {
   const wt = w.weather;
   wt.timer -= dt;
   if (wt.timer <= 0) {
-    const prev = wt.type, r = Math.random();
+    const prev = wt.type, r = random();
     wt.type = wt.forced || (r < 0.6 ? 'clear' : r < 0.86 ? 'cloud' : 'rain');
     wt.timer = wt.forced ? 1e9 : rnd(140, 340);
     if (wt.type === 'rain' && prev !== 'rain') note(w, 'It started to rain.', 'weather');
@@ -235,9 +236,9 @@ export function birdTick(w, b, dt) {
   if (b.state === 'away') {
     b.timer -= dt;
     if (b.timer <= 0 && w.weather.rain < 0.4 && sunOf(hourOf(w)) > 0.2) {
-      const r = Math.random(); b.x = Math.random() < 0.5 ? -30 : W + 30; b.y = rnd(250, 420); b.z = 170;
+      const r = random(); b.x = random() < 0.5 ? -30 : W + 30; b.y = rnd(250, 420); b.z = 170;
       const fd = !!(w.deco && w.deco.feeder); b.feed = false;
-      if (r < (fd ? 0.8 : 0.6) || b.gift) { const p = randomOpenPoint(w, 160, 880, 300, 545); b.tx = p.x; b.ty = p.y; b.tz = 0; b.dest = 'ground'; if (fd && Math.random() < 0.75) { b.tx = 872 + rnd(-16, 16); b.ty = 360 + rnd(-6, 10); b.feed = true; } }
+      if (r < (fd ? 0.8 : 0.6) || b.gift) { const p = randomOpenPoint(w, 160, 880, 300, 545); b.tx = p.x; b.ty = p.y; b.tz = 0; b.dest = 'ground'; if (fd && random() < 0.75) { b.tx = 872 + rnd(-16, 16); b.ty = 360 + rnd(-6, 10); b.feed = true; } }
       else if (r < 0.85) { b.tx = pick([120, 260, 380, 520, 700, 860]); b.ty = GY0 + 4; b.tz = 46; b.dest = 'perch'; }
       else { b.tx = 822 + rnd(-20, 30); b.ty = 312; b.tz = 118; b.dest = 'perch'; }
       b.state = 'fly'; b.alert = 0;
@@ -269,12 +270,12 @@ export function birdTick(w, b, dt) {
 // gift (see sim.js: what the cat wants to find) always leaves it. A feeder brings more birds, so more things.
 export function dropFromBird(w, b, sure = false) {
   const gift = b.gift; b.gift = null;
-  if (!gift && !sure && Math.random() > (w.deco && w.deco.feeder ? 0.045 : 0.13)) return null; // (with a feeder there are four times the visits, so each leaves less often)
+  if (!gift && !sure && random() > (w.deco && w.deco.feeder ? 0.045 : 0.13)) return null; // (with a feeder there are four times the visits, so each leaves less often)
   if (w.items.length >= 7) return null;
   const q = w.cat.quirk; let type, color = null;
   if (gift) { type = gift.type; color = gift.color; }
-  else if (Math.random() < 0.45 && (type = birdMaterial(w))) { /* a crafting part: bark, a twig or a bit of string */ }
-  else { type = Math.random() < 0.45 ? q.item : pick(ITEM_TYPES); color = type === 'feather' ? pick(FEATHER_COLORS) : pick(COLOR_NAMES.filter(c => c !== 'black')); }
+  else if (random() < 0.45 && (type = birdMaterial(w))) { /* a crafting part: bark, a twig or a bit of string */ }
+  else { type = random() < 0.45 ? q.item : pick(ITEM_TYPES); color = type === 'feather' ? pick(FEATHER_COLORS) : pick(COLOR_NAMES.filter(c => c !== 'black')); }
   let x = clamp(b.x + rnd(-8, 8), 30, W - 30), y = clamp(b.y + rnd(2, 10), GY0 + 24, GY1 - 12);
   if (blocked(w, x, y)) { const p = randomOpenPoint(w, x - 60, x + 60, GY0 + 24, GY1 - 12); x = p.x; y = p.y; }
   const it = { id: uid(), type, color, x, y, age: 0, from: 'bird' }; w.items.push(it);
@@ -288,7 +289,7 @@ function birdMaterial(w) {
   const inv = w.cat.inv || {}, wt = { bark: 1, twig: 1, twine: 0.85 };
   const room = MATERIALS.map(m => [m, wt[m] * Math.max(0, 1 - (inv[m] || 0) / MAT_CAP)]), total = room.reduce((a, r) => a + r[1], 0);
   if (total <= 0) return null;
-  let r = Math.random() * total; for (const [m, v] of room) { r -= v; if (r <= 0) return m; }
+  let r = random() * total; for (const [m, v] of room) { r -= v; if (r <= 0) return m; }
   return room[room.length - 1][0];
 }
 
@@ -300,7 +301,7 @@ export function fishTick(w, dt) {
   if (!f) {
     if (w.fishT == null) w.fishT = rnd(60, 140);
     w.fishT -= dt;
-    if (w.fishT <= 0 && sunOf(hourOf(w)) > 0.12 && w.weather.rain < 0.5) { w.fish = { x: p.x + rnd(-0.6, 0.6) * p.rx, y: p.y + rnd(-0.3, 0.4) * p.ry, dir: Math.random() < 0.5 ? -1 : 1, t: 0, life: rnd(45, 95), spooked: false, spookT: 0, wag: 0 }; w.fishT = rnd(0.2, 0.45) * w.dayLen; }
+    if (w.fishT <= 0 && sunOf(hourOf(w)) > 0.12 && w.weather.rain < 0.5) { w.fish = { x: p.x + rnd(-0.6, 0.6) * p.rx, y: p.y + rnd(-0.3, 0.4) * p.ry, dir: random() < 0.5 ? -1 : 1, t: 0, life: rnd(45, 95), spooked: false, spookT: 0, wag: 0 }; w.fishT = rnd(0.2, 0.45) * w.dayLen; }
     return;
   }
   f.t += dt; f.wag += dt * 5;
@@ -357,7 +358,7 @@ export function sparkTick(w, s, dt) {
 export function spawnItem(w, forceType, forceColor) {
   if (w.items.length >= 7) return null;
   const q = w.cat.quirk;
-  const type = forceType || (Math.random() < 0.55 ? q.item : pick(ITEM_TYPES));
+  const type = forceType || (random() < 0.55 ? q.item : pick(ITEM_TYPES));
   const color = forceColor || (type === 'feather' ? pick(FEATHER_COLORS) : pick(COLOR_NAMES.filter(c => c !== 'black')));
   const p = randomOpenPoint(w, 40, 920, GY0 + 30, GY1 - 16);
   const it = { id: uid(), type, color, x: p.x, y: p.y, age: 0 };

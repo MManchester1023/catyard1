@@ -9,6 +9,7 @@ import { feel } from './feelings.js';
 import { coinActive } from './secrets.js';
 import { isUpset, upsetVoice, upsetAbout } from './upset.js';
 import { recall, touch, when, regularLine } from './memory.js';
+import { random } from './rng.js';
 
 export const POSTS_MAX = 80;
 export function ensureBlog(w) {
@@ -32,7 +33,7 @@ const clip = (s, n = 210) => (s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/
 function chooseEntries(list, n) {
   const pool = list.map(e => ({ e, k: wt(e) })), out = [];
   while (out.length < n && pool.length) {
-    let r = Math.random() * pool.reduce((s, x) => s + x.k, 0), i = 0;
+    let r = random() * pool.reduce((s, x) => s + x.k, 0), i = 0;
     for (; i < pool.length - 1; i++) { r -= pool[i].k; if (r <= 0) break; }
     out.push(pool.splice(i, 1)[0].e);
   }
@@ -138,15 +139,15 @@ export function composePost(w) {
   const title = first ? 'Hello, Yard' : pick(HEAD[top && HEAD[top.tag] ? top.tag : 'default']);
   const paras = [first ? `Welcome to ${b.title}. I am ${c.name}. This is a blog about what I do, what I think, how I feel and what I want. I have heard that writing things down makes them real. I am testing that.` : pick(v.open).replace('#N', `#${b.posts.length + 1}`)];
   if (items.length) paras.push(story(w, items));
-  const old = !first && Math.random() < 0.4 ? recall(w, { exclude: items.length ? items[0].id : null }) : null; // looking back
+  const old = !first && random() < 0.4 ? recall(w, { exclude: items.length ? items[0].id : null }) : null; // looking back
   if (old) {
     touch(w, old); const t = trim(old.text, 170), lead = when(w, old);
     paras.push(SOFT.test(t) || /^I\b/.test(t) ? `${lead}, ${lowerFirst(t)} ${pick(LOOK_BACK)}` : `${t} That was ${lead.toLowerCase()}. ${pick(LOOK_BACK)}`);
-  } else if (!first && Math.random() < 0.25) { const rl = regularLine(w); if (rl) paras.push(rl); }
+  } else if (!first && random() < 0.25) { const rl = regularLine(w); if (rl) paras.push(rl); }
   const th = c.thought && w.clock - c.thoughtAt < w.dayLen * 0.5 ? c.thought : null;
   const mood = [feelLine(w, fl)];
-  if (th && Math.random() < 0.7) mood.push(`${pick(THOUGHT_LEAD)} “${th.replace(/^“|”$/g, '')}”`);
-  if (want && Math.random() < 0.8) mood.push(pick(WANT_LINES(want)));
+  if (th && random() < 0.7) mood.push(`${pick(THOUGHT_LEAD)} “${th.replace(/^“|”$/g, '')}”`);
+  if (want && random() < 0.8) mood.push(pick(WANT_LINES(want)));
   paras.push(mood.join(' '));
   paras.push(pick(v.close));
   return { id: uid(), title, body: paras.join('\n\n'), mood: fl.label, want: want || '', did: items.map(e => e.id), upTo: w.journal.length ? w.journal[0].id : 0, by: 'offline', read: false };
@@ -157,8 +158,8 @@ export function composePost(w) {
 export function considerBlog(w) {
   const c = w.cat, b = ensureBlog(w).blog; if (b.draft || !c.mem.known.tablet) return null;
   const first = !b.started, techie = c.temper === 'techie';
-  if (first) { if (dayOf(w) < scaled(w, techie ? 2 : 4) || Math.random() > (techie ? 0.6 : 0.3)) return null; }
-  else if (w.clock - b.lastAt < w.dayLen * 0.8 || Math.random() > 0.5) return null;
+  if (first) { if (dayOf(w) < scaled(w, techie ? 2 : 4) || random() > (techie ? 0.6 : 0.3)) return null; }
+  else if (w.clock - b.lastAt < w.dayLen * 0.8 || random() > 0.5) return null;
   if (material(w).length < (first ? 5 : 3)) return null;
   b.draft = composePost(w); b.seenId = b.draft.upTo; // everything up to now is covered by this post
   return b.draft;

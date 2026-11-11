@@ -9,6 +9,7 @@ import { PACE, paceOf, scaled } from './pace.js';
 import { feel } from './feelings.js';
 import { clue, starsFinal } from './mysteries.js';
 import { openWishes, wishLabel } from './wishes.js';
+import { random } from './rng.js';
 
 export const nightId = w => dayOf(w) - (hourOf(w) < 12 ? 1 : 0);          // (a night runs from one evening to the next morning)
 export const darkSky = w => sunOf(hourOf(w)) < 0.12;
@@ -37,7 +38,7 @@ export function starsRoll(w) {
   const m = w.mysteries.stars, c = w.cat; if (!m) return;
   if (m.interest && !m.solved) starsFinal(w); // (with no tablet it gets there in the end)
   if (m.interest || m.solved || dayOf(w) < 3 || (m.nights || 0) < scaled(w, PACE.starsNights, 2)) return;
-  if (Math.random() < PACE.starsUrge * (0.5 + c.traits.curious) * (c.temper === 'nightowl' ? 1.5 : 1) / paceOf(w)) startStars(w, 'nights');
+  if (random() < PACE.starsUrge * (0.5 + c.traits.curious) * (c.temper === 'nightowl' ? 1.5 : 1) / paceOf(w)) startStars(w, 'nights');
 }
 
 // ---------- clues ----------
@@ -46,7 +47,7 @@ export function starsClue(w, amt = 1) { const m = w.mysteries.stars; if (!m || !
 // it has read about the stars (tablet.js): that can start the wondering, and it is the last step of working them out
 export function starsPage(w) {
   const m = w.mysteries.stars; if (!m || m.solved) return;
-  if (!m.interest) { if (Math.random() < 0.4) startStars(w, 'read'); return; }
+  if (!m.interest) { if (random() < 0.4) startStars(w, 'read'); return; }
   m.read = (m.read || 0) + 1; starsClue(w, 2);
   if (m.enough) { starsFinal(w); }
 }
@@ -55,24 +56,24 @@ export function starsPage(w) {
 // a star may fall on a clear night. nights are planned once, when the sky goes dark; a cat that goes out to gaze at the
 // stars may also find one falling while it looks
 function planNight(w, id) {
-  const h = hourOf(w), hh = h < 12 ? h + 24 : h, span = Math.max(0, (29 - hh) / 24 * w.dayLen), r = Math.random(), n = r < 1 - PACE.meteorNight ? 0 : r < 1 - PACE.meteorNight * 0.2 ? 1 : 2;
+  const h = hourOf(w), hh = h < 12 ? h + 24 : h, span = Math.max(0, (29 - hh) / 24 * w.dayLen), r = random(), n = r < 1 - PACE.meteorNight ? 0 : r < 1 - PACE.meteorNight * 0.2 ? 1 : 2;
   w.meteorPlan = { id, times: Array.from({ length: n }, () => w.clock + rnd(0.04, 0.96) * span).sort((a, b) => a - b) };
   return w.meteorPlan;
 }
 const ensurePlan = w => (w.meteorPlan && w.meteorPlan.id === nightId(w) ? w.meteorPlan : planNight(w, nightId(w)));
 // a cat that starts gazing at the stars on a night it is allowed a wish may be lucky
 export function meteorLure(w, dur) {
-  if (!w.mysteries.stars.solved || !darkSky(w) || !skyClear(w) || !wishReady(w) || Math.random() > 0.45) return false;
+  if (!w.mysteries.stars.solved || !darkSky(w) || !skyClear(w) || !wishReady(w) || random() > 0.45) return false;
   const p = ensurePlan(w); p.times.push(w.clock + rnd(4, Math.max(5, dur - 3))); p.times.sort((a, b) => a - b); return true;
 }
 
 function catSees(w) {
   const c = w.cat; if (c.pose === 'sleep' || c.pose === 'inside' || c.hidden) return false;
   if (c.act && c.act.type === 'gaze') return true;
-  return Math.random() < (w.weather.cloud > 0.4 ? 0.2 : 0.45);
+  return random() < (w.weather.cloud > 0.4 ? 0.2 : 0.45);
 }
 export function launchMeteor(w, forceSee = null) {
-  const dir = Math.random() < 0.5 ? -1 : 1;
+  const dir = random() < 0.5 ? -1 : 1;
   w.meteor = { t: 0, dur: rnd(1.4, 2.0), x0: dir > 0 ? rnd(140, 560) : rnd(400, 820), y0: rnd(10, 55), dx: dir * rnd(150, 260), dy: rnd(60, 115), seen: forceSee == null ? catSees(w) : !!forceSee };
   if (w.meteor.seen) { const c = w.cat; c.thought = pick(['A STAR. It is falling. Wish, wish, wish.', 'There. There! One fell.', 'I saw it. I was looking. Nobody else saw it, but I did.']); c.thoughtId++; c.thoughtAt = w.clock; c.face = dir > 0 ? 1 : -1; }
   return w.meteor;
@@ -96,15 +97,15 @@ function meteorSeen(w) {
 // what turns up when a wish is granted: something the cat likes, or exactly what it asked the human for
 export function glitterThing(w) {
   const q = w.cat.quirk; let type, color = null;
-  if (Math.random() < 0.3) type = 'twine';
-  else { type = Math.random() < 0.6 ? q.item : pick(ITEM_TYPES); color = type === 'feather' ? pick(FEATHER_COLORS) : (Math.random() < 0.6 ? q.favColor : pick(COLOR_NAMES.filter(k => k !== 'black'))); }
+  if (random() < 0.3) type = 'twine';
+  else { type = random() < 0.6 ? q.item : pick(ITEM_TYPES); color = type === 'feather' ? pick(FEATHER_COLORS) : (random() < 0.6 ? q.favColor : pick(COLOR_NAMES.filter(k => k !== 'black'))); }
   return { type, color };
 }
 export function starWish(w) {
   const c = w.cat; w.starWishDay = dayOf(w);
   let p = randomOpenPoint(w, 80, 880, 300, 540), tries = 0; while (blocked(w, p.x, p.y) && tries++ < 8) p = randomOpenPoint(w, 80, 880, 300, 540);
   const open = openWishes(w).filter(x => x.kind === 'item'); let thing = glitterThing(w), asked = null; // (it may grant something it had asked the human for)
-  if (open.length && Math.random() < 0.5) { asked = pick(open); thing = { type: asked.type, color: asked.color || (asked.type === 'feather' ? pick(FEATHER_COLORS) : w.cat.quirk.favColor) }; }
+  if (open.length && random() < 0.5) { asked = pick(open); thing = { type: asked.type, color: asked.color || (asked.type === 'feather' ? pick(FEATHER_COLORS) : w.cat.quirk.favColor) }; }
   const it = { id: uid(), type: thing.type, color: thing.color, x: p.x, y: p.y, age: 0, moon: true, star: true }; w.items.push(it);
   w.stats.starWishes = (w.stats.starWishes || 0) + 1;
   if (asked) { asked.state = 'granted'; asked.granted = { day: dayOf(w), time: clockStr(w), by: 'star' }; }

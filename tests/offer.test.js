@@ -4,6 +4,8 @@ import { makeWorld, tick } from '../src/sim/sim.js';
 import { leaveOffering, inspectOffer, finishOffer, wonderAbout, pendingOffer, MAX_ON_MAT } from '../src/sim/offerings.js';
 import { runCommand } from '../src/sim/commands.js';
 import { serialize, deserialize } from '../src/sim/save.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = (name) => console.log('  ok', name);
 const run = (w, s) => { for (let t = 0; t < s; t += 0.1) tick(w, 0.1); };
@@ -85,8 +87,8 @@ const run = (w, s) => { for (let t = 0; t < s; t += 0.1) tick(w, 0.1); };
   assert(c.words.lighthouse >= 1 || c.words.paintings >= 1, 'it learned words from the note');
   finishOffer(w, offer);
   assert(c.keepsakes.length === 1 && c.keepsakes[0].text.includes('lighthouse') && !w.offers.length);
-  const real = Math.random; Math.random = () => 0.1;
-  c.wants = []; const want = wonderAbout(w, 'The lighthouse keeper sailed away'); Math.random = real;
+  setRandom(() => 0.1);
+  c.wants = []; const want = wonderAbout(w, 'The lighthouse keeper sailed away'); setRandom(null);
   assert(want && want.kind === 'lookup' && want.word === 'lighthouse' && /find out what "lighthouse" is/.test(want.text), JSON.stringify(want));
   const mean = leaveOffering(w, { kind: 'note', text: 'I hate you, you stupid cat' }).offer; const m = inspectOffer(w, mean);
   assert(m.tier === 'meh' || m.tier === 'curious', 'unkind words land differently: ' + m.tier);

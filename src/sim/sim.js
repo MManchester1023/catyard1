@@ -24,6 +24,7 @@ import { frogTick } from './frog.js';
 import { discoverRadius, placeCap } from './pace.js';
 import { ensureTablet } from './tablet.js';
 import { ensureBlog, considerBlog } from './blog.js';
+import { makeRng, useRng, nextSeed } from './rng.js';
 
 export { describe };
 export const VERSION = 3;
@@ -42,9 +43,12 @@ export function makeCat(name) {
   };
 }
 
-export function makeWorld(name) {
+// opt.seed fixes the dice: the same seed gives the same cat and, stepped the same way, the same life (see rng.js)
+export function makeWorld(name, opt = {}) {
+  const rng = makeRng(opt.seed != null ? opt.seed : nextSeed()); useRng(rng); // (before anything is rolled)
   const dayLen = 1200;
   const w = {
+    rng,
     v: VERSION, clock: (6.3 / 24) * dayLen, dayLen, speed: 1, paused: false,
     log: [], logId: 0, journal: [], chat: [], asks: [], pending: [], onNote: null,
     weather: { type: 'clear', rain: 0, cloud: 0.15, timer: rnd(160, 300), forced: null },
@@ -86,6 +90,7 @@ function noticeThought(w) {
 }
 
 export function tick(w, dt) {
+  useRng(w.rng); // (this world's dice, whichever world was stepped last)
   w.clock += dt;
   const c = w.cat, n = c.needs, o = w.o, h = hourOf(w), bm = beamOf(w), dayDt = dt / w.dayLen;
   weatherTick(w, dt);
@@ -171,11 +176,15 @@ export function tick(w, dt) {
 }
 
 // advance by real seconds, honoring the speed setting. returns sim seconds advanced
-export function advance(w, realDt, maxSteps = 90) {
+// The live loop. The world always moves in steps of exactly STEP seconds, however the frames happen to fall (the
+// leftover is kept for the next frame), so the same seed gives the same life at any frame rate or speed.
+export const STEP = 1 / 60;
+export function advance(w, realDt, maxSteps = 600) {
   if (w.paused) return 0;
-  let left = Math.min(realDt, 1) * w.speed, steps = 0, used = 0;
-  while (left > 1e-6 && steps < maxSteps) { const d = Math.min(left, 0.1); tick(w, d); left -= d; used += d; steps++; }
-  return used;
+  let acc = (w.acc || 0) + Math.min(realDt, 1) * w.speed, steps = 0;
+  while (acc >= STEP && steps < maxSteps) { tick(w, STEP); acc -= STEP; steps++; }
+  w.acc = Math.min(acc, STEP); // (time beyond what fits in one go is dropped, as before, rather than piling up)
+  return steps * STEP;
 }
 
 // fast-forward the time the app was closed. no thoughts spoken, no LLM asks

@@ -7,8 +7,9 @@ import { feel } from './feelings.js';
 import { onEvent } from './wants.js';
 import { layoutStash } from './quirk.js';
 import { PACE, paceOf, barkLuck, gatherRoom } from './pace.js';
-import { foundCatTree } from './secrets.js';
+import { foundCatTree } from './cattree.js';
 import { foundPlace } from './finds.js';
+import { random } from './rng.js';
 
 export const INV_CAP = MAT_CAP;
 export const have = (w, m) => w.cat.inv[m] || 0;
@@ -54,7 +55,7 @@ export const neededMat = (w, m) => goals(w).some(id => (rawShortfall(w, id)[m] |
 // ---------- the oak ----------
 export function scratchTree(w) {
   if (!gatherRoom(w)) { feel(w, ['act:tree'], { joy: 0.02 }, 'content'); return null; } // it has given what it can today
-  const c = w.cat, r = Math.random(), k = barkLuck(w), lucky = (0.38 + c.traits.curious * 0.06) * k; // pace.js: the oak is not that generous
+  const c = w.cat, r = random(), k = barkLuck(w), lucky = (0.38 + c.traits.curious * 0.06) * k; // pace.js: the oak is not that generous
   const drop = r < lucky ? 'bark' : r < lucky + 0.14 * k ? 'twig' : null;
   if (!drop || c.inv[drop] >= INV_CAP) { feel(w, ['act:tree'], { joy: 0.02 }, 'content'); return null; }
   return drop;
@@ -65,7 +66,7 @@ export const bedRoom = w => { const c = w.cat; return (c.sDay === dayOf(w) ? c.s
 export const stringWanted = w => knows(w, 'string') && (w.cat.inv.twine || 0) < 4 && goals(w).some(id => (shortfall(w, id).twine || 0) > 0);
 export function scratchBed(w) {
   const c = w.cat;
-  if (!bedRoom(w) || c.inv.twine >= INV_CAP || Math.random() > 0.5 * Math.min(1, barkLuck(w) * 2)) { feel(w, ['act:bed'], { joy: 0.01 }, 'content'); return null; }
+  if (!bedRoom(w) || c.inv.twine >= INV_CAP || random() > 0.5 * Math.min(1, barkLuck(w) * 2)) { feel(w, ['act:bed'], { joy: 0.01 }, 'content'); return null; }
   return 'twine';
 }
 export function collectDrop(w, type) {

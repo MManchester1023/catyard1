@@ -14,6 +14,7 @@ import { draftWish, publishWish, wishPending } from './wishes.js';
 import { blogPending, publishPost, BLOG_THOUGHTS } from './blog.js';
 import { wantsToResearch, interestRequest, interestPage, interestMiss } from './interest.js';
 import { starsPage, starsNeedsReading } from './stars.js';
+import { random } from './rng.js';
 
 export const PAGES_MAX = 24, INTERESTS_MAX = 40, SEEN_MAX = 400, ASKED_WORDS = 24;
 const SKIP = new Set('about after also because between during first their there these they were which while with would other since from that this have been into over under only most many some such than then when where who whose'.split(' '));
@@ -54,23 +55,23 @@ export function pickRequest(w) {
   const t = w.tablet, lw = lookupWant(w), lr = w.cat.wants.find(x => x.kind === 'learn');
   if (lr) return { kind: 'lookup', q: RECIPES[lr.recipe].topic, word: null, recipe: lr.recipe };
   if (lw) return { kind: 'lookup', q: lw.word, word: lw.word, skip: t.seen.slice(-250) }; // (a word it wants to know: the best page it has not read yet)
-  if (starsNeedsReading(w) && Math.random() < 0.75) return { kind: 'lookup', q: pick(STAR_QUERIES), word: null, stars: true, skip: t.seen.slice(-250), vary: true }; // (it has watched them long enough: now it wants to know what they are)
+  if (starsNeedsReading(w) && random() < 0.75) return { kind: 'lookup', q: pick(STAR_QUERIES), word: null, stars: true, skip: t.seen.slice(-250), vary: true }; // (it has watched them long enough: now it wants to know what they are)
   // every general search skips what it has already read, picks among the first few new results, and reads something random
   // if there is nothing new (so it does not keep landing on the same pages)
   const general = (q, extra) => Object.assign({ kind: 'lookup', q, word: null, skip: t.seen.slice(-250), vary: true, fallback: true }, extra);
   if (wantsToResearch(w)) { const r = interestRequest(w), have = new Set(r.skip.map(x => String(x).toLowerCase())); r.skip = [...r.skip, ...t.seen.slice(-250).filter(x => !have.has(x))]; return r; } // (a special interest: page after page on the same subject)
   const qs = QUIRK_QUERIES[w.cat.temper];
-  if (qs && Math.random() < (w.cat.temper === 'techie' ? 0.5 : 0.4)) { // (its quirk decides what it is curious about; it works through the whole list before going round again)
+  if (qs && random() < (w.cat.temper === 'techie' ? 0.5 : 0.4)) { // (its quirk decides what it is curious about; it works through the whole list before going round again)
     t.asked = t.asked || []; let fresh = qs.filter(x => !t.asked.includes(x)); if (!fresh.length) { t.asked = t.asked.filter(x => !qs.includes(x)); fresh = qs; }
     const q = pick(fresh); t.asked.push(q); if (t.asked.length > 80) t.asked.shift();
     return general(q, { quirk: true });
   }
   // the words it keeps coming across: any of the commonest, weighted, and not one it has just looked up
   const recent = t.askedWords.slice(-Math.min(ASKED_WORDS, Math.floor(Object.keys(t.interests).length / 2))); // (up to half of what it knows, so a small vocabulary still rotates)
-  const cand = Object.entries(t.interests).filter(([k]) => !recent.includes(k)).sort((a, b) => b[1] - a[1]).slice(0, 14), r = Math.random();
+  const cand = Object.entries(t.interests).filter(([k]) => !recent.includes(k)).sort((a, b) => b[1] - a[1]).slice(0, 14), r = random();
   if (t.featuredDate !== localDate() && r < 0.3) return { kind: 'featured' };
   if (cand.length && r < 0.55) {
-    let x = Math.random() * cand.reduce((s, e) => s + e[1], 0), word = cand[0][0]; for (const [k, n] of cand) { x -= n; if (x <= 0) { word = k; break; } }
+    let x = random() * cand.reduce((s, e) => s + e[1], 0), word = cand[0][0]; for (const [k, n] of cand) { x -= n; if (x <= 0) { word = k; break; } }
     t.askedWords.push(word); if (t.askedWords.length > ASKED_WORDS) t.askedWords.shift();
     return general(word);
   }
@@ -104,7 +105,7 @@ function noteInterests(w, pg) {
 
 // a new thing it could look up next: a name or word in the text it has not met
 function wonderFromPage(w, pg) {
-  const c = w.cat; if (c.wants.length >= MAX_WANTS || hasWant(w, 'lookup') || Math.random() > 0.3) return;
+  const c = w.cat; if (c.wants.length >= MAX_WANTS || hasWant(w, 'lookup') || random() > 0.3) return;
   const own = new Set(pg.title.toLowerCase().match(/[a-z]+/g) || []);
   const words = (pg.extract.match(/\b[A-Z][a-z]{5,13}\b/g) || []).map(x => x.toLowerCase()).filter(x => !own.has(x) && !SKIP.has(x) && !(c.words[x] >= 2));
   if (words.length) { const word = pick(words); addWant(w, { kind: 'lookup', key: word, word, strength: rnd(0.5, 0.8) }); }

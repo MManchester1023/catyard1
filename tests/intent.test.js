@@ -12,10 +12,11 @@ import { Brain, DEFAULTS, digest } from '../src/sim/llm.js';
 import { serialize, deserialize } from '../src/sim/save.js';
 import { offlineReply } from '../src/sim/thoughts.js';
 import { TEMPER_IDS } from '../src/sim/temper.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const fresh = (temper = null) => { const w = makeWorld('Int'); w.cat.temper = temper; return w; };
-const withRandom = (v, f) => { const r = Math.random; Math.random = () => v; try { return f(); } finally { Math.random = r; } };
 const atHour = (w, day, h) => { w.clock = (day - 1) * w.dayLen + (h / 24) * w.dayLen; };
 // a calm noon with a handful of things it could do
 const calm = () => { const w = fresh(); const c = w.cat; atHour(w, 5, 12); c.traits = { curious: 0.5, bold: 0.5, affection: 0.5, lazy: 0.3 }; Object.assign(c.needs, { hunger: 0.1, thirst: 0, tired: 0.3, fun: 0.5, dirty: 0.2, create: 0.6, lonely: 0.5, fear: 0 }); c.mem.known.post = 1; c.mem.known.yarn = 1; c.mem.known.easel = 1;

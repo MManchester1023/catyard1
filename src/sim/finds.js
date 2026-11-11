@@ -9,6 +9,7 @@
 import { clamp, ITEM_LABEL, PLACE_LABEL, pick, an } from './util.js';
 import { journal, note, dayOf } from './world.js';
 import { feel, keyName } from './feelings.js';
+import { random } from './rng.js';
 
 export const MAX_FAVS = 3, FAV_PULL = 0.3;
 // everything it does that can become a favourite, by the key it is remembered under
@@ -60,7 +61,7 @@ const FAV_T = {
 // the start of a favourite: it knows, and says so now and then
 export function favStart(w) {
   const c = w.cat, a = c.act, key = actKeyOf(a); if (!isFav(w, key)) return;
-  if (w.clock - c.favSaid < w.dayLen * 0.15 || Math.random() > 0.5) return;
+  if (w.clock - c.favSaid < w.dayLen * 0.15 || random() > 0.5) return;
   c.favSaid = w.clock; c.thought = pick(FAV_T[key] || FAV_T.default); c.thoughtId++; c.thoughtAt = w.clock;
 }
 

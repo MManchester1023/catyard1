@@ -7,6 +7,8 @@ import { pickRequest, ensureTablet, QUIRK_QUERIES, ASKED_WORDS } from '../src/si
 import { addWant } from '../src/sim/wants.js';
 import { serialize, deserialize } from '../src/sim/save.js';
 import { TEMPER_IDS } from '../src/sim/temper.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const LONG = ' It has been studied for a very long time by many careful people who wrote down everything they learned about it.';

@@ -7,6 +7,7 @@ import { RECIPES } from './recipes.js';
 import { humanNeed, craftWant, goals } from './craft.js';
 import { itemName, stashColors } from './quirk.js';
 import { upsetBy, soothe } from './upset.js';
+import { random } from './rng.js';
 
 export const WISH_OPEN_MAX = 2, WISH_LIFE_DAYS = 5;
 const sameAs = (a, b) => a.kind === b.kind && a.type === b.type; // one open request per kind of thing is plenty
@@ -45,9 +46,9 @@ export function considerWish(w) {
   if (c.wishes.filter(x => x.state === 'open' || x.state === 'draft').length >= WISH_OPEN_MAX) return null;
   if (w.clock - c.lastWishAt < w.dayLen * 0.7) return null;
   const cand = candidates(w); if (!cand.length) return null;
-  let r = Math.random() * cand.reduce((s, x) => s + x.weight, 0), chosen = cand[0].spec;
+  let r = random() * cand.reduce((s, x) => s + x.weight, 0), chosen = cand[0].spec;
   for (const x of cand) { r -= x.weight; if (r <= 0) { chosen = x.spec; break; } }
-  const wish = Object.assign({ id: Math.random().toString(36).slice(2, 9), state: 'draft', day: dayOf(w), seen: false }, chosen);
+  const wish = Object.assign({ id: random().toString(36).slice(2, 9), state: 'draft', day: dayOf(w), seen: false }, chosen);
   wish.text = phrase(w, wish); c.wishes.unshift(wish); if (c.wishes.length > 30) c.wishes.pop(); c.lastWishAt = w.clock;
   return wish;
 }

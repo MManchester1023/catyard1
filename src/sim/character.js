@@ -11,6 +11,7 @@ import { isUpset } from './upset.js';
 import { coinActive } from './secrets.js';
 import { actKeyOf, SCORE_KEY, isFav } from './finds.js';
 import { affinity, keyName } from './feelings.js';
+import { random } from './rng.js';
 
 export function ensureChar(c) {
   if (!c.dayMood) c.dayMood = { day: 0, kind: 'steady' }; if (!Array.isArray(c.habits)) c.habits = []; if (!c.slotLog) c.slotLog = {};
@@ -44,11 +45,11 @@ export function rollMood(w) {
     dreamy: 0.6 + T.curious * 0.8 + (t === 'nightowl' || t === 'vangogh' ? 1 : 0) + (rainy ? 0.5 : 0), busy: 0.6 + (t === 'builder' || t === 'techie' || t === 'collector' ? 1.2 : 0) + T.curious * 0.4, restless: 0.6 + (1 - T.lazy) * 0.8 + n.fun * 0.8,
     grumpy: 0.35 + (n.tired > 0.6 ? 1 : 0) + (n.hunger > 0.6 ? 0.8 : 0) + (isUpset(w) ? 1.5 : 0) + (rainy ? 0.3 : 0), chipper: 0.5 + c.mood.joy * 0.8 + (coinActive(w) ? 1.5 : 0),
   };
-  let r = Math.random() * Object.values(wt).reduce((a, b) => a + b, 0), kind = 'steady';
+  let r = random() * Object.values(wt).reduce((a, b) => a + b, 0), kind = 'steady';
   for (const [k, v] of Object.entries(wt)) { r -= v; if (r <= 0) { kind = k; break; } }
   const m = MOODS[kind]; c.dayMood = { day: dayOf(w), kind };
   if (m.joy) c.mood.joy = clamp(c.mood.joy + m.joy); if (m.fear) n.fear = clamp(n.fear + m.fear);
-  if (m.line && Math.random() < 0.7) journal(w, pick(m.line), 'mood');
+  if (m.line && random() < 0.7) journal(w, pick(m.line), 'mood');
   return kind;
 }
 
@@ -69,7 +70,7 @@ export function noteAct(w) {
   if (h) {
     if (h.last !== day) { // the ritual, kept
       h.last = day; h.times = (h.times || 0) + 1; c.needs.fear = clamp(c.needs.fear - 0.04); c.mood.joy = clamp(c.mood.joy + 0.02);
-      if (Math.random() < 0.4) { c.thought = pick([`${keyName(key)[0].toUpperCase() + keyName(key).slice(1)} ${SLOT_WORD[slot]}. As always.`, 'My routine. It holds the day together.', 'Right on time. I do like a ritual.']); c.thoughtId++; c.thoughtAt = w.clock; }
+      if (random() < 0.4) { c.thought = pick([`${keyName(key)[0].toUpperCase() + keyName(key).slice(1)} ${SLOT_WORD[slot]}. As always.`, 'My routine. It holds the day together.', 'Right on time. I do like a ritual.']); c.thoughtId++; c.thoughtAt = w.clock; }
     }
   } else if (e.n >= scaled(w, HABIT_DAYS) && c.habits.length < MAX_HABITS) {
     c.habits.push({ key, slot, since: day, last: day, times: e.n });
@@ -77,7 +78,7 @@ export function noteAct(w) {
   }
   const s = c.stub; if (s && w.clock < s.until && acted(a, s.key)) { // the notion, seen through
     c.stub = null; c.mood.joy = clamp(c.mood.joy + 0.03);
-    if (Math.random() < 0.35) journal(w, `I wanted to ${DO[s.key]} and I did. I will not be told otherwise.`, 'impulse');
+    if (random() < 0.35) journal(w, `I wanted to ${DO[s.key]} and I did. I will not be told otherwise.`, 'impulse');
   }
 }
 // is this act what the score name is about?
@@ -97,13 +98,13 @@ const IMPULSE_KEYS = [...Object.keys(SCORE_KEY).filter(k => k !== 'wash' && k !=
 export function rollImpulse(w) {
   const c = ensureChar(w.cat), S = w.scoreSnap; if (!S) return null;
   if (c.stub && w.clock < c.stub.until) return null; c.stub = null;
-  if (w.clock - c.stubAt < w.dayLen * 0.2 || Math.random() > 0.1 + 0.25 * stubbornness(c)) return null;
+  if (w.clock - c.stubAt < w.dayLen * 0.2 || random() > 0.1 + 0.25 * stubbornness(c)) return null;
   if (c.needs.hunger > 0.75 || c.needs.tired > 0.8 || isUpset(w)) return null; // a notion, not a crisis
   const m = moodToday(w), pool = IMPULSE_KEYS.filter(k => S[k] > 0.05).map(k => {
-    const ak = SCORE_KEY[k], wgt = 0.3 + Math.max(0, ak ? affinity(w, ak) : 0) * 2 + (ak && isFav(w, ak) ? 1 : 0) + (m.mul[k] > 1 ? 0.6 : 0) + Math.random() * 0.4; return [k, wgt];
+    const ak = SCORE_KEY[k], wgt = 0.3 + Math.max(0, ak ? affinity(w, ak) : 0) * 2 + (ak && isFav(w, ak) ? 1 : 0) + (m.mul[k] > 1 ? 0.6 : 0) + random() * 0.4; return [k, wgt];
   });
   if (!pool.length) return null;
-  let r = Math.random() * pool.reduce((a, p) => a + p[1], 0), key = pool[0][0]; for (const [k, v] of pool) { r -= v; if (r <= 0) { key = k; break; } }
+  let r = random() * pool.reduce((a, p) => a + p[1], 0), key = pool[0][0]; for (const [k, v] of pool) { r -= v; if (r <= 0) { key = k; break; } }
   c.stub = { key, until: w.clock + w.dayLen * 0.12, day: dayOf(w) }; c.stubAt = w.clock;
   c.thought = pick([`I have decided I am going to ${DO[key]}. Do not argue.`, `Right. I am going to ${DO[key]}. It is not up for discussion.`, `I have a notion. ${DO[key][0].toUpperCase() + DO[key].slice(1)}. Now.`]); c.thoughtId++; c.thoughtAt = w.clock;
   return c.stub;

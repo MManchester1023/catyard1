@@ -7,10 +7,11 @@ import { serialize, deserialize } from '../src/sim/save.js';
 import { offlineReply, thoughtFor } from '../src/sim/thoughts.js';
 import { digest } from '../src/sim/llm.js';
 import { composePost, ensureBlog } from '../src/sim/blog.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const fresh = () => { const w = makeWorld('Tess'); w.cat.mem.known.tablet = 1; return w; };
-const withRandom = (v, f) => { const r = Math.random; Math.random = () => v; try { return f(); } finally { Math.random = r; } };
 const atDay = (w, d) => { w.clock = (d - 1) * w.dayLen + 100; };
 
 // ---- what is kept: significant things, not chatter; the first of anything is memorable

@@ -6,6 +6,7 @@ import { meetFrog } from './frog.js';
 import { quirkWord } from './quirk.js';
 import { onEvent } from './wants.js';
 import { addToStash } from './quirk.js';
+import { random } from './rng.js';
 
 export const MYSTERY_INFO = {
   moon: { name: 'the moon', short: 'moon' },
@@ -65,7 +66,7 @@ export function clue(w, id, amt = 1, phase = null) {
   const revise = Math.floor(m.clues / (PACE.reviseEvery * pm));
   if (revise > m.revised && !(id === 'moon' && m.sawPhases)) {
     m.revised = revise;
-    if (Math.random() < 0.55) { const old = m.theory; m.conf = 0.35; setTheory(w, id, pick(THEORIES[id](w.cat.quirk).filter(t => t !== old)), 'I was wrong before. New evidence.'); }
+    if (random() < 0.55) { const old = m.theory; m.conf = 0.35; setTheory(w, id, pick(THEORIES[id](w.cat.quirk).filter(t => t !== old)), 'I was wrong before. New evidence.'); }
   }
   if (id === 'sparks' && m.clues >= sc(PACE.sparksSolve, 4)) return solve(w, id);
   if (id === 'tree' && m.clues >= sc(PACE.treeSolve, 4)) return solve(w, id);
@@ -96,7 +97,7 @@ export function moonFinal(w) {
 // there have been enough of them the cat knows what lives there, and the frog becomes its friend.
 export function frogSighting(w) {
   const m = w.mysteries.ripples; if (m.solved) return false;
-  const day = dayOf(w); if (m.frogDay !== day) { m.frogDay = day; m.frogToday = 0; m.frogGood = Math.random() < PACE.frogDayChance; }
+  const day = dayOf(w); if (m.frogDay !== day) { m.frogDay = day; m.frogToday = 0; m.frogGood = random() < PACE.frogDayChance; }
   if (!m.frogGood || m.frogToday >= Math.max(1, Math.round(PACE.frogPerDay / paceOf(w)))) return false;
   m.frogToday++; m.frogSeen = (m.frogSeen || 0) + 1;
   if (m.frogSeen >= scaled(w, PACE.frogSightings, 2)) { solve(w, 'ripples'); return true; }
@@ -140,7 +141,7 @@ export function rippleTick(w, dt, hour, night) {
   if (w.ripple) { w.ripple.t += dt; if (w.ripple.t > 5) w.ripple = null; return; }
   w.rippleT -= dt;
   if (w.rippleT <= 0) {
-    w.rippleT = (night || hour < 7.5 || hour > 17) ? 60 + Math.random() * 90 : 160 + Math.random() * 200;
-    if (w.weather.rain < 0.5) w.rippleAt = w.clock, w.ripple = { t: 0, dx: (Math.random() - 0.5) * 100, dy: (Math.random() - 0.5) * 20, frog: night || Math.random() < 0.4 };
+    w.rippleT = (night || hour < 7.5 || hour > 17) ? 60 + random() * 90 : 160 + random() * 200;
+    if (w.weather.rain < 0.5) w.rippleAt = w.clock, w.ripple = { t: 0, dx: (random() - 0.5) * 100, dy: (random() - 0.5) * 20, frog: night || random() < 0.4 };
   }
 }

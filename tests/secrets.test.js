@@ -10,7 +10,8 @@ import { knows } from '../src/sim/recipes.js';
 import { isUpset, upsetBy, soothe } from '../src/sim/upset.js';
 import { wishTick } from '../src/sim/wishes.js';
 import { leaveOffering } from '../src/sim/offerings.js';
-import { foundCatTree, moonWish, moonWishTick, secretsRoll, coinActive } from '../src/sim/secrets.js';
+import { moonWish, moonWishTick, secretsRoll, coinActive } from '../src/sim/secrets.js';
+import { foundCatTree } from '../src/sim/cattree.js';
 import { clue, solve, moonFinal, frogVisitsForMoon } from '../src/sim/mysteries.js';
 import { meetFrog, frogVisited } from '../src/sim/frog.js';
 import { clueCap, quick, PACE } from '../src/sim/pace.js';
@@ -19,6 +20,8 @@ import { runCommand } from '../src/sim/commands.js';
 import { thoughtFor } from '../src/sim/thoughts.js';
 import { moonPhase } from '../src/sim/world.js';
 import { pickRequest, QUIRK_QUERIES, ensureTablet } from '../src/sim/tablet.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const K = { pond: 1, post: 1, tree: 1, flowers: 1, cushion: 1, yarn: 1, fence: 1, easel: 1, tablet: 1 };
@@ -106,7 +109,7 @@ const calm = (w, hour = 10) => {
   assert.ok(!m.cat.wants.some(x => x.recipe === 'cattree'), 'and stops wanting one');
   const r = deserialize(serialize(m)); assert.ok(r.catTree && r.catTree.how === 'made', 'saved');
   // the odds are exact, so test the threshold rather than sampling (sampling flaked about 1 run in 100)
-  const probe = f => { const x = mk(); x.clock = 3 * x.dayLen; const edge = PACE.peekChance * (0.6 + x.cat.traits.curious * 0.8), r = Math.random; Math.random = () => edge * f; try { secretsRoll(x); } finally { Math.random = r; } return !!x.cat.peekUrge; };
+  const probe = f => { const x = mk(); x.clock = 3 * x.dayLen; const edge = PACE.peekChance * (0.6 + x.cat.traits.curious * 0.8); setRandom(() => edge * f); try { secretsRoll(x); } finally { setRandom(null); } return !!x.cat.peekUrge; };
   assert.ok(probe(0.5) && !probe(1.5), 'the roll succeeds just under the stated chance and fails just over it'); const perDay = PACE.peekChance * (0.6 + 0.5 * 0.8) * 6; assert.ok(perDay > 0.008 && perDay < 0.04, 'about 1-3% a day: ' + (perDay * 100).toFixed(1) + '%');
   assert.ok(/cat tree/.test(runCommand(mk(), 'secret status', { admin: true }).lines.join(' ')));
   ok('rare to wonder what is behind the cabin; finds or builds a cat tree; sits in it; saved');
@@ -129,7 +132,8 @@ const calm = (w, hour = 10) => {
 // ---- the moon
 {
   const w = mk(); const m = w.mysteries.moon; m.theory = 'x'; m.sawPhases = true; meetFrog(w);
-  for (let i = 0; i < 9; i++) frogVisited(w); assert.ok(!m.solved, 'nine visits are not enough'); frogVisited(w); assert.ok(m.solved, 'the tenth is the last step');
+  const visit = x => { frogVisited(x); moonFinal(x); }; // (what the frog act does at the end of a visit, acts.js)
+  for (let i = 0; i < 9; i++) visit(w); assert.ok(!m.solved, 'nine visits are not enough'); visit(w); assert.ok(m.solved, 'the tenth is the last step');
   assert.equal(frogVisitsForMoon(w), 10);
   const f = mk(); f.cat.traits.curious = 0.95; assert.equal(frogVisitsForMoon(f), 5, 'twice as fast for a very curious cat');
   const x = mk(); assert.ok(!moonWishTick(x), 'no wish before the moon is understood');

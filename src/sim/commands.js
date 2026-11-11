@@ -14,7 +14,8 @@ import { topFeelings } from './feelings.js';
 import { TEMPERS, TEMPER_IDS, temperName } from './temper.js';
 import { meetFrog } from './frog.js';
 import { PACE, paceOf, scaled, MIN_PACE, MAX_PACE } from './pace.js';
-import { foundCatTree, moonWish } from './secrets.js';
+import { moonWish } from './secrets.js';
+import { foundCatTree } from './cattree.js';
 import { startStars, launchMeteor, starWish, wishReady } from './stars.js';
 import { solve, moonFinal, frogVisitsForMoon } from './mysteries.js';
 import { upsetBy } from './upset.js';
@@ -28,6 +29,7 @@ import { startInterest, finishInterest, interestActive, ensureInterest, TOPIC_NA
 import { RECIPES, knows } from './recipes.js';
 import { unlockRecipe, startable, INV_CAP } from './craft.js';
 import { MATERIALS, matText } from './util.js';
+import { random } from './rng.js';
 
 const HELP = {
   status: 'status - the cat at a glance',
@@ -66,13 +68,14 @@ const HELP = {
   give: 'give <bark|twig|twine> - leave a bundle of material on the mat for the cat (same as offer material)',
   craft: 'craft give <bark|twig|twine> [n] | craft learn <recipe> | craft now <recipe> | craft table',
   wish: 'wish add <type> [color] | wish clear',
-  reset: 'reset confirm - start over with a brand new cat',
+  reset: 'reset confirm [seed] - start over with a brand new cat (give a seed number to start from that exact cat; see seed)',
+  seed: 'seed   (the number this world\'s dice started from. The same seed gives the same cat, and left alone with the tablet and Claude off, the same life: "reset confirm <seed>" starts one again)',
   memories: 'memories   (what the cat remembers, how strongly, and who it counts as a regular; works without admin mode)',
   mind: 'mind | mind mood <kind> | mind intent <what> | mind whim | mind favs   (today\'s mood, habits, what it means to do, favourite things; plain "mind" works without admin mode)',
   interest: 'interest | interest start [topic] | interest done   (its special interest and what it has read about it)',
   admin: 'admin on | admin off',
 };
-const OPEN = new Set(['memories', 'help', 'status', 'save', 'saves', 'admin', 'brain', 'offer', 'tastes', 'feelings', 'history', 'export', 'inventory', 'recipes', 'wishes', 'give']);
+const OPEN = new Set(['seed', 'mind', 'memories', 'help', 'status', 'save', 'saves', 'admin', 'brain', 'offer', 'tastes', 'feelings', 'history', 'export', 'inventory', 'recipes', 'wishes', 'give']);
 const num = (s, lo, hi) => { const v = parseFloat(s); return Number.isFinite(v) ? clamp(v, lo, hi) : null; };
 const bad = (usage) => ({ lines: ['Usage: ' + usage] });
 
@@ -170,7 +173,7 @@ export function runCommand(w, line, ctx = {}) {
       if (sub === 'starsdone') { startStars(w, 'nights'); const ms = m.stars; ms.theory = ms.theory || 'The stars are watching.'; ms.enough = true; ms.enoughDay = dayOf(w); ms.read = Math.max(ms.read || 0, 1); if (!ms.solved) solve(w, 'stars'); return L('The stars are understood: on a clear night one may fall, and the cat may ask it for one thing.'); }
       if (sub === 'meteor') { if (!m.stars.solved) return L('The stars have to be understood first (secret starsdone).'); w.starWishDay = -99; launchMeteor(w, true); return L('A shooting star is falling. If it is dark and clear the cat will see it.'); }
       if (sub === 'starwish') { if (!m.stars.solved) return L('The stars have to be understood first (secret starsdone).'); starWish(w); return L('Something glittering is lying in the yard.'); }
-      if (sub === 'upset') { const ok = upsetBy(w, 'admin' + Math.random(), 'Somebody made me upset on purpose, I think.', { level: 0.6, days: 0.3, note: 'an admin did it.' }); return L(ok ? `${c.name} is upset.` : 'It would not be upset (the coin?).'); }
+      if (sub === 'upset') { const ok = upsetBy(w, 'admin' + random(), 'Somebody made me upset on purpose, I think.', { level: 0.6, days: 0.3, note: 'an admin did it.' }); return L(ok ? `${c.name} is upset.` : 'It would not be upset (the coin?).'); }
       return L([`cat tree: ${w.catTree ? w.catTree.how + ' on day ' + w.catTree.day : 'not yet'}${c.peekUrge ? ' (wondering what is behind the cabin)' : ''}`,
         `oak: ${m.tree.solved ? 'coin found' : m.tree.interest ? Math.floor(m.tree.clues) + ' clues' : 'not interested'} | curiosity ${Math.round(c.traits.curious * 100)}${c.traits.curious > 0.9 ? ' (works out the moon and the oak twice as fast)' : ''}`,
         `stars: ${m.stars.solved ? 'understood, shooting stars grant wishes (' + (w.stats.starWishes || 0) + ' so far' + (wishReady(w) ? ', next one is free' : '') + ')' : m.stars.interest ? Math.floor(m.stars.clues) + ' clues' + (m.stars.enough ? ', needs the tablet' + (m.stars.read ? ' (read)' : '') : '') : 'not interested, ' + (m.stars.nights || 0) + ' nights of looking up'}`,
@@ -184,7 +187,7 @@ export function runCommand(w, line, ctx = {}) {
     case 'stash': {
       if (a[0] === 'list') { const cs = stashColors(w); return L(w.stash.items.length ? [`${w.stash.items.length} items at ${w.stash.site ? w.stash.site.label : '?'}`, Object.entries(cs).map(([k, v]) => `${k} x${v}`).join(', ')] : 'The stash is empty.'); }
       if (a[0] === 'steal') { const lost = stealFromStash(w, Math.round(num(a[1], 1, 50) || 1)); return L(lost.length ? `Took ${lost.length}. ${c.name} will notice at the next visit.` : 'The stash is empty.'); }
-      if (a[0] === 'add') { const type = a[1], color = a[2]; if (!ITEM_TYPES.includes(type) || !COLOR_NAMES.includes(color)) return bad(HELP.stash); const k = Math.round(num(a[3], 1, 30) || 1); if (!w.stash.site) return L('There is no stash yet. Let the cat start one first.'); for (let i = 0; i < k; i++) w.stash.items.push({ id: Math.random().toString(36).slice(2, 8), type, color, ox: 0, oy: 0, rot: 0 }); w.stash.known = w.stash.items.length; layoutStash(w); return L(`Added ${k}.`); }
+      if (a[0] === 'add') { const type = a[1], color = a[2]; if (!ITEM_TYPES.includes(type) || !COLOR_NAMES.includes(color)) return bad(HELP.stash); const k = Math.round(num(a[3], 1, 30) || 1); if (!w.stash.site) return L('There is no stash yet. Let the cat start one first.'); for (let i = 0; i < k; i++) w.stash.items.push({ id: random().toString(36).slice(2, 8), type, color, ox: 0, oy: 0, rot: 0 }); w.stash.known = w.stash.items.length; layoutStash(w); return L(`Added ${k}.`); }
       if (a[0] === 'clear') { w.stash.items = []; w.stash.known = 0; return L('Stash emptied.'); }
       return bad(HELP.stash);
     }
@@ -291,7 +294,8 @@ export function runCommand(w, line, ctx = {}) {
     case 'save': return { lines: ['Saving...'], action: { type: 'save', slot: a[0] || 'main' } };
     case 'load': return { lines: ['Loading...'], action: { type: 'load', slot: a[0] || 'main' } };
     case 'saves': return { lines: [], action: { type: 'saves' } };
-    case 'reset': return a[0] === 'confirm' ? { lines: ['Starting over with a new cat.'], action: { type: 'reset' } } : L('This deletes the current cat. Type "reset confirm" to do it.');
+    case 'seed': return L(`Seed ${w.rng.seed}. "reset confirm ${w.rng.seed}" (admin) starts this same cat again from the beginning.`);
+    case 'reset': return a[0] === 'confirm' ? { lines: ['Starting over with a new cat' + (a[1] != null && /^\d+$/.test(a[1]) ? ` from seed ${+a[1] >>> 0}.` : '.')], action: { type: 'reset', seed: a[1] != null && /^\d+$/.test(a[1]) ? +a[1] >>> 0 : null } } : L('This deletes the current cat. Type "reset confirm" to do it.');
   }
   return L(`Unknown command "${cmd}". Type help.`);
 }

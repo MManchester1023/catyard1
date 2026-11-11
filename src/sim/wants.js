@@ -4,6 +4,7 @@ import { note, journal, dayOf } from './world.js';
 import { itemName, stashColors, quirkWord } from './quirk.js';
 import { RECIPES, knows } from './recipes.js';
 import { paceOf } from './pace.js';
+import { random } from './rng.js';
 
 export const MAX_WANTS = 3;
 const MYST_TEXT = { moon: 'work out what the moon is', ripples: 'find out what lives in the pond', sparks: 'catch one of the dancing sparks', tree: 'find out what is hiding in the roots of the oak', stars: 'find out what the stars are' };
@@ -61,7 +62,7 @@ export function genWants(w) {
     if (knows(w, id)) cand.push({ kind: 'craft', key: id, recipe: id, w: d }); else if (c.mem.known.tablet) cand.push({ kind: 'learn', key: id, recipe: id, w: d * 0.8 });
   }
   if (!cand.length) return;
-  let r = Math.random() * cand.reduce((s, x) => s + x.w, 0);
+  let r = random() * cand.reduce((s, x) => s + x.w, 0);
   for (const x of cand) { r -= x.w; if (r <= 0) { const { w: _w, ...rest } = x; const made = addWant(w, rest); if (made.kind === 'find') w.pending.push({ at: w.clock + w.dayLen * rnd(0.2, 0.55), type: made.item, color: made.color }); return; } }
 }
 

@@ -7,6 +7,7 @@ import { pick, clamp } from './util.js';
 import { dayOf, journal, note, clockStr } from './world.js';
 import { scaled } from './pace.js';
 import { feel } from './feelings.js';
+import { random } from './rng.js';
 
 export const INTEREST_PAGES = 6, MAX_MISSES = 3, REST_DAYS = 1.5, START_CHANCE = 0.12;
 // [what it is called, what kind of thing it is]
@@ -38,7 +39,7 @@ function choose(w) {
   const c = w.cat, seen = new Set(c.interests.map(x => x.topic)), lean = LEAN[c.temper] || [];
   const pool = TOPICS.filter(t => !seen.has(t[0]) && !(c.interest && c.interest.topic === t[0]));
   const rows = (pool.length ? pool : TOPICS).map(t => [t[0], 1 + (lean.includes(t[1]) ? 1.5 : 0)]);
-  let r = Math.random() * rows.reduce((a, b) => a + b[1], 0); for (const [t, wt] of rows) { r -= wt; if (r <= 0) return t; } return rows[0][0];
+  let r = random() * rows.reduce((a, b) => a + b[1], 0); for (const [t, wt] of rows) { r -= wt; if (r <= 0) return t; } return rows[0][0];
 }
 export function startInterest(w, topic = null) {
   const c = ensureInterest(w.cat), t = topic || choose(w);
@@ -53,14 +54,14 @@ export function startInterest(w, topic = null) {
 // a few times a day: once it has the tablet and has been alive a few days, something catches its eye
 export function interestTick(w) {
   const c = ensureInterest(w.cat); if (interestActive(w) || !c.mem.known.tablet || dayOf(w) < scaled(w, 3)) return null;
-  if (w.clock - c.interestAt < w.dayLen * REST_DAYS || Math.random() > START_CHANCE) return null;
+  if (w.clock - c.interestAt < w.dayLen * REST_DAYS || random() > START_CHANCE) return null;
   return startInterest(w);
 }
 
 // ---------- researching it ----------
 // what to ask the tablet for: the subject itself, skipping every page it has already read about it
 export const interestRequest = w => { const i = w.cat.interest; return { kind: 'lookup', q: i.topic, word: null, interest: true, skip: i.titles.slice() }; };
-export const wantsToResearch = w => interestActive(w) && Math.random() < 0.8;
+export const wantsToResearch = w => interestActive(w) && random() < 0.8;
 
 // it has read a page that was part of the research
 export function interestPage(w, pg) {

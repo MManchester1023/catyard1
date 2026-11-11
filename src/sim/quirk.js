@@ -3,6 +3,7 @@ import { rnd, pick, uid, an, ITEM_TYPES, ITEM_LABEL, ITEM_PLURAL, COLOR_NAMES, M
 import { STASH_SITES, note, journal, dayOf } from './world.js';
 import { feel, affinity } from './feelings.js';
 import { upsetBy } from './upset.js';
+import { random } from './rng.js';
 
 export const TASTES = ['pile', 'rows', 'ring', 'rainbow'];
 export const TASTE_LABEL = { pile: 'a loose pile', rows: 'tidy rows by color', ring: 'a ring', rainbow: 'a rainbow line' };
@@ -96,7 +97,7 @@ export function addToStash(w, item) {
 // the cat tidies the stash according to its current taste, which can change
 export function tidyStash(w) {
   const q = w.cat.quirk, d = dayOf(w);
-  if (d - q.tasteSince >= 4 && Math.random() < 0.25) {
+  if (d - q.tasteSince >= 4 && random() < 0.25) {
     const next = pick(TASTES.filter(t => t !== q.taste)); const prev = q.taste; q.taste = next; q.tasteSince = d;
     note(w, `${w.cat.name} is rearranging the stash into ${TASTE_LABEL[next]}.`, 'collect');
     journal(w, `${TASTE_LABEL[prev]} was childish. The stash will be ${TASTE_LABEL[next]} from now on.`, 'stash');
@@ -106,7 +107,7 @@ export function tidyStash(w) {
 
 export function stealFromStash(w, n = 1) {
   const out = [];
-  for (let i = 0; i < n && w.stash.items.length; i++) out.push(...w.stash.items.splice(Math.floor(Math.random() * w.stash.items.length), 1));
+  for (let i = 0; i < n && w.stash.items.length; i++) out.push(...w.stash.items.splice(Math.floor(random() * w.stash.items.length), 1));
   layoutStash(w); return out;
 }
 

@@ -1,295 +1,366 @@
 # Cat Yard
 
-A small world where a cat lives on its own and you watch. It has needs, moods and a personality, but also wants: it collects small objects in a hidden stash, paints with its paws and slowly gets better, and keeps theories about the mysteries of the yard (the moon, ripples in the pond, sparks at dusk). Each cat also has a **temperament** (Van Gogh, Hunter or Night owl), can occasionally catch a bird, and can make friends with a **frog** from the pond. You can talk to it, and an admin mode lets you change the world.
+A small world where a cat lives on its own and you watch. It has needs, moods and a personality of its own. It collects small things in a stash, builds an easel and paints, makes things out of bark, keeps theories about the mysteries of the yard, befriends a frog, reads Wikipedia on a tablet and writes a blog. You can talk to it, leave it gifts, and (in admin mode) change the world.
 
-The whole yard is drawn in a dithered, low-resolution pixel style (ordered Bayer dithering, so the pattern holds still instead of shimmering), including the cat's paintings.
+The yard is drawn in a dithered, low-resolution pixel style, including the cat's paintings.
 
-Two things connect the cat to the outside world, in the spirit of Pino's World: **offerings** you leave on a mat, and a **tablet** that shows it real pages from Wikipedia and lets it leave notes for you. The cat also **makes things** out of bark from the oak, **learns what it likes from how things make it feel**, and everything it does and thinks goes into a **History** you can read and export.
+It is plain JavaScript with no bundler and no framework, so it runs as a normal web page in any modern browser. An optional Tauri wrapper turns the same files into a small Windows desktop app.
 
-It is a plain-JavaScript simulation with no bundler and no framework, so it runs as a normal web page in any modern browser. An optional Tauri v2 wrapper turns the same files into a small Windows desktop app (see the end of this section).
+## Contents
 
-## Play it in your browser (GitHub Pages)
+- [Getting it running](#getting-it-running)
+- [The screen](#the-screen)
+- [The cat](#the-cat)
+- [The yard](#the-yard)
+- [Making things](#making-things)
+- [Painting](#painting)
+- [Offerings: the mat](#offerings-the-mat)
+- [The tablet](#the-tablet)
+- [Notes from the cat](#notes-from-the-cat)
+- [The blog](#the-blog)
+- [History](#history)
+- [Secrets](#secrets)
+- [How long things take](#how-long-things-take)
+- [A Claude-powered voice (optional)](#a-claude-powered-voice-optional)
+- [Chat and admin commands](#chat-and-admin-commands)
+- [Reporting a problem](#reporting-a-problem)
+- [Development](#development)
+- [Known limits](#known-limits)
 
-GitHub hosts the game for you and gives it a web address. No installer, nothing to build.
+## Getting it running
 
-1. Create a GitHub repository and upload this whole folder to it (keep the `.github/workflows` folder: it holds `pages.yml`).
-2. In the repository open **Settings → Pages**, and under **Source** choose **GitHub Actions**. (You only do this once.)
-3. Open the **Actions** tab. The **Publish the game (GitHub Pages)** workflow runs by itself on every push to `main` (or `master`); you can also start it with **Run workflow**. It takes about a minute.
-4. When it is green, your game is at `https://YOUR-NAME.github.io/YOUR-REPOSITORY/`. The same link is shown on the workflow run.
+### In your browser, hosted by GitHub Pages
 
-To update the game later, replace the files in the repository with the new ones (the whole `src` folder is the game); the page republishes itself. Every publish tags the file links with the commit, so a browser never mixes old and new files. The bottom of the **Settings** tab shows a *Build* line: if it is missing or does not match the one in the release notes, the site is still serving old files (give it a minute after the Actions run turns green, then reload; a private window is a quick way to check).
+1. Create a GitHub repository and upload this whole folder to it. Keep the `.github/workflows` folder: it holds `pages.yml`.
+2. In the repository open **Settings → Pages** and under **Source** choose **GitHub Actions**. You only do this once.
+3. Open the **Actions** tab. The **Publish the game (GitHub Pages)** workflow runs on every push to `main` (or `master`), and you can start it by hand with **Run workflow**. It takes about a minute.
+4. When it is green, the game is at `https://YOUR-NAME.github.io/YOUR-REPOSITORY/`. The link is also shown on the workflow run.
 
-Browser notes:
+**Updating.** Replace the files in the repository with the new ones, ideally in a single commit. Only the `src` folder is published, so that is the game. The page republishes itself, and each publish tags the file links with the commit so a browser never mixes old and new files.
 
-- The cat lives while the tab is open, including in a background tab (browsers slow background tabs down, so it catches up when you come back). If you close the tab or the browser, the world is paused: the cat picks up exactly where it was, and nothing happens while you are away. (Settings > Performance > *While the app is closed* can switch this to "Let the cat live on", which catches up on up to 3 hours when you return and shows a summary of what it did.)
-- The save lives in that browser's local storage. A different browser or device is a different (new) cat, and clearing site data erases it. **Settings → Saving → Download save file** writes a `.json` copy you can keep, and **Load a save file…** brings a cat back or moves it to another browser or computer. Loading a file first keeps the current cat as a save called `before-import` (`/load before-import` in admin mode restores it).
-- Autosave works as on the desktop: every few minutes, whenever the tab is hidden or closed, and with `/save`. The last 3 backups are kept (one new backup at most every 10 minutes), and if the main save is ever unreadable the newest backup is loaded instead.
-- If you use a Claude API key, it is stored in that browser and sent only to api.anthropic.com. The tablet only contacts en.wikipedia.org.
+**Checking which version you are on.** The bottom of the **Settings** tab shows a *Build* line. If it is missing or older than you expect, the site is still serving old files: wait for the Actions run to turn green, then reload. A private window is a quick way to check. If a run sits at *Queued*, GitHub has not started it yet; the previous version stays live until it finishes.
 
-## Run it on your own computer
+### On your own computer
 
 ```
 npm run web
 ```
 
-Then open <http://localhost:8765/index.html>. Any static file server pointed at the `src` folder works if you do not have Node (for example `python -m http.server 8765` from inside `src`). Opening `index.html` directly from a folder does not work, because browsers block ES modules on `file://` pages.
+Then open <http://localhost:8765/index.html>. Any static file server pointed at the `src` folder works too, for example `python -m http.server 8765` from inside `src`. Opening `index.html` straight from a folder does not work, because browsers block ES modules on `file://` pages.
 
-## Optional: the Windows desktop app
+### As a Windows desktop app (optional)
 
-The same game wrapped as a Windows app with a tray icon (closing the window tucks the cat into the tray; saves are real files). The installer is built by GitHub, not on your machine.
+The same game with a tray icon and saves as real files. The installer is built by GitHub, not on your machine.
 
 1. Push this folder to a GitHub repository.
-2. Open the **Actions** tab, choose **Build Windows installer**, and press **Run workflow**. (Pushing a tag such as `v0.1.0` does the same.)
-3. When it finishes (a first run takes about 10 minutes), open the run and download the **cat-yard-windows-installer** artifact. Inside is a `.exe` installer. It installs for the current user only and needs no admin rights.
+2. In the **Actions** tab choose **Build Windows installer** and press **Run workflow**. Pushing a tag such as `v0.1.0` does the same.
+3. When it finishes (a first run takes about 10 minutes), download the **cat-yard-windows-installer** artifact. It contains a `.exe` installer that installs for the current user and needs no admin rights.
 
-That workflow runs the simulation tests first and stops if they fail. In the desktop app:
+The workflow runs the simulation tests first and stops if they fail. In the desktop app:
 
-- Closing the window saves and tucks the cat into the system tray. By default the world is paused while it sits there (Settings > Performance > *While the app is closed* can let it live on instead). Left-click the tray icon to bring it back; right-click for **Save and quit**.
-- You can turn the tray behaviour off in **Settings → Performance**, so closing really quits (it still saves first).
-- Saves are written atomically (temp file then rename) with the last 3 backups, in `%APPDATA%\com.catyard.app\saves\`.
+- Closing the window saves and tucks the cat into the system tray. Left-click the tray icon to bring it back; right-click for **Save and quit**. **Settings → Performance** can turn the tray off so that closing really quits (it still saves first).
+- Saves are written atomically, with the last 3 backups, in `%APPDATA%\com.catyard.app\saves\`.
 
-## Saving (both versions)
+### Saving
 
-Saves happen automatically every 3 minutes (configurable), whenever the window or tab is hidden or closed, and whenever you type `/save`. If the main save is ever corrupt, the newest good backup is loaded instead. Frame rate drops when the window is not focused, and **Eco** mode caps it at 15 fps.
+- **Autosave** runs every 3 minutes (configurable), whenever the window or tab is hidden or closed, and when you type `/save`. The last 3 backups are kept (a new one at most every 10 minutes). If the main save is unreadable, the newest good backup is loaded.
+- **In a browser** the save lives in that browser's local storage. Another browser or device is a new cat, and clearing site data erases it. **Settings → Saving → Download save file** writes a `.json` copy, and **Load a save file…** brings a cat back or moves it elsewhere. Loading a file first keeps the current cat as a save called `before-import`.
+- **While you are away** the world is paused by default and picks up exactly where it was. **Settings → Performance → While the app is closed** can be set to "Let the cat live on", which catches up on up to 3 hours when you return and shows a summary.
+- **In a background tab** the cat keeps living; browsers slow background tabs down, so it catches up when you come back.
+- **Starting over.** **Settings → World → Start over with a new cat…** A save from an older version keeps things that version started with (for example its easel); only a new cat starts from nothing.
 
-## Giving the cat a Claude-powered mind (optional)
+## The screen
 
-Without a key the cat uses a built-in offline voice built from what it actually knows and wants. With one, its thoughts, chat replies, theories and painting titles come from Claude.
+The yard is on the left with the cat's needs under it. The panel on the right has these tabs:
 
-1. Create an API key in the Anthropic Console.
-2. Open **Settings**, paste the key, press **Save**, then **Test connection**.
-3. If the test fails with a model error, change the **Model** field to a model your account can use. The default is `claude-haiku-5-5`.
-
-The simulation never waits on Claude. If the key is missing, the network is down or the daily call limit (default 400) is reached, the cat just switches back to the offline voice. The key is stored in plain text in `settings.json` in the same app data folder and is only ever sent to `api.anthropic.com`.
-
-## Offerings: the mat
-
-The mat sits by the glass at the front of the yard. Open the **Outside** tab to leave an object (a marble, button, feather or bottle cap, in any colour) or a note of up to 140 characters. It holds three things at once.
-
-- The cat notices after a moment, walks over, looks at it and reacts according to its own tastes. Objects it likes go to the stash; ones it does not are left on the mat and eventually tidied away.
-- What it likes is not a fixed table (see *Feelings and tastes* below). A gift lands differently depending on the cat's day: a lonely, well-fed cat is easy to please, a hungry one is not. After several gifts that made it feel good, the favourite colour can change, and only after many can the thing it collects change. The **Outside** tab shows what it likes right now and how each offering was received.
-- Besides objects and notes you can leave **materials**: bark, twigs and twine (see *Making things*).
-- Notes are read, kept (the last six are shown) and their words are learned. A word it does not know can become something it wants to look up on the tablet.
-- With a Claude key set, the cat's reaction to an offering is rewritten by Claude. Without one it uses its built-in lines. Offerings work either way.
-
-Chat commands (no admin mode needed): `offer item <type> [color]`, `offer material <bark|twig|twine>` (or just `give <material>`), `offer note <text>`, `offer list`, `tastes`, `feelings`. `offer clear` needs admin mode.
-
-## Quirks: Collector, Van Gogh, Hunter, Night owl, Techie, Garfield, Bob the Builder
-
-Every cat has exactly one quirk, picked at random for a new cat and shown in the **Cat** tab's *About* sub-tab under *Quirk*. Cats from an older save get one the first time they are loaded.
-
-- **Collector**: covets one kind of small thing, goes out of its way to fetch it, hides the collection (or lays it out on its table) and fusses over it. Other cats keep a gift they love, but only a Collector hoards.
-- **Van Gogh**: obsessed with painting. The urge to create builds faster, it paints more than twice as often (even when tired or hungry), stays longer at the canvas, learns the craft about twice as fast, and is never quite finished. Its made-up pictures are mostly swirling skies.
-- **Hunter**: hunts whenever it can. It notices mice and birds from far off, stalks them whether or not it is hungry and tries again almost at once.
-- **Night owl**: its day runs about three hours behind: lively well into the night, deeply asleep from roughly 2am to 7:30am.
-- **Techie**: goes to the tablet first. It finds the tablet within its first hour or so (it is not held back by the three-new-things-a-day limit), looks things up when it cannot work them out, searches for things that fit its interests, and starts its blog early.
-- **Garfield**: hungry sooner, bored sooner, eats at the first excuse, naps in the sun and on the cushion (but only when it is actually tired, and not back to back), and would much rather do that than paint, play or explore.
-- **Bob the Builder**: gathers more from the oak each day, always has a project, builds faster, and would rather craft than just about anything.
-
-Each quirk has its own thoughts and its own way of talking in chat, and its own Wikipedia searches (a Van Gogh looks up Impressionism, a Hunter looks up lynxes, a Builder looks up beaver dams and so on). In admin mode `quirk trait <collector|vangogh|hunter|nightowl|techie|garfield|builder|none>` changes it.
-
-## Birds
-
-Birds land in the yard now and then. A cat that stalks one has a **rare** lucky pounce (a few percent per stalk, a little better for a skilled hunter). If it works, the bird is caught: hunger and thirst are filled, and boredom and loneliness are emptied. A feather drops, and it goes into the history. The odds are the same for every cat; the Hunter only gets more tries, so expect roughly one catch every ten or so days for an ordinary cat and one every few days for a Hunter. Mice work as before.
-
-## The frog
-
-The ripples in the pond are a frog. Once the cat has worked that mystery out (see *How long things take*), the frog becomes its friend and gets a name. It lives on a lily pad at the near edge of the pond, comes up a few times a day for a while and then goes back under (it comes up sooner in the rain and when the cat is lonely).
-
-When the cat is lonely and the frog is out, it goes and sits with it. A visit takes **loneliness down a lot** (about 0.55 to 0.75 depending on how well they know each other), far more than anything else it can do for company, and the friendship grows with each visit. After a visit the frog hides for a while, so it cannot be used all day. The **Cat** tab shows the frog, whether it is out, how many visits there have been, and a bond meter. A cat whose pond mystery was already solved in an older save meets its frog the first time that save is loaded. `frog` in admin mode: `frog meet|out|hide|visit`.
-
-## How long things take
-
-Discoveries are slow on purpose, and each mystery can only teach the cat so much per day however busy it is, so the big ones take days.
-
-| Thing | Roughly, at the default pace |
+| Tab | What it shows |
 | --- | --- |
-| A first theory about the moon | 2 to 3 days; understanding it needs 6 different moon phases (about a week) |
-| The pond ripples (the frog) | about 5 good days, it can learn from the pond once a day |
-| The dancing sparks | about 8 days at the very fastest, usually 10 to 20 (it can learn six things a day from them) |
-| Bark and twigs from the oak | at most two pieces a day, and not every scratch gives one |
-| Working out a recipe without the tablet | 4 days |
-| Noticing a part of the yard (pond, tree, tablet…) | it has to get within about 100 px of it, and only three new things sink in per day: about 2 to 3 days for all of them (a Techie finds the tablet regardless). The easel only exists once it has built it |
-| The easel | about 3 days: it needs two oak frames, which is 4 bark (it has to find the oak first, then gets two pieces a day) |
-| The bark table | about 3 days more: two oak frames and 2 bark, 6 bark in all |
-| Getting curious about the stars | at least 4 clear nights of gazing, then a few days more by chance (usually day 4 to 9) |
-| Understanding the stars | roughly 2 to 3 weeks in all: about 12 clues (three a day), then a page on the tablet (or 6 days without it) |
-| A shooting star | on about half of clear nights once it understands; a wish at most every 5 days, and only if it is looking |
+| **Chat** | Talk to the cat, and type commands |
+| **Cat** | The cat itself, in sub-tabs: *About* (who it is, its quirk, being upset, the frog), *Wants* (what it wants, its painting level), *Mind* (mood, habits, favourite things, special interest), *Memory* (what it remembers, what makes it feel good) and *Wondering* (the mysteries it has noticed) |
+| **Crafting** | What it is carrying, whether it has an easel, what it can make and what it has made |
+| **Stash** | Everything it has kept, favourite first |
+| **Blog** | Its blog, once it has started one |
+| **Outside** | The mat, notes from the cat, its tastes, the tablet |
+| **History** | What it did, thought and had happen |
+| **Gallery** | Its paintings |
+| **Settings** | Claude connection, tablet, saving, performance, start over, build line |
 
-All of these are numbers in `src/sim/pace.js`. In admin mode `pace X` scales them all at once: `pace 2` is twice as slow, `pace 0.5` twice as fast, `pace 1` the default (range 0.25 to 4). It is saved with the cat, so a save made before this change simply starts at 1.
+*Wondering* stays hidden until the cat has actually noticed a mystery. The Cat tab only redraws when something on it changes, so your scroll position is kept.
 
-## Feelings and tastes
+## The cat
 
-Whenever something happens to the cat (a gift, a page, a finished painting, a piece of bark, a visit to the stash, something it made), its mood and needs move: it may feel warm, thrilled, soothed, proud, uneasy or let down. Whatever it was engaged with gets a memory of how that felt, and those memories are what it likes and dislikes. They feed the colour and object tastes, and nudge what it chooses to do (a cat that finds painting rewarding paints a little more). It says so in its diary when a feeling has settled into a preference. The **Cat** and **Outside** tabs show what currently makes it feel good and what makes it uneasy; `/feelings` lists them. Nobody sets this: it is learned.
+### Needs and daily life
+
+The cat has hunger, thirst, tiredness, boredom, loneliness and a creative urge. A day lasts 20 real minutes by default.
+
+- **Eating** makes it sleepy: a full meal adds 0.3 to tiredness, a snack proportionally less. It always grooms itself after eating.
+- **Sleep.** It does not go to bed or nap unless it is tired. A little tired is enough at night; a daytime nap needs it properly tired. By day it wakes once it has slept itself out; once in bed for the night it sleeps on to the morning. Waiting out the rain in the cabin when it is not tired is sitting about, not a nap. An ordinary cat sleeps around 40% of the time.
+- **Washing.** It gets dirty and washes properly: front paws, face, then the rest.
+- **Furniture.** The scratching post, yarn, sunbeam and cushion each have their own use (claws, play, warmth, naps).
+- **Hunting.** It stalks mice, can fish when a fish shows itself in the pond, and now and then catches a bird (see [Birds](#birds)). A caught mouse fills hunger and eases boredom.
+- **The glass.** Occasionally it comes to the glass for your attention.
+
+### Quirks
+
+Every cat has exactly one quirk, picked at random and shown under **Cat → About**.
+
+| Quirk | What it does |
+| --- | --- |
+| **Collector** | Covets one kind of small thing, goes out of its way to fetch it, and fusses over the collection. Other cats keep a gift they love; only a Collector hoards. |
+| **Van Gogh** | Obsessed with painting. The urge builds faster, it paints more than twice as often, stays longer at the canvas and learns about twice as fast. Its made-up pictures are mostly swirling skies. |
+| **Hunter** | Hunts whenever it can. It notices prey from far off, stalks whether or not it is hungry, and tries again almost at once. |
+| **Night owl** | Its day runs about three hours behind: lively well into the night, deeply asleep from roughly 2am to 7:30am. |
+| **Techie** | Goes to the tablet first. It finds the tablet within its first hour or so, looks things up when stuck, and starts its blog early. |
+| **Garfield** | Hungry sooner, bored sooner, eats at the first excuse and naps in the sun (only when actually tired). It would rather do that than paint, play or explore. It sleeps around 48% of the time. |
+| **Bob the Builder** | Gathers more from the oak each day, always has a project, builds faster, and would rather craft than almost anything. |
+
+Each quirk has its own thoughts, its own way of talking and its own Wikipedia searches.
+
+### Its own mind
+
+A few things make it *this* cat on *this* day. All of it is saved, and shown under **Cat → Mind** and **Cat → Memory**.
+
+- **Mood of the day.** Each morning it wakes up bold, lazy, sociable, dreamy, busy, restless, grumpy or chipper, which colours what it fancies.
+- **Habits.** What it keeps doing at the same time of day becomes a habit that pulls, and fades if it stops.
+- **Stubborn notions.** Now and then it gets an idea and will not be talked out of it.
+- **Deciding for itself.** A few times a day it makes up its mind what to do next and says why in its diary. This is a strong nudge, not an order: hunger and sleep still come first.
+- **Change over time.** What it does day after day slowly moves its traits, and it notices.
+- **Memory.** The diary holds the last 150 lines, so the cat separately keeps up to 60 significant memories: discoveries, solved mysteries, wishes, upsets, firsts. They fade, but thinking about one makes it last. It brings them up in thoughts, chat and its blog, and it knows who its regulars are (the frog, the crow, the birds, you).
+- **Favourite things to do.** Up to three activities that keep making it feel good become favourites. Doing one lifts its mood more than anything else.
+- **A special interest.** Now and then it becomes interested in one subject (about 80 possible, tilted by its quirk) and reads up to 6 Wikipedia pages on it before something else catches its eye. This needs the tablet and a connection.
+
+### Feelings and tastes
+
+Whenever something happens to the cat (a gift, a page, a finished painting, a piece of bark), its mood and needs move, and whatever it was engaged with gets a memory of how that felt. Those memories are what it likes and dislikes. They shape its colour and object tastes and nudge what it chooses to do. Nobody sets this: it is learned. **Cat → Memory** and the **Outside** tab show what makes it feel good or uneasy; `/feelings` lists them.
+
+### Being upset
+
+Being left hungry or alone too long, hunts that keep failing, a collection raided by the crow, or a note nobody answers will upset it. **Cat → About** shows what it is upset about, and the cat says so itself in its thoughts, in chat and on its blog. It sulks for a while and is soothed by what it likes: a gift, a visit with the frog, being fed, a wish granted.
+
+## The yard
+
+### Birds
+
+Birds land in the yard now and then, and they are where new things come from. A bird that leaves may drop either a **trinket** (a marble, button, feather or bottle cap, often the kind the cat collects) or a **crafting part** (bark, a twig or a bit of string). About four drops in ten are parts, and the part the cat is shortest of is the likeliest. It is never dropped a part it already has a full load of. Expect about one drop a day.
+
+A cat that stalks a bird has a rare lucky pounce. A catch fills hunger and thirst and empties boredom and loneliness. An ordinary cat catches about one every five days, a Hunter about one every two.
+
+### The frog
+
+The ripples in the pond are a frog. Once the cat has worked that out, the frog becomes its friend and gets a name. It comes up onto a lily pad a few times a day (sooner in rain, and when the cat is lonely). Sitting with it takes loneliness down far more than anything else the cat can do, and the friendship grows with each visit. Afterwards the frog hides for a while.
+
+### Mysteries
+
+The cat wonders about the moon, the ripples in the pond and the sparks that dance at dusk, and builds theories from clues. A mystery only appears (in its thoughts, its diary and **Cat → Wondering**) once the cat has actually noticed it. Each one can only teach it so much per day, so the big ones take days. See also [Secrets](#secrets).
 
 ## Making things
 
-The cat scratches the oak, and now and then a piece of **bark** or a **twig** comes loose. It can carry 12 of each. Pieces collect in a small pile (beside the table once there is one). The **Crafting** tab shows what it is carrying, whether it has an easel yet, what it can make and what it has made.
+The cat scratches the oak, and now and then a piece of **bark** or a **twig** comes loose (at most two pieces a day). Birds drop parts too. It can carry 12 of each.
 
-The **oak frame** is a building part: two pieces of bark make one, and bigger things are made out of frames. A cat that needs frames for a project makes them without being asked. A spare frame is hung around one of its paintings (as the old bark frame was), so a finished painting stands framed on the table.
+The **oak frame** is a building part: two pieces of bark make one, and bigger things are built from frames. A cat makes the frames a project needs without being asked. A spare frame is hung around one of its paintings.
 
 | Recipe | Needs | How it learns it |
 | --- | --- | --- |
 | Oak frame | 2 bark | Already knows. A part, not a finished thing. |
-| Easel | 2 oak frames | Already knows. **It does not start with one.** Until it has built the easel it cannot paint (the urge to create still builds), and making it is its first big want. |
+| Easel | 2 oak frames | Already knows. **A new cat has no easel** and cannot paint until it builds one, so this is its first big want. |
 | Bark table | 2 oak frames, 2 bark | Already knows. The stash moves out of hiding onto the tabletop. |
-| Bird feeder | 1 oak frame, 1 bark, 2 twigs | Looks it up on the tablet. Draws more birds. |
+| Bird feeder | 1 oak frame, 1 bark, 2 twigs | Looks it up on the tablet. Brings more birds. |
 | Wind chime | 3 twigs, 1 twine | Looks it up on the tablet. Calms it a little. |
-| Cat tree | 3 oak frames, 2 bark, 5 twigs, 3 twine | Looks it up on the tablet (see *Secrets*). |
+| Cat tree | 3 oak frames, 2 bark, 5 twigs, 3 twine | Looks it up on the tablet (see [Secrets](#secrets)). |
 
-Until the easel and the table exist, the bark it finds goes to them first. A save made before this change keeps the easel it already had.
+Until the easel and the table exist, bark goes to them first. To learn a recipe the cat looks the topic up on the tablet; if the tablet turns up nothing twice, or there is no connection for about four days, it works it out itself.
 
-When it wants to make something it does not know, it goes to the tablet and looks the topic up; the page it reads is what unlocks the recipe. If the tablet turns up nothing twice it works it out itself, and with no connection it does the same after about four days. **Twine is scarce**: it comes from you (leave it on the mat, or use `/give twine`), now and then from a bird, and from the cushion once the cat has worked out where string comes from.
+**Twine is scarce.** It comes from you (leave it on the mat, or `/give twine`), now and then from a bird, and from the cushion once the cat has worked out where string comes from.
 
-## The yard, washing and being upset
+## Painting
 
-- **Furniture gets used.** The scratching post, the yarn, the sunbeam and the cushion all have their own reasons to be visited (sharpening claws, play, warming up, napping). The cushion is also where string comes from once the cat has worked out that its stuffing is held in by string (see *Making things*): it will pull some out of its bed when it needs it.
-- **Sleep, eating and grooming.** Eating makes it sleepy: a full meal adds 0.3 to tiredness (a small snack, proportionally less), and it always grooms itself after eating. It does not go to bed or nap unless it is actually tired (a little tired is enough for the night, properly tired for a nap in the sun), it wakes when it has slept itself out in the daytime, and once in bed for the night it sleeps on to the morning. Waiting out the rain in the cabin when it is not tired is sitting about, not a nap. One consequence is that cats sleep somewhat more overall than before, since every meal adds tiredness (an ordinary cat around 40% of the time, Garfield around 48%, down from about 56%).
-- **Washing.** It has a proper routine now: it gets dirty, and it washes (front paws, face, then the rest) instead of a quick lick.
-- **It can get upset.** Being left hungry for too long, being alone for too long, a hunt that fails again and again, a collection raided by the crow, and a note on the tablet that nobody answers all upset it. The Cat tab shows *Upset* and what it is upset about, and the cat says so itself, in its own words, in its thoughts, in chat, on its blog and to Claude; it sulks and avoids things for a while, and it is soothed by what it likes: a gift on the mat, a visit with the frog, being fed, a wish granted.
-- **Birds leave things.** Items turn up in the yard because a bird dropped them, not at random. What a bird leaves is always either a trinket (a marble, button, feather or bottle cap, in a colour, and often the kind the cat collects) or a crafting part (a piece of bark, a twig or a bit of string). About four drops in ten are crafting parts, and the part the cat is shortest of is the likeliest; it will not be dropped one it is already carrying a full load of. The cat picks them up like any other find, straight into what it is carrying.
-- **Hunting.** Every cat can catch a bird now (about one every five days for an ordinary cat, about one every two for a Hunter). It can also fish in the pond when a fish shows itself, and a caught mouse fills hunger and takes a bit off boredom. Wants like "catch 5 mice" or "catch 5 birds" come up.
-- **The glass.** It comes to the glass for attention much less often than it used to.
-
-## Its own mind
-
-Beyond hunger, sleep and the rules in `mind.js`, a few things make it *this* cat on *this* day. All of it is saved with the cat, and the **Cat** tab shows it under its *Mind* sub-tab (*On its mind*, *Favourite things to do*, *Special interest*) and its *Memory* sub-tab (*What it remembers*, *What makes it feel good*).
-
-- **Deciding for itself.** A few times a day (about every fifth of a day, when it is not hungry, sleepy, upset or asleep) the cat makes up its mind what it wants to do next, and says why in its diary. The simulation works out what is possible right now; with Claude connected, Claude is shown that menu with the cat's mood, habits, memories and wants and picks one in the cat's voice (at most three times a day). With no Claude, or no answer in time, a built-in whim picks from the same ingredients. The pick is a strong nudge, not an order: hunger and sleep still come first. Whether it did what it set out to do is noted too.
-- **Deeper memory.** The diary only holds the last 150 lines, so the cat keeps the significant things for itself (up to 60): big discoveries, solved mysteries, wishes, being upset, firsts of anything. They fade with the days but each time it thinks about one it lasts longer, so a few stay for good. It brings them up in its thoughts, in chat ("yesterday...", "remember when..."), on its blog and in what Claude is told. It also keeps count of who keeps turning up (the frog, the crow, the birds, the mice, you) so it can say they are regulars. It does not name individual visitors, only events.
-- **More natural behaviour.** Four things nudge its choices without being rules. *Moods of the day*: each morning it wakes up bold, lazy, sociable, dreamy, busy, restless, grumpy or chipper (tilted by yesterday and the weather, not decided by them) and that colours what it fancies. *Habits and rituals*: what it keeps doing at the same time of day becomes a habit that pulls, and fades if it stops. *Stubborn impulses*: now and then it gets a notion and will not be talked out of it (the stubborner it is, the more often). *Change over time*: what it does day after day slowly moves its traits, and it notices ("I think I am getting bolder").
-- **A special interest.** Now and then, for no reason it can explain, it becomes interested in one thing (octopuses, lighthouses, tea... about 80 subjects, tilted a little by its quirk). It goes after it on the tablet, page after page of Wikipedia on that subject (6 pages, or until there is nothing more), keeps what it learned, and talks, writes and wonders about it. Then something else catches its eye. Needs the tablet found and internet; without it, it just does not start one.
-- **Favourites and finds.** What it comes across for itself (a button in the grass, a new corner of the yard) shapes what it likes as much as what it is given. And the things it *does* that keep making it feel good become **favourite things to do** (at most three, and they can change over time: sitting with the frog, painting, gazing at the sky...). Doing a favourite is a bigger boost than anything else: the mood lifts faster while it happens, it takes more off boredom and loneliness, it leaves a glow behind, and the cat goes for it whenever it can.
-
-## Secrets
-
-The **Cat** tab is split into sub-tabs: *About* (who it is, its quirk, being upset, the frog), *Wants* (what it wants and its painting level), *Mind*, *Memory* and *Wondering*. The sub-tab bar stays at the top while you scroll, the page only redraws when something on it changes (so your place is kept), and the main tab bar wraps onto two rows so every tab is always visible. *Wondering* does not appear at all until the cat has actually noticed a mystery, and a mystery only turns up in its thoughts, the diary and the events as the cat meets it (a clue about the moon, the first ripple in the pond, a spark). Some things the cat has to find out for itself, and the Cat tab hides them until it has:
-
-- **The cat tree.** Behind the cabin. A cat can wander round there by chance (a few percent a day), or, once it has looked up cat trees on the tablet and gathered a lot of bark, twigs and twine, build one. It then climbs it, sits at the top and watches the yard.
-- **The shiny coin.** A cat with curiosity over 75 may start wondering about the old oak. If it investigates for long enough (days, not minutes) it finds a gold coin in the roots. The coin goes in the stash (and ranks first), and the cat is *delighted* for two days: nothing upsets it.
-- **A very curious cat** (over 90) works out the moon's secret and the oak's secret twice as fast.
-- **The moon.** Its last step is the frog (about ten visits). Afterwards, on full-moon nights, the cat can make a *moon wish*: something it has wished for turns up and sparkles in the stash.
-- **The dancing sparks** only become something it wants to understand after it has actually seen one.
-- **The stars.** A cat that has spent enough nights gazing at the sky (four clear ones, then a little luck each sixth of a day; night owls are likelier) starts wondering about the stars themselves, not the moon. It then watches them on clear nights (a few clues a day) until it has watched enough, and needs the tablet to be sure: reading a page about stars or meteors is the last step, or, with no tablet, about six days of living with it. After that, **on a clear night a star may fall** (it is drawn crossing the sky). If the cat is awake and outside it sees it (always, if it went out to gaze), and it makes a wish: something it likes turns up glittering in the yard, or exactly what it had written to the human asking for. At most one wish every five days. A cat with curiosity over 90 works this out twice as fast too. Reading about the stars on the tablet can also start the wondering.
-
-Admin: `secret status|cattree|peek|oak|coin|moon|moonwish|stars|starsdone|meteor|starwish|upset <why>`. The pond mystery is shorter than it was; the first meeting with the frog sets loneliness to zero.
+Once it has an easel, the cat paints when the urge builds and the light is good, and slowly improves through 12 levels. Most paintings are of something in the yard. Now and then it paints something made up: **swirling skies**, **splatter**, **waves**, **colour blocks**, **fields of dots** or **blooms**, depending on its mood, the time of day and its skill. Each picture is generated from a seed, so it always redraws the same way. The **Gallery** tab holds them all.
 
 ## The Stash tab
 
-A list of everything the cat has kept, favourite first. The ranking comes from what it collects, its favourite colour and what has made it feel good, so it changes as its tastes change.
+Everything the cat has kept, favourite first. The ranking comes from what it collects, its favourite colour and what has made it feel good, so it changes as its tastes do.
 
-The Cat tab no longer has its own *Keepsakes* list; this tab covers it.
+## Offerings: the mat
 
-## Painting: made-up pictures
+The mat sits by the glass at the front of the yard and holds three things at once. In the **Outside** tab you can leave:
 
-Most paintings are of something in the yard (the pond, the oak, the moon, rain, the flower bed...). Now and then the cat paints something it made up instead, and the picture is generated from a seed, so it always redraws the same way: **swirling skies**, **splatter**, **waves**, **colour blocks**, **fields of dots** and **blooms**. Which style depends on its mood and the time of day (swirls at night, blooms when it is happy, waves when it is tired or raining, splatter when the urge to create is high) and on its skill: beginners only manage scribbles and splatter, the rest unlock as it improves, and the finer details arrive with level. The yard scenes also get extra things now (hills, a tree line, a fence, a lantern, the sun, stars, a flock of birds), different every time. Older paintings in a save are drawn exactly as they were. In admin mode `art paint <subject>` makes it paint one: moon, pond, oak, stash, sunbeam, rain, flowers, bird, yard, window, swirl, splatter, waves, blocks, dots or bloom.
+- **An object**: a marble, button, feather or bottle cap, in any colour.
+- **A material**: bark, twigs or twine.
+- **A note** of up to 140 characters.
 
-## The blog
-
-Once the cat has found the tablet and has a few days of life to write about (day 4 or so, day 2 for a Techie), it starts a blog. The name fits its quirk ("Lasagna Mondays", "Letters From the Easel", "Notes From the Tall Grass", "paw.log"...). A post is drafted from what has happened since the last one: a few things from its diary, how it feels, what is on its mind and what it wants, in the voice of its quirk. The next time it sits at the tablet it types it up (you will see it typing), and about one post every day or two follows.
-
-The **Blog** tab appears once it has started. New posts are tagged *new* and the tab shows a dot until you have read them; the cat notices when you read, and it cheers it up a little. With the Claude connection on, each post is rewritten in the cat's own words from the same facts. The blog is included in `export`. Admin: `blog status|post|read|clear` (`blog post` makes it write one now).
-
-## Notes from the cat
-
-When the cat needs something only you can bring (twine for a chime it wants to make, an object it has been hoping for), it drafts a note, then goes to the tablet and types it out. You are told in the chat, and the note appears in the **Outside** tab with a **Give it** button that leaves the right thing on the mat. When what it asked for arrives it knows you read the note, and it is delighted. Notes nobody answers fade after five days. It does not write notes during its first day or so here. With a Claude key set, the wording of each note comes from Claude. `/wishes` lists them; `/wish add <type> [color]` (admin) plants one.
-
-## History: what it did and thought
-
-The **History** tab replaces the old Journal.
-
-- **Today**: what it is doing and thinking now, how today has been spent so far, the day's highlights and the latest few entries.
-- **Timeline**: everything it did (each thing it set out to do), thought, had happen and said, newest first, with filters and a search box. The last 2,000 entries are kept.
-- **Diary**: its own words.
-- **Days**: for each of the last 45 days, how the time was spent (sleeping, painting, on the tablet…) and the things worth remembering.
-- **Export the whole story** writes a text file (the days, the diary, the timeline, its things, its notes to you) and copies it to the clipboard. On Windows the file goes to `%APPDATA%\com.catyard.app\exports\`; in a browser it downloads. `/export` does the same.
-
-With *While the app is closed* set to "Let the cat live on" (it is "Pause the world" by default), the world catches up after you were away and the summary says what it gathered, made and wrote; the catch-up adds events and diary lines to the history but not every moment-to-moment step.
-
-Chat commands (no admin mode needed): `history [N]`, `history <did|thought|event|diary|chat> [N]`, `history day N`, `history days`, `history find <text>`, `export`, `inventory`, `recipes`, `wishes`, `feelings`.
+The cat notices after a moment, walks over and reacts according to its own tastes and its day: a lonely, well-fed cat is easy to please, a hungry one is not. Objects it likes go to the stash; the rest are eventually tidied away. After several gifts that made it feel good its favourite colour can change, and after many, so can the thing it collects. Notes are read and kept (the last six are shown), and a word it does not know can become something it wants to look up.
 
 ## The tablet
 
-A tablet stands on a stump in the yard. Once the cat finds it, it now and then walks over, sits down and reads a page, then reacts to it. What it reads shapes what it wants next: an article about the moon is a clue in its moon mystery, one about ponds or fireflies likewise, a page about painting adds to its skill, and a word it wants to know gets looked up. It keeps its last 24 pages and a list of interests, which pick what it reads next.
+A tablet stands on a stump in the yard. Once the cat finds it, it now and then sits down, reads a page and reacts. What it reads matters: a page about the moon is a clue in its moon mystery, a page about painting adds to its skill, and recipes are learned here. It is also where it types its notes to you and its blog.
 
-**It does not keep reading the same things.** The tablet remembers the title of every page the cat has read (the last 400) and every search skips them: a search asks Wikipedia for the first ten results, drops the ones already read and picks one of the first few new ones at random, and if a search has nothing new left the cat reads a random article instead. Each quirk has about 25 searches of its own and goes through all of them before starting a round again; the words it picks up from the notes you write and the pages it reads are rotated so it does not look up the same word twice running. A special interest still reads page after page on its one subject, never the same page twice, and simply runs dry when there is nothing more. A word it specifically wants to know is looked up once, skipping what it has read; if Wikipedia has nothing new on it, it gives the want up. Recipe lookups are the exception: they keep going back until the cat has learned the recipe. It is also where it looks up how to make things, and where it types its notes to you. Writing a note works with no connection.
+**It does not re-read.** The tablet remembers every title the cat has read (the last 400) and searches skip them. Each quirk has about 25 searches of its own and goes through all of them before starting again. If a search has nothing new, the cat reads a random article instead. Recipe lookups are the exception: they repeat until the recipe is learned.
 
-What this connects to, exactly:
+**What it connects to:**
 
-- Only `https://en.wikipedia.org`. Random articles, the featured article of the day, and searches for words the cat is curious about. Nothing about you or your cat is sent. The desktop build's permissions (`capabilities/default.json` and the content security policy) allow that one host plus `api.anthropic.com`, and nothing else.
-- Page text is untrusted. It is shown as plain text, never as markup, and when Claude is used it is marked in the prompt as quoted material, not instructions.
-- A simple word filter skips pages about violence and adult subjects. It is a keyword list, so it is imperfect; it can be turned off but is on by default.
-- Requests are slow and capped: at least 15 seconds apart and 60 a day by default. All of this is under **Settings → Tablet and the internet**, including an off switch. With it off, or with no connection, the cat re-reads pages it already kept, or frowns at a dead screen.
-- The cat only waits a short while for a page, so a slow connection never stalls the world. Catching up after you were away makes no requests.
+- Only `https://en.wikipedia.org`: random articles, the featured article and searches. Nothing about you or your cat is sent.
+- Page text is treated as untrusted. It is shown as plain text, and when Claude is used it is marked as quoted material, not instructions.
+- A keyword filter skips pages about violence and adult subjects. It is imperfect, and on by default.
+- Requests are at least 15 seconds apart and capped at 60 a day by default.
+- **Settings → Tablet and the internet** has all of this, including an off switch. With it off, or with no connection, the cat re-reads pages it kept or frowns at a dead screen.
 
-Chat commands (admin mode): `tablet status|on|off|go|pages|forget`.
+## Notes from the cat
 
-## Talking and admin mode
+When the cat needs something only you can bring (twine for a chime, an object it has been hoping for), it types a note on the tablet. You are told in the chat, and the note appears in the **Outside** tab with a **Give it** button. When the thing arrives it knows you read the note, and it is delighted. Unanswered notes fade after five days. It does not write notes during its first day or so.
 
-Type in the chat to talk to the cat. Press **Admin** (or type `admin on`) to run commands. `help`, `status`, `save`, `saves`, `admin`, `brain`, `offer`, `give`, `tastes`, `feelings`, `history`, `export`, `inventory`, `recipes` and `wishes` work without admin mode.
+## The blog
+
+Once the cat has found the tablet and has a few days to write about (around day 4, day 2 for a Techie), it starts a blog with a name that fits its quirk. A post is drafted from what has happened since the last one, in its own voice, and typed up the next time it sits at the tablet: about one post every day or two. The **Blog** tab appears once it has started and shows a dot for unread posts. The cat notices when you read, and it cheers it up a little.
+
+## History
+
+- **Today**: what it is doing and thinking, how the day has been spent, and the latest entries.
+- **Timeline**: everything it did, thought, had happen and said, newest first, with filters and search. The last 2,000 entries are kept.
+- **Diary**: its own words.
+- **Days**: for each of the last 45 days, how the time was spent and what was worth remembering.
+- **Export the whole story** writes a text file and copies it to the clipboard. In a browser it downloads; on Windows it goes to `%APPDATA%\com.catyard.app\exports\`.
+
+## Secrets
+
+Some things the cat has to find out for itself.
+
+- **The cat tree.** Behind the cabin. A cat can wander round there by chance, or build one after looking it up on the tablet. It then climbs it and watches the yard.
+- **The shiny coin.** A cat with curiosity over 75 may start wondering about the old oak. If it investigates for days it finds a gold coin in the roots, which ranks first in the stash. It is delighted for two days, and nothing upsets it.
+- **The moon.** Its last step is the frog (about ten visits). Afterwards, on full-moon nights, it can make a *moon wish*: something it wished for turns up sparkling in the stash.
+- **The dancing sparks** only become something it wants to understand after it has seen one.
+- **The stars.** After enough clear nights of gazing it starts wondering about the stars themselves. It watches them until it has seen enough, then needs a tablet page about stars or meteors to be sure (or about six days without one). After that a star may fall on a clear night; if the cat sees it, it makes a wish, at most once every five days.
+- **A very curious cat** (over 90) works these out twice as fast.
+
+## How long things take
+
+Discoveries are slow on purpose.
+
+| Thing | Roughly, at the default pace |
+| --- | --- |
+| Noticing a part of the yard | It has to pass within about 100 px, and only three new places sink in per day: 2 to 3 days for all of them. A Techie finds the tablet regardless. |
+| Bark and twigs from the oak | At most two pieces a day, and not every scratch gives one |
+| The easel | About 3 days (4 bark) |
+| The bark table | About 3 days more (6 bark) |
+| Working out a recipe without the tablet | 4 days |
+| A first theory about the moon | 2 to 3 days; understanding it needs 6 different moon phases (about a week) |
+| The pond ripples (the frog) | About 5 good days |
+| The dancing sparks | 8 days at the very fastest, usually 10 to 20 |
+| Getting curious about the stars | At least 4 clear nights of gazing, then a few days more by chance |
+| Understanding the stars | Roughly 2 to 3 weeks in all |
+| A shooting star | About half of clear nights once it understands; a wish at most every 5 days |
+
+These are numbers in `src/sim/pace.js`. In admin mode `pace X` scales them all: `pace 2` is twice as slow, `pace 0.5` twice as fast (range 0.25 to 4).
+
+## A Claude-powered voice (optional)
+
+Without a key the cat uses a built-in offline voice. With one, Claude writes its words: passing thoughts, chat replies, theories, painting titles, reactions to gifts and pages, wish notes and blog posts. Up to three times a day Claude also picks what the cat sets its mind on, from a menu the simulation provides. Everything else (needs, sleep, hunting, crafting, mysteries) is always decided by the simulation, so the cat behaves much the same either way.
+
+1. Create an API key in the Anthropic Console.
+2. Open **Settings**, paste the key, press **Save**, then **Test connection**.
+3. If the test fails with a model error, change the **Model** field to one your account can use. The default is `claude-haiku-5-5`.
+
+The simulation never waits on Claude. If the key is missing, the network is down or the daily call limit (default 400) is reached, the cat switches back to the offline voice. Settings shows how many calls were made today. The key is stored on your device (in the browser's storage, or the app's data folder on desktop) and is sent only to `api.anthropic.com`.
+
+## Chat and admin commands
+
+Type in the chat to talk to the cat. Press **Admin** (or type `admin on`) to run the commands that change the world. `help <command>` shows the details for one command.
+
+**No admin mode needed**
 
 | Command | What it does |
 | --- | --- |
-| `status` | The cat at a glance |
+| `help`, `status` | Help, and the cat at a glance |
+| `seed` | The number this cat's dice started from (see [Reporting a problem](#reporting-a-problem)) |
+| `save`, `saves` | Save now, list saves |
+| `offer item <type> [color]`, `offer material <bark\|twig\|twine>`, `offer note <text>`, `offer list` | Leave something on the mat |
+| `give <material>` | Shortcut for offering a material |
+| `tastes`, `feelings` | What it likes and why |
+| `inventory`, `recipes`, `wishes` | What it carries, what it can make, what it has asked for |
+| `history [N]`, `history <did\|thought\|event\|diary\|chat> [N]`, `history day N`, `history days`, `history find <text>` | Read back what happened |
+| `memories`, `mind` | What it remembers; its mood, habits and intentions |
+| `export` | Write out the whole story |
+| `brain` | Claude connection status |
+
+**Admin mode**
+
+| Command | What it does |
+| --- | --- |
 | `time HH:MM` / `time +N` | Set the time of day / advance N hours |
 | `day N` | Jump to day N |
 | `speed X` | Simulation speed, 0.1 to 120 |
 | `pause` / `resume` | Stop or restart the world |
 | `daylen SECONDS` | Real seconds per in-world day (default 1200) |
+| `pace [X]` | How slowly it works things out |
 | `weather clear\|cloud\|rain\|auto` | Set the weather |
 | `spawn mouse\|treat\|item [type] [color] [count]` | Add things to the yard |
 | `feed` | Refill the food bowl |
-| `set trait\|need\|joy ...` | Change personality traits, needs or mood |
+| `set trait\|need\|joy ...` | Change traits, needs or mood |
 | `tp <place>` | Move the cat (house, bowl, water, cushion, post, pond, flowers, tree, fence, easel, stash, glass, mat, tablet, table) |
-| `want list\|add\|done\|clear` | Read, give or grant wants |
-| `quirk item\|color\|taste ...` | Change what it collects and how it arranges it |
-| `quirk trait <collector\|vangogh\|hunter\|nightowl\|techie\|garfield\|builder\|none>` | Change its quirk |
-| `frog [meet\|out\|hide\|visit]` | Bring in, show, hide or visit the pond frog |
-| `pace [X]` | How slowly it works things out (1 default, 2 twice as slow, 0.25 to 4) |
-| `stash list\|add\|steal\|clear` | Edit the stash |
-| `art level\|paint [subject]\|clear` | Painting skill, make it paint something (including the made-up styles), gallery |
-| `blog status\|post\|read\|clear` | The cat's blog |
-| `secret status\|cattree\|peek\|oak\|coin\|moon\|moonwish\|stars\|starsdone\|meteor\|starwish\|upset` | Trigger or inspect the secrets and being upset |
-| `mind` / `mind mood <kind>` / `mind intent <what>` / `mind whim` / `mind favs` | Its mood today, habits, what it has set its mind on, its favourite things |
-| `memories` | What it remembers, how strongly, and who it counts as a regular |
-| `interest` / `interest start [topic]` / `interest done` | Its special interest and what it has read about it |
-| `think <text>` | Put a thought in its head |
 | `name <name>` / `coat <coat>` | Rename it / change its coat |
+| `think <text>` | Put a thought in its head |
+| `want list\|add\|done\|clear` | Read, give or grant wants |
+| `quirk trait <collector\|vangogh\|hunter\|nightowl\|techie\|garfield\|builder\|none>` | Change its quirk |
+| `quirk item\|color\|taste ...` | Change what it collects and how it arranges it |
+| `stash list\|add\|steal\|clear` | Edit the stash |
+| `craft give\|learn\|now\|table` | Hand it materials, teach a recipe, build something now |
+| `art level\|paint [subject]\|clear` | Painting skill, paint something now, clear the gallery |
+| `frog meet\|out\|hide\|visit` | The pond frog |
+| `secret status\|cattree\|peek\|oak\|coin\|moon\|moonwish\|stars\|starsdone\|meteor\|starwish\|upset <why>` | Trigger or inspect the secrets and being upset |
+| `mind mood <kind>` / `mind intent <what>` / `mind whim` / `mind favs` | Set its mood or intention, see its favourites |
+| `interest` / `interest start [topic]` / `interest done` | Its special interest |
+| `wish add <type> [color]` / `wish clear` | Plant or clear a wish note |
+| `blog status\|post\|read\|clear` | The blog |
+| `tablet status\|on\|off\|go\|pages\|forget` | The tablet |
+| `offer clear` | Clear the mat |
+| `brain on\|off\|key\|model\|cap\|test` | Control the Claude connection |
 | `clear log\|journal\|chat\|history` | Clear histories |
-| `brain status\|on\|off\|key\|model\|cap\|test` | Control the Claude connection |
-| `offer item\|material\|note\|list\|clear` / `give` / `tastes` / `feelings` | Leave something on the mat / see what the cat likes and why |
-| `craft give\|learn\|now\|table` | Hand it materials, teach it a recipe, make it build something now |
-| `wish add\|clear` | Plant or clear a wish note |
-| `history …` / `export` / `inventory` / `recipes` / `wishes` | Read back what it did, thought, carries and asked for |
-| `tablet status\|on\|off\|go\|pages\|forget` | Control and inspect the tablet |
-| `save [name]` / `load [name]` / `saves` | Manual saves and slots |
-| `reset confirm` | Start over with a new cat |
+| `load [name]` | Load a save slot |
+| `reset confirm [seed]` | Start over with a new cat (with a seed: that exact cat again) |
 
-`help <command>` shows the details for one command.
+## Reporting a problem
+
+Two things make a problem reproducible:
+
+- **A save file** (Settings → Saving → *Download save file*). It carries the cat's dice, so loading it always plays out the same way from there. This is the best thing to send.
+- **The seed** (bottom of Settings → World, or `/seed`). A cat started from the same seed (`reset confirm <seed>` in admin mode) is the same cat, and if it is left alone with the tablet and Claude switched off, it lives the same life step for step, at any speed or frame rate. Anything you do (chat, gifts, commands) and anything from the network changes what follows, so with a seed also say roughly what you did and on which day.
 
 ## Development
 
 ```
 npm install        # installs the Tauri CLI (only needed for the desktop app)
-npm run web        # serves src/ at http://localhost:8765/index.html for the browser version
-npm test           # simulation, save, Claude-layer, offering, tablet, crafting/feelings/history, quirk/frog/pacing, secrets, painting, blog, memory, favourites, character, intent, special-interest, stars, search-variety and refinement (sleep, upset, easel, oak frames) tests (no network needed)
-npm run dev        # desktop app with live files (needs Rust + the Tauri prerequisites)
-npm run build      # local installer (Windows)
+npm run web        # serves src/ at http://localhost:8765/index.html
+npm test           # all simulation tests (no network needed; seeded, so they give the same result every run)
+npm run dev        # desktop app with live files (needs Rust and the Tauri prerequisites)
+npm run build      # local Windows installer
 ```
 
-Layout: `src/sim/` is the DOM-free simulation (runs in Node and in the app; `offerings.js`, `tablet.js`, the network layer `web.js`, and the newer `feelings.js`, `craft.js`, `recipes.js`, `wishes.js` and `history.js`, `upset.js`, `secrets.js`, `pace.js` and `blog.js` live there), `src/render.js`, `src/dither.js` and `src/draw_cat.js` draw the canvas, `src/ui.js` and `src/main.js` are the interface and app shell, and `src-tauri/` is the thin Rust wrapper (tray, window, file and HTTP plugins).
+Layout:
+
+| Path | What it is |
+| --- | --- |
+| `src/sim/` | The simulation. No DOM, so it runs in Node and in the app. `mind.js` decides what the cat does, `acts.js` carries it out, `rng.js` holds the dice, `pace.js` the timing numbers, `version.js` the build line. |
+| `src/render.js`, `src/dither.js`, `src/draw_cat.js` | Drawing the canvas |
+| `src/ui.js`, `src/main.js` | The interface and the app shell |
+| `src-tauri/` | The thin Rust wrapper for the desktop app |
+| `tests/` | Node tests; several run multi-day simulations |
+| `.github/workflows/` | `pages.yml` publishes the browser version, `build.yml` builds the Windows installer |
+
+When releasing, update the build line in `src/sim/version.js`.
+
+**Randomness.** Everything random in `src/sim` goes through `random()` in `rng.js`, never `Math.random` (the network layer, `web.js`, is the one exception). Each world has its own seeded generator, saved with it, and the live loop moves in fixed steps of 1/60 s, so the same seed and the same inputs give the same world. Tests call `seedTests(1)` at the top, so every world they make gets a fixed seed; `CAT_SEED=7 npm test` runs them with a different set (in PowerShell: `$env:CAT_SEED=7; npm test`). Use `withRandom(value, fn)` from `rng.js` to load the dice in a test. `tests/seed.test.js` checks all of this, including that nothing in `src/sim` calls `Math.random`.
+
+**Tuning behaviour.** What the cat does next is decided in `mind.js`. `situation()` works out what the rules share, including four named conditions (`awake`, `dry`, `out`, `fit`; `fit` means tiredness below `TOO_TIRED`). `ACTIVITIES` is a table with one entry per activity: an optional `prep`, an optional `when` (otherwise it scores 0), a `score`, and an optional `then`. Changing a rule means changing one entry. The order of the table is the order the dice are rolled in, so reordering it changes how a seeded world plays out.
+
+**Module layering.** No two modules may import each other, even indirectly, and the foundation (`rng.js`, `version.js`, `util.js`, `world.js`, in that order) only uses what is below it. `tests/structure.test.js` fails if either is broken, and also checks the activity table is well formed. When two modules both need something, move it down into a small module of its own (as `cattree.js` was) rather than importing sideways.
 
 ## Known limits
 
-- The browser version is the best-tested one: it was clicked through in a real browser served from a sub-folder (as GitHub Pages does), including saving, backups, downloading and loading a save file, and recovering from a corrupted save. It has not been run on the live github.io site, and Safari and Firefox were not tried.
-- Pausing while the window is closed to the tray (desktop) is written but not tested on a real desktop; the browser version is tested.
-- The Windows build, tray, close-to-tray and installer were written without access to a Windows machine. The simulation, UI and save logic are tested in Node and a real browser; the desktop shell is only type-checked. Expect to fix small things on the first real run.
-- The Claude layer was tested against a fake server, not the live API.
-- The tablet was tested against a fake Wikipedia (in Node and in a real browser with the requests intercepted), not the live site. In the browser version the live Wikipedia and Claude requests rely on those services allowing requests from web pages (Wikipedia's API does when asked with `origin=*`, and the Claude API does with the browser-access header the app sends); that has not been confirmed against the live services. In the installed app, the first real run is the first time the Tauri HTTP permission for Wikipedia is exercised.
-- Crafting, wish notes, feelings and the history were tested in Node (including headless multi-day runs and a fake Wikipedia for recipe lookups) and clicked through in a real browser. The recipe lookups have never run against live Wikipedia, and the export file and its folder have only been exercised in the browser (as a download), not in the installed Windows app.
-- Recipe pages are matched by title and keyword (for example a page whose title mentions "feeder"). If Wikipedia has no such page the cat works the recipe out itself.
-- Pages and page titles come from Wikipedia's own text, which can contain anything; the filter is a word list, not moderation.
-- Temperaments, the bird catch, the frog and the slower pacing were measured in Node over many simulated cats and days (for example the Van Gogh spends about 12 to 16% of its time painting, the Hunter makes about five times as many stalks, the night owl is awake between midnight and 3am about two thirds of the time) and clicked through in a real browser, but the pacing numbers are tuned by simulation, not by watching a cat for weeks. If something takes too long or too short a time, `pace` and the numbers in `src/sim/pace.js` are the dials.
-- The secrets, being upset, made-up paintings, fish and the blog were tested in Node (including two-week runs for every quirk, checking for stuck or invalid states) and clicked through in a real browser. The blog's Claude rewrite was tested against the fake server only.
-- Reported once and **not reproduced**: the mat vanishing when the table is built. It stays put in every run here (Node and browser), so if you still see it, note what you did just before and where on screen it was.
-- The cat's world is a single yard with one cat. It is deliberately small.
+- **Browser version.** This is the best-tested one: clicked through in a real browser served from a sub-folder, including saving, backups, save files and recovering from a corrupted save. Safari and Firefox were not tried.
+- **Desktop version.** The Windows build, tray and installer were written without access to a Windows machine, and the desktop shell is only type-checked. Expect to fix small things on a first real run.
+- **Claude and Wikipedia.** Both were tested against fake servers (in Node and in a real browser with requests intercepted), not the live services.
+- **The page filter** is a word list, not moderation, and Wikipedia text can contain anything.
+- **Recipe pages** are matched by title and keyword. If Wikipedia has no matching page, the cat works the recipe out itself.
+- **Pacing** is tuned by simulating many cats and days, not by watching one for weeks. If something takes too long or too short a time, `pace` and `src/sim/pace.js` are the dials.
+- **Tests are seeded**, so they give the same result every run. They also pass with seeds 2 to 9, but a statistical test can still fail for some other seed; if `CAT_SEED=n` turns one up, that seed is worth keeping as a reproducer.
+- **Not reproduced:** a report of the mat vanishing when the table is built. If you see it, note what happened just before.
+- The world is a single yard with one cat. It is deliberately small.

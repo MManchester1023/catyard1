@@ -15,6 +15,8 @@ import { goals, finishCraft, startable, gatherNeed, shortfall, nextCraft, hangSp
 import { blocked, journal, dropFromBird } from '../src/sim/world.js';
 import { composePost, ensureBlog, feelingNow } from '../src/sim/blog.js';
 import { serialize, deserialize } from '../src/sim/save.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const fresh = (temper = null) => { const w = makeWorld('Tess'); w.netOn = false; w.cat.temper = temper; w.cat.traits.curious = 0.5; return w; };
@@ -29,7 +31,6 @@ const calm = (w, hour = 10) => {
 };
 const kinds = (w, n = 60) => new Set(Array.from({ length: n }, () => { const d = decide(w, null); return d.type + (d.opts && d.opts.lounge ? ':lounge' : ''); }));
 const hold = w => { w.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; w.cat.reeval = 1e9; };
-const withRandom = (v, f) => { const r = Math.random; Math.random = () => v; try { return f(); } finally { Math.random = r; } };
 
 // ---- a cat does not sleep unless it is tired
 {

@@ -4,7 +4,7 @@ import { spot, walk, randomOpenPoint, note, journal, hourOf, sunOf, beamOf, bird
 import { decide, interest, pickSleepSpot, unknownPlaces, SLEEPY } from './mind.js';
 import { itemName, chooseSite, addToStash, tidyStash, noticeTheft } from './quirk.js';
 import { onEvent } from './wants.js';
-import { clue, frogSighting } from './mysteries.js';
+import { clue, frogSighting, moonFinal } from './mysteries.js';
 import { starsNote, starsClue, darkSky, meteorLure } from './stars.js';
 import { pickSubject, paintWork, finishWork, subjectLabel } from './art.js';
 import { thoughtFor } from './thoughts.js';
@@ -16,10 +16,11 @@ import { feel } from './feelings.js';
 import { shiftOf, deepNightOf, birdChance } from './temper.js';
 import { frogSpot, frogName, frogDrop, frogVisited } from './frog.js';
 import { missedHunt, caughtSomething } from './upset.js';
-import { CAT_TREE, catTreeSpot, foundCatTree } from './secrets.js';
+import { CAT_TREE, catTreeSpot, foundCatTree } from './cattree.js';
 import { enjoyAct, favStart, foundThing } from './finds.js';
 import { noteAct } from './character.js';
 import { intentFulfilled } from './intent.js';
+import { random } from './rng.js';
 
 export function think(w, key, extra) { const c = w.cat; c.thought = thoughtFor(w, key, extra); c.thoughtId++; c.thoughtAt = w.clock; }
 export const INTERRUPT = new Set(['idle', 'explore', 'play']);
@@ -34,10 +35,10 @@ export function start(w, type, opts = {}) {
   c.hidden = false; c.wig = false; c.pu = 0; if (type !== 'gift' && type !== 'stash') c.carry = null;
   const aim = id => { const s = spot(w, id); a.tx = s.x; a.ty = s.y; a.sf = s.face; };
   switch (type) {
-    case 'idle': a.phase = 'do'; a.dur = a.sulk ? rnd(10, 22) : rnd(3, 8) * (0.7 + c.traits.lazy); a.stand = a.sulk ? false : Math.random() < 0.35; if (a.sulk) { const s = spot(w, 'fence'); a.tx = s.x; a.ty = s.y; a.phase = 'go'; think(w, 'sulk'); } else think(w, 'idle'); break;
+    case 'idle': a.phase = 'do'; a.dur = a.sulk ? rnd(10, 22) : rnd(3, 8) * (0.7 + c.traits.lazy); a.stand = a.sulk ? false : random() < 0.35; if (a.sulk) { const s = spot(w, 'fence'); a.tx = s.x; a.ty = s.y; a.phase = 'go'; think(w, 'sulk'); } else think(w, 'idle'); break;
     case 'explore': {
       const unk = unknownPlaces(w);
-      if (unk.length && Math.random() < 0.55 + c.traits.curious * 0.4 + (c.temper === 'techie' && unk.includes('tablet') ? 0.4 : 0)) { a.target = c.temper === 'techie' && unk.includes('tablet') && Math.random() < 0.8 ? 'tablet' : pick(unk); aim(a.target); } // (a techie heads for the glow)
+      if (unk.length && random() < 0.55 + c.traits.curious * 0.4 + (c.temper === 'techie' && unk.includes('tablet') ? 0.4 : 0)) { a.target = c.temper === 'techie' && unk.includes('tablet') && random() < 0.8 ? 'tablet' : pick(unk); aim(a.target); } // (a techie heads for the glow)
       else { const p = randomOpenPoint(w); a.tx = p.x; a.ty = p.y; }
       a.spd = 62; a.dur = rnd(1.5, 4); think(w, 'explore'); break;
     }
@@ -49,7 +50,7 @@ export function start(w, type, opts = {}) {
       a.eaten = 0; break;
     case 'drink': {
       let from = 'water';
-      if (k.pond) { const dw = dist(c, spot(w, 'water')), dp = dist(c, spot(w, 'pond')); if (dp < dw || Math.random() < 0.3 + c.traits.bold * 0.3) from = 'pond'; }
+      if (k.pond) { const dw = dist(c, spot(w, 'water')), dp = dist(c, spot(w, 'pond')); if (dp < dw || random() < 0.3 + c.traits.bold * 0.3) from = 'pond'; }
       a.from = from; aim(from); think(w, 'drink'); break;
     }
     case 'groom': a.phase = 'do'; a.dur = rnd(6, 12); c.groomNext = false; think(w, 'groom'); break;
@@ -78,7 +79,7 @@ export function start(w, type, opts = {}) {
     }
     case 'hunt': a.dur = 40; c.huntCool = 0; think(w, 'stalk'); break;
     case 'beg': aim('bowl'); c.begAt = w.clock; a.dur = 14; think(w, 'beg'); note(w, `The bowl is empty. ${c.name} is waiting nearby, looking tragic.`, 'food'); break;
-    case 'perch': a.spot = (k.tree && (!k.fence || Math.random() < 0.55)) ? 'tree' : 'fence'; aim(a.spot); a.dur = rnd(14, 30); think(w, 'perch'); break;
+    case 'perch': a.spot = (k.tree && (!k.fence || random() < 0.55)) ? 'tree' : 'fence'; aim(a.spot); a.dur = rnd(14, 30); think(w, 'perch'); break;
     case 'gift': aim('house'); a.sf = 1; think(w, 'gift'); break;
     case 'collect': a.tx = a.item.x; a.ty = a.item.y; { const nm = itemName(a.item.type, a.item.color), A = an(nm); think(w, MATERIALS.includes(a.item.type) ? 'matSee' : 'collect', { aitem: A, Aitem: A[0].toUpperCase() + A.slice(1) }); } break;
     case 'stash':
@@ -109,7 +110,7 @@ export function start(w, type, opts = {}) {
     case 'listen': { a.tx = o.tree.x - 40; a.ty = o.tree.y + 24; a.dur = rnd(14, 22); c.listenAt = w.clock; think(w, 'listenGo'); break; }
     case 'peek': { a.tx = CAT_TREE.x + 14; a.ty = CAT_TREE.y + 6; a.sf = 1; a.dur = rnd(4, 6); think(w, 'peekGo'); break; }
     case 'cattree': { const s = catTreeSpot(); a.tx = s.x; a.ty = s.y; a.sf = 1; a.dur = rnd(18, 36); c.catTreeAt = w.clock; think(w, 'catTreeGo'); break; }
-    case 'wash': { a.from = k.pond && Math.random() < 0.5 ? 'pond' : 'water'; aim(a.from); c.washAt = w.clock; think(w, 'washGo'); break; }
+    case 'wash': { a.from = k.pond && random() < 0.5 ? 'pond' : 'water'; aim(a.from); c.washAt = w.clock; think(w, 'washGo'); break; }
   }
   c.reeval = rnd(0.8, 1.4); noteAct(w); intentFulfilled(w); favStart(w);
   const dtxt = describe(w), ld = w.lastDid; // the history records what it set out to do
@@ -171,7 +172,7 @@ export function actTick(w, dt) {
   switch (a.type) {
     case 'idle': {
       if (a.sulk && a.phase === 'go') { c.pose = 'walk'; if (arrive(44)) { toDo(); c.face = c.x < 480 ? -1 : 1; } break; } // (the Sulk walks off, then sits facing the fence)
-      c.pose = a.stand ? 'stand' : 'sit'; const t = a.sulk ? null : interest(w); if (t && Math.random() < dt * 2) c.face = t.x >= c.x ? 1 : -1; if (a.t > a.dur) done(w); break; }
+      c.pose = a.stand ? 'stand' : 'sit'; const t = a.sulk ? null : interest(w); if (t && random() < dt * 2) c.face = t.x >= c.x ? 1 : -1; if (a.t > a.dur) done(w); break; }
     case 'explore':
       if (a.phase === 'go') { c.pose = 'walk'; if (arrive(a.spd)) toDo(); } else { c.pose = 'sit'; if (a.t > a.dur) done(w); }
       break;
@@ -248,7 +249,7 @@ export function actTick(w, dt) {
       else {
         a.swat = 0.32; c.pose = 'swat'; c.face = tgt.x >= c.x ? 1 : -1;
         if (a.kind === 'yarn') { const ang = rnd(-0.9, 0.9) + (c.x < 480 ? 0 : Math.PI), sp = rnd(130, 250); tgt.vx = Math.cos(ang) * sp; tgt.vy = Math.sin(ang) * sp * 0.45; }
-        else { tgt.flee = 3.5; if (Math.random() < 0.08) note(w, `${c.name} nearly caught a butterfly.`, 'play'); }
+        else { tgt.flee = 3.5; if (random() < 0.08) note(w, `${c.name} nearly caught a butterfly.`, 'play'); }
       }
       break;
     }
@@ -260,7 +261,7 @@ export function actTick(w, dt) {
       if (a.phase === 'go') {
         const d = dist(c, p);
         // once in a while a bird freezes instead of flying off, and then the pounce can land
-        if (p.kind === 'bird' && !a.rolled && d < 235) { a.rolled = true; if (Math.random() < birdChance(c)) { a.lucky = true; p.frozen = 9; p.alert = 0; } }
+        if (p.kind === 'bird' && !a.rolled && d < 235) { a.rolled = true; if (random() < birdChance(c)) { a.lucky = true; p.frozen = 9; p.alert = 0; } }
         c.pose = d > 200 ? 'run' : 'crouch'; walk(w, c, p.x, p.y, d > 200 ? 115 : 48, dt);
         if (d < 64) { a.phase = 'wiggle'; a.t = 0; c.face = p.x >= c.x ? 1 : -1; }
         if (a.t > a.dur) { c.huntCool = cool(8); done(w); }
@@ -274,9 +275,9 @@ export function actTick(w, dt) {
           c.z = 0; c.pu = 0;
           const dd = Math.hypot(p.x - c.x, p.y - c.y);
           if (p.kind === 'bird' && a.lucky && p.state === 'ground' && dd < 44) { catchBird(w, p); }
-          else if (p.kind === 'mouse' && !p.dead && dd < 38 && Math.random() < c.skill + 0.25 + (c.temper === 'hunter' ? 0.12 : 0)) {
+          else if (p.kind === 'mouse' && !p.dead && dd < 38 && random() < c.skill + 0.25 + (c.temper === 'hunter' ? 0.12 : 0)) {
             p.dead = true; c.mem.caught++; w.stats.mice++; n.hunger = clamp(n.hunger - 0.3); n.fun = clamp(n.fun - 0.4); note(w, `${c.name} caught a mouse!`, 'hunt'); caughtSomething(w); onEvent(w, 'caught', { prey: 'mouse' });
-            if (n.hunger < 0.35 && Math.random() < 0.6) { start(w, 'gift'); c.carry = { type: 'mouse' }; } else start(w, 'eat', { from: 'prey' });
+            if (n.hunger < 0.35 && random() < 0.6) { start(w, 'gift'); c.carry = { type: 'mouse' }; } else start(w, 'eat', { from: 'prey' });
           } else {
             if (p.kind === 'mouse') p.state = 'flee'; else birdLeave(p);
             c.mem.missed++; w.stats.misses++; c.huntCool = cool(8); think(w, 'miss'); missedHunt(w);
@@ -348,21 +349,21 @@ export function actTick(w, dt) {
     case 'paint': {
       if (a.phase === 'go') { c.pose = 'walk'; if (arrive(68)) { toDo(); c.face = 1; w.easel = { work: a.work, progress: 0 }; note(w, `${c.name} set up at the easel to paint ${subjectLabel(a.subject)}.`, 'art'); } break; }
       c.pose = 'paint'; w.easel.progress = clamp(a.t / a.dur);
-      if (Math.random() < dt * 0.05) think(w, 'paint', { subject: subjectLabel(a.subject) });
+      if (random() < dt * 0.05) think(w, 'paint', { subject: subjectLabel(a.subject) });
       if (a.t >= a.dur || (w.weather.rain > 0.6 && a.t > a.dur * 0.6)) { w.easel.progress = 1; finishWork(w, a.work); c.pose = 'sit'; done(w); }
       break;
     }
     case 'gaze': {
       if (a.phase === 'go') { c.pose = 'walk'; if (arrive(62)) { toDo(); c.face = a.moonX >= c.x ? 1 : -1; } break; }
       c.pose = 'gaze'; const mp = moonPos(w);
-      if (a.t >= a.nextClue) { a.nextClue += 5; if (a.stars) starsClue(w, 1); else clue(w, 'moon', 1, moonPhase(w)); starsNote(w); if (Math.random() < 0.3) think(w, a.stars ? 'gazeStars' : 'gaze'); }
+      if (a.t >= a.nextClue) { a.nextClue += 5; if (a.stars) starsClue(w, 1); else clue(w, 'moon', 1, moonPhase(w)); starsNote(w); if (random() < 0.3) think(w, a.stars ? 'gazeStars' : 'gaze'); }
       if (a.t > a.dur || (a.stars ? !darkSky(w) : !mp) || w.weather.cloud > 0.85 || w.weather.rain > 0.3 || n.hunger > 0.92) done(w);
       break;
     }
     case 'investigate': {
       if (a.phase === 'go') { c.pose = 'walk'; if (arrive(66)) { toDo(); c.face = 1; } break; }
       if (a.kind === 'tree') {
-        c.pose = a.t % 9 < 5 ? 'crouch' : 'sit'; if (a.t > a.nextClue) { a.nextClue += rnd(5, 7); clue(w, 'tree', 1); if (Math.random() < 0.4) think(w, 'oakSniff'); }
+        c.pose = a.t % 9 < 5 ? 'crouch' : 'sit'; if (a.t > a.nextClue) { a.nextClue += rnd(5, 7); clue(w, 'tree', 1); if (random() < 0.4) think(w, 'oakSniff'); }
         if (a.t > a.dur || w.mysteries.tree.solved) done(w);
       } else if (a.kind === 'ripples') {
         c.pose = 'crouch'; if (w.rippleT > 14 && !w.ripple) w.rippleT = rnd(5, 14); // the pond stirs when someone is watching
@@ -403,7 +404,7 @@ export function actTick(w, dt) {
       n.lonely = clamp(n.lonely - frogDrop(f) / a.dur * dt); c.mood.joy = clamp(c.mood.joy + 0.004 * dt);
       a.nextBoop -= dt; if (a.nextBoop <= 0) { a.boopT = 0.45; a.nextBoop = rnd(4, 7); f.hop = 1; }
       c.pose = a.boopT > 0 ? 'swat' : 'sit'; if (a.boopT > 0) a.boopT -= dt;
-      if (a.t > a.dur) { frogVisited(w); c.pose = 'sit'; think(w, 'frogDone'); done(w); }
+      if (a.t > a.dur) { frogVisited(w); moonFinal(w); c.pose = 'sit'; think(w, 'frogDone'); done(w); } // (the last step towards the moon's secret is time spent with the frog)
       break;
     }
     case 'fish': {
@@ -420,7 +421,7 @@ export function actTick(w, dt) {
         c.pose = 'swat'; c.face = f && f.x >= c.x ? 1 : -1;
         if (a.t > 0.45) {
           a.strikes++; w.fx.push({ x: f ? f.x : c.x, y: f ? f.y : p.y, t: 0 });
-          if (f && Math.abs(f.x - c.x) < 46 && Math.random() < 0.22 + c.skill * 0.3 + (c.temper === 'hunter' ? 0.12 : 0)) {
+          if (f && Math.abs(f.x - c.x) < 46 && random() < 0.22 + c.skill * 0.3 + (c.temper === 'hunter' ? 0.12 : 0)) {
             w.fish = null; w.stats.fish = (w.stats.fish || 0) + 1; c.mem.caught++;
             n.hunger = clamp(n.hunger - 0.75); n.thirst = clamp(n.thirst - 0.15); n.fun = clamp(n.fun - 0.3); n.wet = clamp(n.wet + 0.1);
             feel(w, ['act:fish'], { joy: 0.3 }, 'thrilled');
@@ -439,7 +440,7 @@ export function actTick(w, dt) {
     case 'listen': {
       if (a.phase === 'go') { c.pose = 'walk'; if (arrive(66)) { toDo(); c.face = 1; } break; }
       c.pose = a.t > a.dur * 0.7 ? 'sit' : 'gaze'; n.fun = clamp(n.fun - 0.045 * dt); c.mood.joy = clamp(c.mood.joy + 0.006 * dt); n.fear = clamp(n.fear - 0.01 * dt);
-      if (Math.random() < dt * 0.07) think(w, 'listen');
+      if (random() < dt * 0.07) think(w, 'listen');
       if (a.t > a.dur || n.fun < 0.04 || !w.deco.chime) { feel(w, ['act:listen', 'craft:chime'], { joy: 0.06, fun: -0.05 }, 'soothed'); done(w); }
       break;
     }

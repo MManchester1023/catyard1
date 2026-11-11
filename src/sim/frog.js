@@ -4,7 +4,6 @@
 import { rnd, pick, clamp } from './util.js';
 import { note, journal } from './world.js';
 import { feel } from './feelings.js';
-import { moonFinal } from './mysteries.js';
 
 export const FROG_NAMES = ['Pip', 'Moss', 'Bram', 'Clover', 'Sprout', 'Mr. Ribbit', 'Bean', 'Lily', 'Newton'];
 
@@ -46,5 +45,4 @@ export function frogVisited(w) {
   feel(w, ['act:frog', 'topic:frog'], { joy: 0.15, lonely: -0.05 }, 'warm');
   note(w, `${c.name} sat with ${f.name} the frog for a while.`, 'friend');
   if (f.visits === 1) journal(w, `I sat with ${f.name} by the pond. We said nothing. It was the best conversation I have had all week.`, 'frog');
-  moonFinal(w); // (the last step towards the moon's secret is time spent with the frog)
 }

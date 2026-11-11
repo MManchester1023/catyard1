@@ -9,10 +9,11 @@ import { serialize, deserialize } from '../src/sim/save.js';
 import { offlineReply } from '../src/sim/thoughts.js';
 import { digest } from '../src/sim/llm.js';
 import { TEMPER_IDS } from '../src/sim/temper.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const fresh = (temper = null) => { const w = makeWorld('Chr'); w.cat.temper = temper; return w; };
-const withRandom = (v, f) => { const r = Math.random; Math.random = () => v; try { return f(); } finally { Math.random = r; } };
 const atHour = (w, day, h) => { w.clock = (day - 1) * w.dayLen + (h / 24) * w.dayLen; };
 
 // ---- moods of the day: weighted by nature and circumstance, never decided by them

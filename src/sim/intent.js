@@ -11,6 +11,7 @@ import { affinity, keyName } from './feelings.js';
 import { isUpset } from './upset.js';
 import { wantPull } from './wants.js';
 import { recall, when, touch } from './memory.js';
+import { random } from './rng.js';
 
 export const INTENT_PULL = 0.8, INTENT_LEN = 0.14, MIN_GAP = 0.2, CLAUDE_PER_DAY = 3, ASK_TIMEOUT = 0.1;
 // what it can set its mind on (never what its body is demanding)
@@ -28,7 +29,7 @@ export function intentMenu(w, max = 7) {
   const S = w.scoreSnap; if (!S) return [];
   const rows = ITEMS.filter(k => S[k] > 0.05 && DO[k]).map(k => ({ key: k, label: DO[k], s: S[k] }));
   rows.sort((a, b) => b.s - a.s);
-  const top = rows.slice(0, max - 2), rest = rows.slice(max - 2).sort(() => Math.random() - 0.5).slice(0, 2); // (a couple of long shots, so it is not just the obvious thing)
+  const top = rows.slice(0, max - 2), rest = rows.slice(max - 2).sort(() => random() - 0.5).slice(0, 2); // (a couple of long shots, so it is not just the obvious thing)
   return top.concat(rest);
 }
 
@@ -42,7 +43,7 @@ export function whim(w, menu = intentMenu(w)) {
     const ak = SCORE_KEY[o.key], parts = {};
     parts.fit = ak ? Math.max(0, affinity(w, ak)) * 2 : 0; parts.fav = ak && isFav(w, ak) ? 1 : 0; parts.habit = habitPull(w, o.key) ? 0.8 : 0;
     parts.mood = m.mul[o.key] > 1 ? 0.6 : m.mul[o.key] < 1 ? -0.3 : 0; parts.mem = mem && (MEM_TO[mem.tag] || []).includes(o.key) ? 0.9 : 0;
-    parts.want = wantPull(w, wantKinds(o.key)) * 0.8; parts.noise = Math.random() * 0.5 + 0.4; parts.again = c.intent && c.intent.key === o.key ? -0.7 : 0; // (it does not decide the same thing twice in a row)
+    parts.want = wantPull(w, wantKinds(o.key)) * 0.8; parts.noise = random() * 0.5 + 0.4; parts.again = c.intent && c.intent.key === o.key ? -0.7 : 0; // (it does not decide the same thing twice in a row)
     return { o, parts, score: Object.values(parts).reduce((a, b) => a + b, 0) };
   });
   rows.sort((a, b) => b.score - a.score); const r = rows[0], p = r.parts;
@@ -69,7 +70,7 @@ export function applyIntent(w, key, why, by = 'whim') {
 export function intentDone(w) {
   const c = ensureIntent(w.cat), i = c.intent; if (!i || i.done) return;
   i.done = true; c.mood.joy = clamp(c.mood.joy + 0.05); w.stats.intentsDone = (w.stats.intentsDone || 0) + 1;
-  if (Math.random() < 0.5) journal(w, `I set out to ${DO[i.key]} and I did. ${i.by === 'claude' ? 'Good.' : 'I like it when things go to plan.'}`, 'intent');
+  if (random() < 0.5) journal(w, `I set out to ${DO[i.key]} and I did. ${i.by === 'claude' ? 'Good.' : 'I like it when things go to plan.'}`, 'intent');
 }
 
 // a few times a day
@@ -83,8 +84,8 @@ export function intentTick(w) {
   const n = c.needs; if (c.pose === 'sleep' || c.pose === 'inside' || n.hunger > 0.7 || n.tired > 0.8 || isUpset(w) || c.hidden) return;
   const menu = intentMenu(w); if (menu.length < 2) return;
   if (c.claudeIntents.day !== day) c.claudeIntents = { day, n: 0 };
-  if (w.llmOn && c.claudeIntents.n < CLAUDE_PER_DAY && Math.random() < 0.85) {
-    c.claudeIntents.n++; c.intentAsk = { id: Math.random().toString(36).slice(2, 8), at: w.clock, menu: menu.map(o => ({ key: o.key, label: o.label })) }; c.intentAt = w.clock;
+  if (w.llmOn && c.claudeIntents.n < CLAUDE_PER_DAY && random() < 0.85) {
+    c.claudeIntents.n++; c.intentAsk = { id: random().toString(36).slice(2, 8), at: w.clock, menu: menu.map(o => ({ key: o.key, label: o.label })) }; c.intentAt = w.clock;
     if (w.asks) w.asks.push({ type: 'intent', id: c.intentAsk.id });
     return;
   }

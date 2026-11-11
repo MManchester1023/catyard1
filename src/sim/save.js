@@ -15,8 +15,9 @@ import { ensureIntent } from './intent.js';
 import { ensureInterest } from './interest.js';
 import { meetFrog } from './frog.js';
 import { makeTemper } from './temper.js';
+import { restoreRng, useRng } from './rng.js';
 
-const KEEP_W = ['v', 'clock', 'dayLen', 'speed', 'paused', 'log', 'logId', 'journal', 'chat', 'pending', 'weather', 'stash', 'easel', 'easelMade', 'mysteries', 'fed', 'stats', 'createdAt', 'items', 'treats', 'wantT', 'rippleT', 'thiefT', 'lastChatAt', 'offers', 'tablet', 'table', 'deco', 'hist', 'days', 'frog', 'pace', 'catTree', 'moonWishDay', 'starWishDay', 'meteorPlan', 'blog'];
+const KEEP_W = ['v', 'rng', 'clock', 'dayLen', 'speed', 'paused', 'log', 'logId', 'journal', 'chat', 'pending', 'weather', 'stash', 'easel', 'easelMade', 'mysteries', 'fed', 'stats', 'createdAt', 'items', 'treats', 'wantT', 'rippleT', 'thiefT', 'lastChatAt', 'offers', 'tablet', 'table', 'deco', 'hist', 'days', 'frog', 'pace', 'catTree', 'moonWishDay', 'starWishDay', 'meteorPlan', 'blog'];
 
 export function serialize(w) {
   const data = { app: 'cat-yard', version: VERSION, savedAt: Date.now(), w: {}, cat: null, o: { bowl: w.o.bowl.food, yarn: { x: w.o.yarn.x, y: w.o.yarn.y } } };
@@ -41,9 +42,10 @@ export function deserialize(text) {
   const data = JSON.parse(text);
   if (!data || data.app !== 'cat-yard' || !data.w || !data.cat) throw new Error('Not a Cat Yard save file');
   if (data.version > VERSION) throw new Error('This save is from a newer version of the app');
-  const w = makeWorld(data.cat.name);
+  const dice = restoreRng(data.w.rng), w = makeWorld(data.cat.name, dice ? { seed: dice.seed } : {}); // (the parts a save does not keep, like the birds in the air, are rebuilt the same way every time)
+  if (dice) { w.rng.seed = dice.seed; w.rng.s = dice.s; } useRng(w.rng); // (from here on, the saved dice: loading the same save always plays out the same way)
   w.items = []; w.treats = []; w.log = []; w.journal = []; w.pending = [];
-  merge(w, finite(data.w));
+  const { rng: _rng, ...rest } = data.w; merge(w, finite(rest));
   if (data.w.easelMade === undefined) w.easelMade = { x: w.o.easel.x, y: w.o.easel.y, day: 1, legacy: true }; // (every save from before the easel had to be built already had one standing)
   merge(w.cat, finite(data.cat));
   if (!data.cat.base) w.cat.base = null; // (an older save's character starts from the traits it has, not from a new cat's)

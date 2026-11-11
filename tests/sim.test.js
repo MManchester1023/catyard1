@@ -2,6 +2,8 @@
 import { makeWorld, tick, describe } from '../src/sim/sim.js';
 import { blocked, dayOf } from '../src/sim/world.js';
 import { levelOf, LEVEL_NAMES } from '../src/sim/art.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const DAYS = +process.argv[2] || 10, RUNS = +process.argv[3] || 4, dt = 1 / 10;
 let bad = 0;

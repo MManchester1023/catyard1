@@ -14,6 +14,8 @@ import { finishWork, paintWork, pickSubject } from '../src/sim/art.js';
 import { serialize, deserialize } from '../src/sim/save.js';
 import { runCommand } from '../src/sim/commands.js';
 import { dayOf } from '../src/sim/world.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const fresh = (temper = null) => { const w = makeWorld('Tess'); w.easelMade = { day: 1 }; w.cat.temper = temper; w.cat.traits.curious = 0.5; return w; }; // (not over 0.75 or 0.9: those cats have extra secrets, tested below)
@@ -48,20 +50,20 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
   dayStart(wm, 6); clue(wm, 'moon', 4, 5); assert.ok(wm.mysteries.moon.sawPhases && /changes/.test(wm.mysteries.moon.theory), 'the sixth phase makes it click');
   ok('the moon is understood after six different phases');
 
-  const realRandom = Math.random;
+  
   try {
-    Math.random = () => 0; // every day is a good frog day
+    setRandom(() => 0); // every day is a good frog day
     const wf = fresh(); let found = 0;
     for (let d = 1; d <= 5; d++) { dayStart(wf, d); const a = frogSighting(wf), b = frogSighting(wf); assert.equal(b, false, 'a second sighting the same day does not count'); if (a) found = d; if (d < 5) assert.ok(!wf.frog, 'no frog friend before the fifth day'); }
     assert.equal(found, 5); assert.ok(wf.mysteries.ripples.solved && wf.frog && wf.frog.name, 'the fifth day of sightings finds the frog');
-    Math.random = () => 0.99; // never a good day
+    setRandom(() => 0.99); // never a good day
     const wn = fresh(); for (let d = 1; d <= 30; d++) { dayStart(wn, d); frogSighting(wn); } assert.ok(!wn.frog && !wn.mysteries.ripples.solved, 'on off days the frog does not count');
-  } finally { Math.random = realRandom; }
+  } finally { setRandom(null); }
   ok('the frog needs five good days of sightings (about two in three days are good), one a day, and then becomes a friend');
 
   // the oak gives a couple of bits a day however long the cat scratches
-  const wg = fresh(); wg.cat.traits.curious = 1; Math.random = () => 0; let got = 0;
-  try { for (let i = 0; i < 20; i++) { const d = scratchTree(wg); if (d) { collectDrop(wg, d); got++; } } assert.equal(got, 2, 'two bits on day 1'); wg.clock += wg.dayLen; for (let i = 0; i < 20; i++) { const d = scratchTree(wg); if (d) { collectDrop(wg, d); got++; } } assert.equal(got, 4, 'two more the next day'); } finally { Math.random = realRandom; }
+  const wg = fresh(); wg.cat.traits.curious = 1; setRandom(() => 0); let got = 0;
+  try { for (let i = 0; i < 20; i++) { const d = scratchTree(wg); if (d) { collectDrop(wg, d); got++; } } assert.equal(got, 2, 'two bits on day 1'); wg.clock += wg.dayLen; for (let i = 0; i < 20; i++) { const d = scratchTree(wg); if (d) { collectDrop(wg, d); got++; } } assert.equal(got, 4, 'two more the next day'); } finally { setRandom(null); }
   const wg2 = fresh(); wg2.pace = 0.5; assert.equal(gatherCap(wg2), 4); wg2.pace = 2; assert.equal(gatherCap(wg2), 1);
   ok('the oak gives two bits of bark or twig a day (a table takes two days, not minutes)');
 
@@ -146,8 +148,8 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
 // ---------- the rare bird catch ----------
 {
   assert.ok(birdChance({ skill: 0.35 }) >= 0.05 && birdChance({ skill: 0.8 }) <= 0.1, 'about five to ten per cent per stalk, for every cat (the Hunter just stalks far more often)');
-  const realRandom = Math.random;
-  const setup = stub => { Math.random = realRandom; const w = calm(fresh(null)); const c = w.cat; c.x = 300; c.y = 420; const b = w.birds[0]; Object.assign(b, { state: 'ground', x: 440, y: 420, z: 0, alert: 0, timer: 99, hop: 99 }); start(w, 'hunt', { prey: b }); Math.random = stub; return { w, c, b }; };
+  
+  const setup = stub => { setRandom(null); const w = calm(fresh(null)); const c = w.cat; c.x = 300; c.y = 420; const b = w.birds[0]; Object.assign(b, { state: 'ground', x: 440, y: 420, z: 0, alert: 0, timer: 99, hop: 99 }); start(w, 'hunt', { prey: b }); setRandom(stub); return { w, c, b }; };
   try {
     const { w, c, b } = setup(() => 0); // every lucky roll succeeds
     w.cat.needs.hunger = 0.9; w.cat.needs.thirst = 0.8; w.cat.needs.fun = 0.7; w.cat.needs.lonely = 0.9; const feathers = w.items.length;
@@ -161,7 +163,7 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
     const u = setup(() => 0.999); // never lucky
     for (let i = 0; i < 250; i++) tick(u.w, 0.1);
     assert.equal(u.w.stats.birds || 0, 0, 'without luck the bird gets away'); ok('without the lucky roll, birds still escape');
-  } finally { Math.random = realRandom; }
+  } finally { setRandom(null); }
 }
 
 // ---------- the frog ----------

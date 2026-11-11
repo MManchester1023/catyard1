@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { makeWorld, tick } from '../src/sim/sim.js';
 import { Brain, DEFAULTS, digest } from '../src/sim/llm.js';
 import { userSpeaks } from '../src/sim/chat.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const w = makeWorld('Testy'); w.easelMade = { x: w.o.easel.x, y: w.o.easel.y, day: 1 }; // (the cat has to build its easel before it can paint; this test needs finished works to ask about)
 for (let i = 0; i < 3 * w.dayLen * 10; i++) tick(w, 0.1);
@@ -76,7 +78,7 @@ console.log('asks ok');
 {
   const { ensureBlog, considerBlog, publishPost } = await import('../src/sim/blog.js'); ensureBlog(w); w.cat.mem.known.tablet = 1;
   for (let i = 0; i < 6; i++) { const { journal } = await import('../src/sim/world.js'); journal(w, `I did thing ${i}.`, 'hunt'); }
-  w.clock = Math.max(w.clock, 6 * w.dayLen); const r = Math.random; Math.random = () => 0; considerBlog(w); Math.random = r;
+  w.clock = Math.max(w.clock, 6 * w.dayLen); setRandom(() => 0); considerBlog(w); setRandom(null);
   const post = w.blog.draft; assert.ok(post, 'a post was drafted'); publishPost(w, post); const ask = w.asks.find(a => a.type === 'blog'); assert.ok(ask, 'publishing queues a rewrite');
   const old = post.title; await brain.tick(w, true);
   assert.equal(post.title, 'Mice, Mostly'); assert.match(post.body, /blue cap/); assert.equal(post.by, 'claude');

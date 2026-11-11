@@ -5,6 +5,8 @@ import { runCommand } from '../src/sim/commands.js';
 import { userSpeaks, offlineSays } from '../src/sim/chat.js';
 import { levelOf } from '../src/sim/art.js';
 import { dayOf, hourOf } from '../src/sim/world.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const w = makeWorld('Testy');
 for (let i = 0; i < 6 * w.dayLen * 10; i++) tick(w, 0.1);

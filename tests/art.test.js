@@ -5,6 +5,8 @@ import { start } from '../src/sim/acts.js';
 import { GEN, buildOps, paintWork, pickSubject, finishWork, subjectLabel, isGenerated, tierOf, xpForLevel, SUBJECT_IDS } from '../src/sim/art.js';
 import { serialize, deserialize } from '../src/sim/save.js';
 import { runCommand } from '../src/sim/commands.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const finite = o => Object.values(o).every(v => typeof v === 'number' ? Number.isFinite(v) : Array.isArray(v) ? v.every(p => Array.isArray(p) ? p.every(Number.isFinite) : true) : true);

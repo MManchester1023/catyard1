@@ -7,6 +7,8 @@ import { fetchPage, Net, isSafe, tidyExtract, TABLET_DEFAULTS } from '../src/sim
 import { canUseTablet, pickRequest, ensureTablet } from '../src/sim/tablet.js';
 import { addWant } from '../src/sim/wants.js';
 import { serialize, deserialize } from '../src/sim/save.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = (name) => console.log('  ok', name);
 const LONG = ' It has been studied for a very long time by many careful people who wrote down everything they learned about it.';

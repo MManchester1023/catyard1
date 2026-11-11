@@ -10,6 +10,7 @@ import { upsetBy, soothe } from './upset.js';
 import { neededMat, receiveMaterial } from './craft.js';
 import { matchWish, grantWish } from './wishes.js';
 import { ensureCraft } from './recipes.js';
+import { random } from './rng.js';
 
 export const MAX_ON_MAT = 3, NOTE_MAX = 140, HIST_MAX = 20, KEEPSAKES_MAX = 6;
 export const slotPos = (w, i) => ({ x: w.o.mat.x + (i - 1) * 22, y: w.o.mat.y });
@@ -147,7 +148,7 @@ export function inspectOffer(w, off) {
   } else {
     const nm = itemName(off.type, off.color), A = an(nm);
     text = wish ? fill(pick(ITEM_REACT.wished), { Aitem: A[0].toUpperCase() + A.slice(1), aitem: A }) : fill(pick(ITEM_REACT[tr]), { Aitem: A[0].toUpperCase() + A.slice(1), aitem: A, color: off.color, item: ITEM_LABEL[off.type] });
-    keep = l >= 0.4 || (l >= 0.3 && Math.random() < 0.5);
+    keep = l >= 0.4 || (l >= 0.3 && random() < 0.5);
     keys.push('color:' + off.color, 'type:' + off.type);
     c.tastes.gifts[off.type] = (c.tastes.gifts[off.type] || 0) + 1;
   }
@@ -188,7 +189,7 @@ export function finishOffer(w, off) {
 export function wonderAbout(w, text) {
   const c = w.cat; if (c.wants.length >= MAX_WANTS || hasWant(w, 'lookup')) return null;
   const words = (text.toLowerCase().match(/[a-z]{6,16}/g) || []).filter(x => !SKIP.has(x) && !(c.words[x] >= 3));
-  if (!words.length || Math.random() > 0.75) return null;
+  if (!words.length || random() > 0.75) return null;
   const word = words.sort((a, b) => b.length - a.length)[0];
   return addWant(w, { kind: 'lookup', key: word, word, strength: rnd(0.6, 0.9) });
 }

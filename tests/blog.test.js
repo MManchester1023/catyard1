@@ -10,12 +10,13 @@ import { runCommand } from '../src/sim/commands.js';
 import { exportText } from '../src/sim/history.js';
 import { TEMPER_IDS } from '../src/sim/temper.js';
 import { offlineReply } from '../src/sim/thoughts.js';
-import { foundCatTree } from '../src/sim/secrets.js';
+import { foundCatTree } from '../src/sim/cattree.js';
+import { seedTests, withRandom, setRandom } from '../src/sim/rng.js';
+seedTests(1); // (every world here gets a fixed seed, so this test gives the same result every run)
 
 const ok = m => console.log('  ok ' + m);
 const fresh = (temper = null) => { const w = makeWorld('Tess'); w.cat.temper = temper; w.cat.traits.curious = 0.5; w.cat.mem.known.tablet = 1; return w; };
 const lives = (w, n = 7) => { for (let i = 0; i < n; i++) journal(w, `Entry ${i}: the yard did something and I noticed.`, i % 2 ? 'hunt' : 'craft'); };
-const withRandom = (v, f) => { const r = Math.random; Math.random = () => v; try { return f(); } finally { Math.random = r; } };
 
 // ---- gating: not before it knows the tablet, not before day 4, not without something to write about
 {

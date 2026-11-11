@@ -13,6 +13,7 @@ import { favourites } from './finds.js';
 import { moodToday, habitLine, ensureChar } from './character.js';
 import { intentActive } from './intent.js';
 import { interestThought, interestReply, interestActive } from './interest.js';
+import { random } from './rng.js';
 
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => (v[k] != null ? v[k] : ''));
 const vars = w => {
@@ -219,16 +220,16 @@ for (const [t, arr] of Object.entries({
 const MEMORY_KINDS = new Set(['idle', 'explore', 'gaze', 'groom', 'sleep', 'perch', 'loungeBeam', 'loungeBed', 'wash', 'paint']);
 export function thoughtFor(w, kind, extra = {}) {
   const v = Object.assign(vars(w), extra), c = w.cat;
-  if (!extra.id && isUpset(w) && Math.random() < 0.4) { const u = T['upset:' + w.cat.upset.hint]; const ab = upsetAbout(w); return u ? pick(u) : ab ? pick([`I am still upset about ${ab}.`, `${ab[0].toUpperCase() + ab.slice(1)}. I have not forgotten.`]) : `I am upset: ${upsetReason(w)}.`; } // (an upset cat says what it is upset about)
-  if (!extra.id && MEMORY_KINDS.has(kind) && Math.random() < 0.12) { const s = Math.random() < 0.25 && regularLine(w) || memoryThought(w); if (s) return s; } // something from before comes back to it
+  if (!extra.id && isUpset(w) && random() < 0.4) { const u = T['upset:' + w.cat.upset.hint]; const ab = upsetAbout(w); return u ? pick(u) : ab ? pick([`I am still upset about ${ab}.`, `${ab[0].toUpperCase() + ab.slice(1)}. I have not forgotten.`]) : `I am upset: ${upsetReason(w)}.`; } // (an upset cat says what it is upset about)
+  if (!extra.id && MEMORY_KINDS.has(kind) && random() < 0.12) { const s = random() < 0.25 && regularLine(w) || memoryThought(w); if (s) return s; } // something from before comes back to it
   if (kind === 'idle' || kind === 'explore') {
-    const r = Math.random();
+    const r = random();
     if (r < 0.55) { const f = pick([WONDER.interest, WONDER.interest, WONDER.wantA, WONDER.theory, WONDER.quirk, WONDER.art, WONDER.night, WONDER.temper, WONDER.temper, WONDER.weather, WONDER.body, WONDER.yard]); const s = f(w); if (s) return fmt(s, v); }
     const fam = Object.entries(c.words).filter(([, n]) => n >= 3).map(([k]) => k);
     if (fam.length && r < 0.7) return `"${pick(fam)}"... the human keeps saying that.`;
   }
-  const qb = QT[c.temper] && QT[c.temper][kind]; if (qb && !extra.id && Math.random() < 0.4) return fmt(pick(qb), v); // (each kind of cat has its own way of putting it)
-  const bank = (kind === 'stalk' && c.temper === 'hunter' ? T.stalkHunter : extra.id && T[kind + ':' + extra.id] ? T[kind + ':' + extra.id] : kind === 'paint' && c.temper === 'vangogh' && Math.random() < 0.5 ? T.paintVg : T[kind]) || T.idle;
+  const qb = QT[c.temper] && QT[c.temper][kind]; if (qb && !extra.id && random() < 0.4) return fmt(pick(qb), v); // (each kind of cat has its own way of putting it)
+  const bank = (kind === 'stalk' && c.temper === 'hunter' ? T.stalkHunter : extra.id && T[kind + ':' + extra.id] ? T[kind + ':' + extra.id] : kind === 'paint' && c.temper === 'vangogh' && random() < 0.5 ? T.paintVg : T[kind]) || T.idle;
   return fmt(pick(bank), v);
 }
 
@@ -275,6 +276,6 @@ export function offlineReply(w, text) {
   else if (has(/bye|goodnight|good night|see you|gotta go/)) body = pick(['Go. I will be here. I am always here.', '*slow blink* Come back.']);
   else if (has(/thank/)) body = 'You are welcome. I did nothing, but you are welcome.';
   if (!body) return greet ? pick(['*blinks slowly* Hello.', 'Oh. You. Hello.', '*chirrups* You came back.']) : has(/\?/) ? pick(['Hm. I will think about it. Later.', 'I do not know. Ask the moon.', '*tilts head* I understand about half of that.']) : pick(['*tilts head*', 'Mrrp.', '*stares, ears twitching*', 'I am listening. Mostly.']);
-  if (isUpset(w) && !has(/upset|angry|mad at|sulk|annoyed|cross with|are you sad/) && upsetAbout(w) && Math.random() < 0.5) body += ' ' + pick([`I am still upset about ${upsetAbout(w)}.`, `You should know I am upset about ${upsetAbout(w)}.`]);
+  if (isUpset(w) && !has(/upset|angry|mad at|sulk|annoyed|cross with|are you sad/) && upsetAbout(w) && random() < 0.5) body += ' ' + pick([`I am still upset about ${upsetAbout(w)}.`, `You should know I am upset about ${upsetAbout(w)}.`]);
   return greet ? pick(['Hello.', 'Oh. You.']) + ' ' + body : body;
 }

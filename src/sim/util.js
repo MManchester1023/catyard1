@@ -1,14 +1,15 @@
 // Shared constants and small helpers. No DOM, no state.
+import { random } from './rng.js';
 export const W = 960, H = 600, GY0 = 236, GY1 = 572;
-export const rnd = (a, b) => a + Math.random() * (b - a);
+export const rnd = (a, b) => a + random() * (b - a);
 export const ri = (a, b) => Math.floor(rnd(a, b + 1));
 export const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
-export const pick = a => a[Math.floor(Math.random() * a.length)];
+export const pick = a => a[Math.floor(random() * a.length)];
 export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const lerp = (a, b, t) => a + (b - a) * t;
 export const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 export const an = w => (/^[aeiou]/i.test(w) ? 'an ' : 'a ') + w;
-export const uid = () => Math.random().toString(36).slice(2, 9);
+export const uid = () => random().toString(36).slice(2, 9);
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };

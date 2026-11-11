@@ -5,6 +5,7 @@
 // The cat brings memories back in its thoughts, in chat, on its blog and in what Claude is told about it.
 import { pick, clamp } from './util.js';
 import { dayOf } from './world.js';
+import { random } from './rng.js';
 
 export const MEM_CAP = 60;
 // how much a kind of diary line matters when it happens
@@ -49,7 +50,7 @@ export function recall(w, { tags = null, minAge = 1, exclude = null, fresh = tru
   const pool = c.memories.filter(m => day - m.day >= minAge && (!tags || tags.includes(m.tag)) && (!exclude || m.id !== exclude) && (!fresh || w.clock - (m.at || -999) > w.dayLen * 0.5));
   if (!pool.length) return null;
   pool.sort((a, b) => strength(w, b) - strength(w, a));
-  const top = pool.slice(0, 4); return top[Math.floor(Math.random() * top.length)]; // not always the same one
+  const top = pool.slice(0, 4); return top[Math.floor(random() * top.length)]; // not always the same one
 }
 export const when = (w, m) => { const d = dayOf(w) - m.day; return d <= 0 ? 'Earlier today' : d === 1 ? 'Yesterday' : d < 7 ? `${d} days ago` : d < 14 ? 'Last week' : `On day ${m.day}`; };
 export function touch(w, m) { m.recalled = (m.recalled || 0) + 1; m.at = w.clock; w.cat.recallAt = w.clock; return m; }

@@ -132,7 +132,7 @@ async function act(a) {
     case 'save': { const ok = await saveNow(a.slot, true); sys(ok ? `Saved${a.slot === 'main' ? '' : ' as "' + a.slot + '"'}.` : ''); break; }
     case 'load': { try { const r = await loadSlot(a.slot, { catchup: false }); if (!r) sys(`No save called "${a.slot}".`); else { swapWorld(r.world); sys(`Loaded "${a.slot}".`); } } catch (e) { sys('Could not load: ' + e.message); } break; }
     case 'saves': { const l = await storage.list(); sys(l.length ? 'Saves: ' + l.join(', ') : 'No saves yet.'); break; }
-    case 'reset': swapWorld(makeWorld()); sys('A new cat has moved in. Say hello.'); saveNow('main', true); break;
+    case 'reset': swapWorld(makeWorld(undefined, a.seed != null ? { seed: a.seed } : {})); sys('A new cat has moved in. Say hello.'); saveNow('main', true); break;
     case 'brain': brainCmd(a.args); break;
     case 'tablet': tabletCmd(a.args[0]); break;
     case 'export': await exportStory(); break;
