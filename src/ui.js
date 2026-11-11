@@ -22,11 +22,12 @@ import { ensureIntent } from './sim/intent.js';
 import { ensureInterest, interestName } from './sim/interest.js';
 import { ensureMemory, strength, when, regulars } from './sim/memory.js';
 import { wishReady } from './sim/stars.js';
+import { BUILD } from './sim/version.js';
 
 export function h(tag, props, ...kids) {
   const e = document.createElement(tag);
   if (props) for (const k of Object.keys(props)) { const v = props[k]; if (v == null || v === false) continue; if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? '' : v); }
-  for (const kid of kids.flat()) if (kid != null && kid !== false) e.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) e.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
   return e;
 }
 const pct = v => Math.round(v * 100);
@@ -72,14 +73,14 @@ function mindSections(w) {
   return out;
 }
 
-// ----- Cat tab: Overview, Mind, and (once it has noticed something strange) Wondering -----
+// ----- Cat tab: About, Wants, Mind, Memory, and (once it has noticed something strange) Wondering -----
 function meter(v) { return h('div', { class: 'bar' }, h('i', { style: `width:${pct(v)}%` })); }
-const CAT_SUBS = [['overview', 'Overview'], ['mind', 'Mind'], ['wondering', 'Wondering']];
+const CAT_SUBS = [['overview', 'About'], ['wants', 'Wants'], ['mind', 'Mind'], ['memory', 'Memory'], ['wondering', 'Wondering']];
 let catSub = 'overview';
 const wonderFound = w => Object.values(w.mysteries).some(discovered);
 
-function overviewSections(w) {
-  const c = w.cat, q = c.quirk, a = c.art, lvl = levelOf(a.xp), next = xpForLevel(lvl + 1), cur = xpForLevel(lvl);
+function aboutSections(w) {
+  const c = w.cat, q = c.quirk;
   const secs = [];
   secs.push(h('div', { class: 'sec' }, h('div', { class: 'big', text: c.name }), h('div', { class: 'muted', text: `${c.age}-year-old ${COAT_LABEL[c.coat]} · ${moodLabel(w)}` }), h('div', { class: 'small', text: describe(w) }),
     h('div', { style: 'margin-top:10px' }, ...[['Curious', 'curious'], ['Bold', 'bold'], ['Affectionate', 'affection'], ['Lazy', 'lazy']].map(([l, k]) => h('div', { class: 'trait' }, h('span', { text: l }), meter(c.traits[k]), h('span', { class: 'muted', text: pct(c.traits[k]) }))))));
@@ -103,6 +104,11 @@ function overviewSections(w) {
     h('div', { text: f.out ? `${f.name} is up on the lily pad.` : `${f.name} is under the water.` }),
     h('div', { class: 'muted small', text: `Met on day ${f.day}. ${c.name} has sat with ${f.name} ${f.visits} time${f.visits === 1 ? '' : 's'}. Visits are the best cure for loneliness it has.` }),
     h('div', { class: 'trait' }, h('span', { text: 'Bond' }), meter(f.bond), h('span', { class: 'muted', text: pct(f.bond) })))); }
+  return secs;
+}
+function wantsSections(w) {
+  const c = w.cat, a = c.art, lvl = levelOf(a.xp), next = xpForLevel(lvl + 1), cur = xpForLevel(lvl);
+  const secs = [];
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Wants' }),
     c.wants.length ? c.wants.map(x => h('div', { class: 'item' }, h('div', { text: cap(x.text) }), h('div', { class: 'muted small', text: `since day ${x.day}` }), meter(x.strength))) : h('div', { class: 'muted', text: 'Nothing right now.' }),
     h('div', { class: 'muted small', text: `${c.doneWants} fulfilled so far` })));
@@ -113,9 +119,10 @@ function overviewSections(w) {
       : h('div', { class: 'muted', text: 'No easel yet, so nothing to paint on. It has to build one first (see the Crafting tab).' })));
   return secs;
 }
-function mindTab(w) {
+function mindTab(w) { return mindSections(w).slice(0, 3); } // (on its mind, favourite things to do, special interest)
+function memoryTab(w) {
   const fl = topFeelings(w, 5);
-  return [...mindSections(w), h('div', { class: 'sec' }, h('h3', { text: 'What makes it feel good' }),
+  return [mindSections(w)[3], h('div', { class: 'sec' }, h('h3', { text: 'What makes it feel good' }),
     fl.good.length || fl.bad.length ? [...fl.good.map(r => tasteRow(r.name, Math.min(1, r.score), null, r.label)), ...fl.bad.map(r => h('div', { class: 'kv' }, h('span', { text: r.name }), h('span', { class: 'chip bad', text: r.label })))] : h('div', { class: 'muted', text: 'Too early to tell. It learns what it likes from how things make it feel.' }),
     h('div', { class: 'muted small', style: 'margin-top:6px', text: 'Nobody told it what to like. These come from gifts, pages, paintings and what it has made.' }))];
 }
@@ -128,17 +135,21 @@ function wonderingTab(w) {
     id === 'stars' && m.interest && !m.solved && m.enough ? h('div', { class: 'muted small', text: 'It has watched enough. Now it wants to read about them.' }) : null,
     id === 'stars' && m.solved ? h('div', { class: 'muted small', text: `A star may fall on a clear night. ${w.stats.starWishes || 0} wish${w.stats.starWishes === 1 ? '' : 'es'} so far${wishReady(w) ? '' : ', and it is waiting for the next'}.` }) : null)))];
 }
-// the tab bar is built once (so it can be clicked while the page underneath is redrawn)
+// the tab bar is built once (so it can be clicked while the page underneath is redrawn). The page itself is only redrawn
+// when what it shows has changed, and the scroll position is kept, so reading it half way down does not jump about.
+const catPage = (w, sub) => sub === 'mind' ? mindTab(w) : sub === 'memory' ? memoryTab(w) : sub === 'wondering' ? wonderingTab(w) : sub === 'wants' ? wantsSections(w) : aboutSections(w);
 export function renderCat(el, w) {
   if (catSub === 'wondering' && !wonderFound(w)) catSub = 'overview';
   if (!el._cat) {
     const bar = h('div', { class: 'subtabs', role: 'tablist' }), body = h('div', { class: 'subbody' });
-    for (const [id, label] of CAT_SUBS) bar.append(h('button', { type: 'button', role: 'tab', 'data-sub': id, text: label, onclick: () => { catSub = id; renderCat(el, el._cat.w); } }));
-    el._cat = { bar, body, w }; el.replaceChildren(bar, body);
+    for (const [id, label] of CAT_SUBS) bar.append(h('button', { type: 'button', role: 'tab', 'data-sub': id, text: label, onclick: () => { if (catSub !== id) { catSub = id; renderCat(el, el._cat.w); el.scrollTop = 0; } } }));
+    el._cat = { bar, body, w, html: '', sub: '' }; el.replaceChildren(bar, body);
   }
   const k = el._cat; k.w = w;
   for (const b of k.bar.children) { b.setAttribute('aria-selected', String(b.dataset.sub === catSub)); b.hidden = b.dataset.sub === 'wondering' && !wonderFound(w); }
-  k.body.replaceChildren(...(catSub === 'mind' ? mindTab(w) : catSub === 'wondering' ? wonderingTab(w) : overviewSections(w)));
+  const page = document.createElement('div'); page.append(...catPage(w, catSub));
+  if (k.sub === catSub && k.html === page.innerHTML) return; // nothing it shows has changed: leave the page alone
+  const top = el.scrollTop; k.body.replaceChildren(...page.childNodes); k.html = k.body.innerHTML; k.sub = catSub; el.scrollTop = top;
 }
 
 // ----- Crafting tab: what it carries, what it is building and what it has made -----
@@ -374,5 +385,6 @@ export function renderSettings(el, ctx) {
     h('div', { class: 'sec' }, h('h3', { text: 'Performance' }), field('set-eco', 'Frame rate', eco), field('set-away', 'While the app is closed', away), h('div', { class: 'muted small', text: desktop ? 'Pause means no time passes while the window is closed, the computer sleeps or it sits in the tray. Minimized, the cat keeps living on a slow timer (drawing stops).' : 'Pause means no time passes while this page is closed or the computer sleeps. While it is open the cat keeps living, even in a background tab (browsers slow those down, so it catches up when you come back). "Let the cat live on" makes it catch up on up to 3 hours after you were away.' }),
       desktop ? h('div', { class: 'field', style: 'margin-top:12px' }, h('label', { for: 'set-tray', class: 'check' }, tray, ' Closing the window tucks the cat into the tray'), h('div', { class: 'muted small', text: 'It saves first either way. (Time is paused while it is there, unless you chose “Let the cat live on” above.) Use the tray icon’s “Save and quit” to really exit.' })) : null),
     h('div', { class: 'sec' }, h('h3', { text: 'World' }), h('div', { class: 'muted small', text: `Day ${dayOf(ctx.w)} · one day lasts ${(ctx.w.dayLen / 60).toFixed(0)} real minutes. Change it with /daylen in admin mode.` }),
-      h('div', { class: 'row2', style: 'margin-top:10px' }, h('button', { class: 'btn danger', type: 'button', onclick: actions.reset, text: 'Start over with a new cat…' }))));
+      h('div', { class: 'row2', style: 'margin-top:10px' }, h('button', { class: 'btn danger', type: 'button', onclick: actions.reset, text: 'Start over with a new cat…' }))),
+    h('div', { class: 'muted small', style: 'margin-top:14px', text: 'Build: ' + BUILD }));
 }

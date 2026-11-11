@@ -17,7 +17,7 @@ GitHub hosts the game for you and gives it a web address. No installer, nothing 
 3. Open the **Actions** tab. The **Publish the game (GitHub Pages)** workflow runs by itself on every push to `main` (or `master`); you can also start it with **Run workflow**. It takes about a minute.
 4. When it is green, your game is at `https://YOUR-NAME.github.io/YOUR-REPOSITORY/`. The same link is shown on the workflow run.
 
-To update the game later, change the files in the repository; the page republishes itself.
+To update the game later, replace the files in the repository with the new ones (the whole `src` folder is the game); the page republishes itself. Every publish tags the file links with the commit, so a browser never mixes old and new files. The bottom of the **Settings** tab shows a *Build* line: if it is missing or does not match the one in the release notes, the site is still serving old files (give it a minute after the Actions run turns green, then reload; a private window is a quick way to check).
 
 Browser notes:
 
@@ -76,7 +76,7 @@ Chat commands (no admin mode needed): `offer item <type> [color]`, `offer materi
 
 ## Quirks: Collector, Van Gogh, Hunter, Night owl, Techie, Garfield, Bob the Builder
 
-Every cat has exactly one quirk, picked at random for a new cat and shown in the **Cat** tab's *Overview* under *Quirk*. Cats from an older save get one the first time they are loaded.
+Every cat has exactly one quirk, picked at random for a new cat and shown in the **Cat** tab's *About* sub-tab under *Quirk*. Cats from an older save get one the first time they are loaded.
 
 - **Collector**: covets one kind of small thing, goes out of its way to fetch it, hides the collection (or lays it out on its table) and fusses over it. Other cats keep a gift they love, but only a Collector hoards.
 - **Van Gogh**: obsessed with painting. The urge to create builds faster, it paints more than twice as often (even when tired or hungry), stays longer at the canvas, learns the craft about twice as fast, and is never quite finished. Its made-up pictures are mostly swirling skies.
@@ -153,7 +153,7 @@ When it wants to make something it does not know, it goes to the tablet and look
 
 ## Its own mind
 
-Beyond hunger, sleep and the rules in `mind.js`, a few things make it *this* cat on *this* day. All of it is saved with the cat, and the **Cat** tab shows it under its *Mind* sub-tab: *On its mind*, *Favourite things to do*, *Special interest* and *What it remembers*.
+Beyond hunger, sleep and the rules in `mind.js`, a few things make it *this* cat on *this* day. All of it is saved with the cat, and the **Cat** tab shows it under its *Mind* sub-tab (*On its mind*, *Favourite things to do*, *Special interest*) and its *Memory* sub-tab (*What it remembers*, *What makes it feel good*).
 
 - **Deciding for itself.** A few times a day (about every fifth of a day, when it is not hungry, sleepy, upset or asleep) the cat makes up its mind what it wants to do next, and says why in its diary. The simulation works out what is possible right now; with Claude connected, Claude is shown that menu with the cat's mood, habits, memories and wants and picks one in the cat's voice (at most three times a day). With no Claude, or no answer in time, a built-in whim picks from the same ingredients. The pick is a strong nudge, not an order: hunger and sleep still come first. Whether it did what it set out to do is noted too.
 - **Deeper memory.** The diary only holds the last 150 lines, so the cat keeps the significant things for itself (up to 60): big discoveries, solved mysteries, wishes, being upset, firsts of anything. They fade with the days but each time it thinks about one it lasts longer, so a few stay for good. It brings them up in its thoughts, in chat ("yesterday...", "remember when..."), on its blog and in what Claude is told. It also keeps count of who keeps turning up (the frog, the crow, the birds, the mice, you) so it can say they are regulars. It does not name individual visitors, only events.
@@ -163,7 +163,7 @@ Beyond hunger, sleep and the rules in `mind.js`, a few things make it *this* cat
 
 ## Secrets
 
-The **Cat** tab is split into sub-tabs (*Overview*, *Mind* and *Wondering*). *Wondering* does not appear at all until the cat has actually noticed a mystery, and a mystery only turns up in its thoughts, the diary and the events as the cat meets it (a clue about the moon, the first ripple in the pond, a spark). Some things the cat has to find out for itself, and the Cat tab hides them until it has:
+The **Cat** tab is split into sub-tabs: *About* (who it is, its quirk, being upset, the frog), *Wants* (what it wants and its painting level), *Mind*, *Memory* and *Wondering*. The sub-tab bar stays at the top while you scroll, the page only redraws when something on it changes (so your place is kept), and the main tab bar wraps onto two rows so every tab is always visible. *Wondering* does not appear at all until the cat has actually noticed a mystery, and a mystery only turns up in its thoughts, the diary and the events as the cat meets it (a clue about the moon, the first ripple in the pond, a spark). Some things the cat has to find out for itself, and the Cat tab hides them until it has:
 
 - **The cat tree.** Behind the cabin. A cat can wander round there by chance (a few percent a day), or, once it has looked up cat trees on the tablet and gathered a lot of bark, twigs and twine, build one. It then climbs it, sits at the top and watches the yard.
 - **The shiny coin.** A cat with curiosity over 75 may start wondering about the old oak. If it investigates for long enough (days, not minutes) it finds a gold coin in the roots. The coin goes in the stash (and ranks first), and the cat is *delighted* for two days: nothing upsets it.

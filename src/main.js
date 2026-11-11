@@ -11,6 +11,7 @@ import { clockStr, dayOf } from './sim/world.js';
 import { exportText, exportName } from './sim/history.js';
 import { storage, isDesktop } from './storage.js';
 import { blogStarted, unreadPosts, markBlogRead } from './sim/blog.js';
+import { BUILD } from './sim/version.js';
 import { h, buildNeeds, updateNeeds, renderCat, renderCrafting, craftingSig, renderStash, renderBlog, renderHistory, renderGallery, renderSettings, renderOutside, paintingModal, moodLabel } from './ui.js';
 
 const $ = id => document.getElementById(id);
@@ -249,7 +250,7 @@ async function boot() {
   showTab('chat'); requestAnimationFrame(frame);
   if (away) awayModal(away);
   if (isDesktop) desktopHooks();
-  window.__cat = { get w() { return w; }, get brain() { return brain; }, get net() { return net; }, get settings() { return settings; }, saveNow, submit };
+  window.__cat = { build: BUILD, get w() { return w; }, get brain() { return brain; }, get net() { return net; }, get settings() { return settings; }, saveNow, submit };
 }
 
 function bindEvents() {

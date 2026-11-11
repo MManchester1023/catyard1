@@ -80,7 +80,7 @@ console.log('asks ok');
   const post = w.blog.draft; assert.ok(post, 'a post was drafted'); publishPost(w, post); const ask = w.asks.find(a => a.type === 'blog'); assert.ok(ask, 'publishing queues a rewrite');
   const old = post.title; await brain.tick(w, true);
   assert.equal(post.title, 'Mice, Mostly'); assert.match(post.body, /blue cap/); assert.equal(post.by, 'claude');
-  assert.ok(w.journal.some(e => e.tag === 'blog' && e.text.includes('Mice, Mostly')) && !w.journal.some(e => e.tag === 'blog' && e.text.includes(`"${old}"`)), 'the diary line follows the new title');
+  assert.ok(w.journal.some(e => e.id === post.jid && e.text.includes('Mice, Mostly')) && !w.journal.some(e => e.id === post.jid && e.text.includes(`"${old}"`)), 'the diary line follows the new title'); // (this post's line only: an earlier post can share a title)
   assert.match(calls.at(-1).body.messages[0].content, /FACTS/); assert.match(digest(w), /You write a blog called/);
   console.log('blog ask ok');
 }
