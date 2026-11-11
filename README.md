@@ -1,43 +1,56 @@
 # Cat Yard
 
-A small desktop world where a cat lives on its own and you watch. It has needs, moods and a personality, but also wants: it collects small objects in a hidden stash, paints with its paws and slowly gets better, and keeps theories about the mysteries of the yard (the moon, ripples in the pond, sparks at dusk). You can talk to it, and an admin mode lets you change the world.
+A small world where a cat lives on its own and you watch. It has needs, moods and a personality, but also wants: it collects small objects in a hidden stash, paints with its paws and slowly gets better, and keeps theories about the mysteries of the yard (the moon, ripples in the pond, sparks at dusk). You can talk to it, and an admin mode lets you change the world.
 
 The whole yard is drawn in a dithered, low-resolution pixel style (ordered Bayer dithering, so the pattern holds still instead of shimmering), including the cat's paintings.
 
 Two things connect the cat to the outside world, in the spirit of Pino's World: **offerings** you leave on a mat, and a **tablet** that shows it real pages from Wikipedia and lets it leave notes for you. The cat also **makes things** out of bark from the oak, **learns what it likes from how things make it feel**, and everything it does and thinks goes into a **History** you can read and export.
 
-Built with Tauri v2 (Windows installer, tray icon, ~small and light) around a plain-JavaScript simulation. No bundler, no framework.
+It is a plain-JavaScript simulation with no bundler and no framework, so it runs as a normal web page in any modern browser. An optional Tauri v2 wrapper turns the same files into a small Windows desktop app (see the end of this section).
 
-## Get the Windows installer
+## Play it in your browser (GitHub Pages)
 
-The installer is built by GitHub, not on your machine.
+GitHub hosts the game for you and gives it a web address. No installer, nothing to build.
 
-1. Create a GitHub repository and push this folder to it.
-2. Open the repository's **Actions** tab, choose **Build Windows installer**, and press **Run workflow**. (Pushing a tag such as `v0.1.0` does the same.)
-3. When it finishes (a first run takes about 10 minutes), open the run and download the **cat-yard-windows-installer** artifact. Inside is a `.exe` installer. It installs for the current user only and needs no admin rights.
+1. Create a GitHub repository and upload this whole folder to it (keep the `.github/workflows` folder: it holds `pages.yml`).
+2. In the repository open **Settings → Pages**, and under **Source** choose **GitHub Actions**. (You only do this once.)
+3. Open the **Actions** tab. The **Publish the game (GitHub Pages)** workflow runs by itself on every push to `main` (or `master`); you can also start it with **Run workflow**. It takes about a minute.
+4. When it is green, your game is at `https://YOUR-NAME.github.io/YOUR-REPOSITORY/`. The same link is shown on the workflow run.
 
-The workflow runs the simulation tests first and stops if they fail.
+To update the game later, change the files in the repository; the page republishes itself.
 
-## Try it in a browser without installing anything
+Browser notes:
+
+- The cat lives while the tab is open, including in a background tab (browsers slow background tabs down, so it catches up when you come back). If you close the tab, it catches up on up to 3 hours when you return, and a summary says what it did.
+- The save lives in that browser's local storage. A different browser or device is a different (new) cat, and clearing site data erases it. **Settings → Saving → Download save file** writes a `.json` copy you can keep, and **Load a save file…** brings a cat back or moves it to another browser or computer. Loading a file first keeps the current cat as a save called `before-import` (`/load before-import` in admin mode restores it).
+- Autosave works as on the desktop: every few minutes, whenever the tab is hidden or closed, and with `/save`. The last 3 backups are kept (one new backup at most every 10 minutes), and if the main save is ever unreadable the newest backup is loaded instead.
+- If you use a Claude API key, it is stored in that browser and sent only to api.anthropic.com. The tablet only contacts en.wikipedia.org.
+
+## Run it on your own computer
 
 ```
 npm run web
 ```
 
-Then open <http://localhost:8765/src/index.html>. This is the same app. Saves go to the browser's local storage instead of a file. Any static file server works if you do not have Node (for example `python -m http.server 8765` from this folder).
+Then open <http://localhost:8765/index.html>. Any static file server pointed at the `src` folder works if you do not have Node (for example `python -m http.server 8765` from inside `src`). Opening `index.html` directly from a folder does not work, because browsers block ES modules on `file://` pages.
 
-## Living in the background
+## Optional: the Windows desktop app
+
+The same game wrapped as a Windows app with a tray icon (closing the window tucks the cat into the tray; saves are real files). The installer is built by GitHub, not on your machine.
+
+1. Push this folder to a GitHub repository.
+2. Open the **Actions** tab, choose **Build Windows installer**, and press **Run workflow**. (Pushing a tag such as `v0.1.0` does the same.)
+3. When it finishes (a first run takes about 10 minutes), open the run and download the **cat-yard-windows-installer** artifact. Inside is a `.exe` installer. It installs for the current user only and needs no admin rights.
+
+That workflow runs the simulation tests first and stops if they fail. In the desktop app:
 
 - Closing the window saves and tucks the cat into the system tray. It keeps living at very low cost (drawing stops completely while hidden). Left-click the tray icon to bring it back; right-click for **Save and quit**.
 - You can turn the tray behaviour off in **Settings → Performance**, so closing really quits (it still saves first).
-- When you were away, the world catches up on reopening (up to 3 hours' worth) and a summary says what the cat did.
-- Frame rate drops when the window is not focused, and **Eco** mode caps it at 15 fps.
+- Saves are written atomically (temp file then rename) with the last 3 backups, in `%APPDATA%\com.catyard.app\saves\`.
 
-## Saving
+## Saving (both versions)
 
-Saves happen automatically every 3 minutes (configurable), whenever the window is hidden or closed, and whenever you type `/save`. Writes are atomic (temp file then rename) and the last 3 backups are kept; if the main save is ever corrupt, the newest good backup is loaded instead.
-
-On Windows the files are in `%APPDATA%\com.catyard.app\saves\`.
+Saves happen automatically every 3 minutes (configurable), whenever the window or tab is hidden or closed, and whenever you type `/save`. If the main save is ever corrupt, the newest good backup is loaded instead. Frame rate drops when the window is not focused, and **Eco** mode caps it at 15 fps.
 
 ## Giving the cat a Claude-powered mind (optional)
 
@@ -148,7 +161,8 @@ Type in the chat to talk to the cat. Press **Admin** (or type `admin on`) to run
 ## Development
 
 ```
-npm install        # installs the Tauri CLI
+npm install        # installs the Tauri CLI (only needed for the desktop app)
+npm run web        # serves src/ at http://localhost:8765/index.html for the browser version
 npm test           # simulation, save, Claude-layer, offering, tablet and crafting/feelings/history tests (no network needed)
 npm run dev        # desktop app with live files (needs Rust + the Tauri prerequisites)
 npm run build      # local installer (Windows)
@@ -158,9 +172,10 @@ Layout: `src/sim/` is the DOM-free simulation (runs in Node and in the app; `off
 
 ## Known limits
 
+- The browser version is the best-tested one: it was clicked through in a real browser served from a sub-folder (as GitHub Pages does), including saving, backups, downloading and loading a save file, and recovering from a corrupted save. It has not been run on the live github.io site, and Safari and Firefox were not tried.
 - The Windows build, tray, close-to-tray and installer were written without access to a Windows machine. The simulation, UI and save logic are tested in Node and a real browser; the desktop shell is only type-checked. Expect to fix small things on the first real run.
 - The Claude layer was tested against a fake server, not the live API.
-- The tablet was tested against a fake Wikipedia (in Node and in a real browser with the requests intercepted), not the live site. The first real run in the installed app is the first time the Tauri HTTP permission for Wikipedia is exercised.
+- The tablet was tested against a fake Wikipedia (in Node and in a real browser with the requests intercepted), not the live site. In the browser version the live Wikipedia and Claude requests rely on those services allowing requests from web pages (Wikipedia's API does when asked with `origin=*`, and the Claude API does with the browser-access header the app sends); that has not been confirmed against the live services. In the installed app, the first real run is the first time the Tauri HTTP permission for Wikipedia is exercised.
 - Crafting, wish notes, feelings and the history were tested in Node (including headless multi-day runs and a fake Wikipedia for recipe lookups) and clicked through in a real browser. The recipe lookups have never run against live Wikipedia, and the export file and its folder have only been exercised in the browser (as a download), not in the installed Windows app.
 - Recipe pages are matched by title and keyword (for example a page whose title mentions "feeder"). If Wikipedia has no such page the cat works the recipe out itself.
 - Pages and page titles come from Wikipedia's own text, which can contain anything; the filter is a word list, not moderation.

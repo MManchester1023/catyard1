@@ -220,6 +220,8 @@ export function renderSettings(el, ctx) {
   const tray = h('input', { id: 'set-tray', type: 'checkbox', checked: s.closeToTray !== false ? true : null });
   tray.addEventListener('change', () => { s.closeToTray = tray.checked; actions.saveSettings(); });
   const desktop = typeof window !== 'undefined' && !!window.__TAURI__;
+  const pick = h('input', { id: 'set-import', type: 'file', accept: '.json,application/json', style: 'display:none', 'aria-label': 'Choose a save file' });
+  pick.addEventListener('change', async () => { const f = pick.files && pick.files[0]; if (!f) return; try { actions.importSave(await f.text(), f.name); } catch { /* unreadable file: nothing to do */ } pick.value = ''; });
   const tc = net ? net.cfg() : null, nst = h('div', { class: 'status', id: 'netstatus' });
   const tOn = h('input', { id: 'set-tab-on', type: 'checkbox', checked: tc && tc.on ? true : null }), tSafe = h('input', { id: 'set-tab-safe', type: 'checkbox', checked: tc && tc.safe !== false ? true : null }), tCap = h('input', { id: 'set-tab-cap', type: 'number', min: '5', max: '500', value: String(tc ? tc.dailyCap : 60) });
   const nRefresh = () => { if (!net) return; nst.textContent = net.label(); nst.className = 'status ' + (net.state === 'error' ? 'bad' : net.enabled() ? 'ok' : ''); };
@@ -227,7 +229,7 @@ export function renderSettings(el, ctx) {
   for (const i of [tOn, tSafe, tCap]) i.addEventListener('change', nSave); nRefresh();
   el.replaceChildren(
     h('div', { class: 'sec' }, h('h3', { text: 'Claude connection' }),
-      h('p', { class: 'muted small', text: 'Optional. With an API key, the cat’s thoughts, chat replies, theories and painting titles come from Claude. Without one it uses its built-in offline voice. Your key is stored only in this app’s data folder and is sent only to api.anthropic.com.' }),
+      h('p', { class: 'muted small', text: 'Optional. With an API key, the cat’s thoughts, chat replies, theories and painting titles come from Claude. Without one it uses its built-in offline voice. Your key is stored only ' + (desktop ? 'in this app’s data folder' : 'in this browser (anyone who can use this browser profile could find it)') + ' and is sent only to api.anthropic.com.' }),
       field('set-key', 'API key', key), field('set-model', 'Model', model),
       h('div', { class: 'field' }, h('label', { for: 'set-on', class: 'check' }, on, ' Use Claude when a key is set')),
       field('set-cap', 'Daily call limit', capI), field('set-every', 'Seconds between idle thoughts', every),
@@ -241,8 +243,10 @@ export function renderSettings(el, ctx) {
       field('set-auto', 'Autosave', auto),
       h('div', { class: 'muted small', text: 'The game also saves when you close or hide the window, and with /save in the chat. The last 3 backups are kept.' }),
       h('div', { class: 'muted small', style: 'margin:6px 0 10px', text: 'Saved in: ' + where }),
-      h('div', { class: 'row2' }, h('button', { class: 'btn', type: 'button', onclick: actions.saveNow, text: 'Save now' }), h('button', { class: 'btn', type: 'button', onclick: actions.loadSaved, text: 'Reload last save' }))),
-    h('div', { class: 'sec' }, h('h3', { text: 'Performance' }), field('set-eco', 'Frame rate', eco), h('div', { class: 'muted small', text: 'When the window is minimized or hidden, drawing stops entirely and the cat keeps living on a slow timer.' }),
+      desktop ? null : h('div', { class: 'muted small', style: 'margin:0 0 10px', text: 'The cat lives in this browser’s storage. Clearing site data, or opening the page in another browser, means a different (or no) cat, so download a save file now and then. A save file also moves the cat to another browser or computer.' }),
+      h('div', { class: 'row2' }, h('button', { class: 'btn', type: 'button', onclick: actions.saveNow, text: 'Save now' }), h('button', { class: 'btn', type: 'button', onclick: actions.loadSaved, text: 'Reload last save' })),
+      h('div', { class: 'row2', style: 'margin-top:8px' }, h('button', { class: 'btn', type: 'button', id: 'set-export', onclick: actions.exportSave, text: 'Download save file' }), h('button', { class: 'btn', type: 'button', id: 'set-import-btn', onclick: () => pick.click(), text: 'Load a save file…' }), pick)),
+    h('div', { class: 'sec' }, h('h3', { text: 'Performance' }), field('set-eco', 'Frame rate', eco), h('div', { class: 'muted small', text: desktop ? 'When the window is minimized or hidden, drawing stops entirely and the cat keeps living on a slow timer.' : 'The cat keeps living while this tab is open, even in the background (browsers slow background tabs down, so it catches up when you come back). If you close the tab, it catches up on up to 3 hours when you return.' }),
       desktop ? h('div', { class: 'field', style: 'margin-top:12px' }, h('label', { for: 'set-tray', class: 'check' }, tray, ' Closing the window keeps the cat running in the tray'), h('div', { class: 'muted small', text: 'It saves first either way. Use the tray icon’s “Save and quit” to really exit.' })) : null),
     h('div', { class: 'sec' }, h('h3', { text: 'World' }), h('div', { class: 'muted small', text: `Day ${dayOf(ctx.w)} · one day lasts ${(ctx.w.dayLen / 60).toFixed(0)} real minutes. Change it with /daylen in admin mode.` }),
       h('div', { class: 'row2', style: 'margin-top:10px' }, h('button', { class: 'btn danger', type: 'button', onclick: actions.reset, text: 'Start over with a new cat…' }))));

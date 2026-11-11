@@ -182,9 +182,28 @@ function showTab(name) {
   if (name === 'cat') renderCat($('tab-cat'), w);
   if (name === 'history') historyUpdate = renderHistory($('tab-history'), w, histSt, { actions: { export: exportStory } });
   if (name === 'outside') outsideUpdate = renderOutside($('tab-outside'), w, { net, actions: { leave: spec => leaveOffering(w, spec) } });
-  if (name === 'settings') renderSettings($('tab-settings'), { settings, brain, net, where, w, actions: { saveSettings: persistSettings, saveNow: () => saveNow('main'), loadSaved: reloadLast, reset: resetModal } });
+  if (name === 'settings') renderSettings($('tab-settings'), { settings, brain, net, where, w, actions: { saveSettings: persistSettings, saveNow: () => saveNow('main'), loadSaved: reloadLast, exportSave, importSave, reset: resetModal } });
   if (name === 'chat') { chatSig = ''; renderChat(); $('chatin').focus(); }
   hud(performance.now());
+}
+// a plain .json copy of the save, to keep somewhere safe or move to another browser or computer
+async function exportSave() {
+  try { const at = await storage.writeExport(`cat-yard-save-${w.cat.name}-day${dayOf(w)}.json`, serialize(w), 'application/json'); sys(`A copy of the save went to ${at}.`); }
+  catch (e) { sys('Could not write the file: ' + (e && e.message ? e.message : e)); }
+}
+function importSave(text, fileName) {
+  const ok = [h('div', { class: 'row2' }, h('button', { class: 'btn primary', type: 'button', text: 'OK', onclick: closeModal }))];
+  let nw; try { nw = deserialize(text); } catch (e) { showModal(h('h2', { text: 'That is not a Cat Yard save' }), h('p', { text: e instanceof SyntaxError ? 'The file is not valid JSON.' : (e && e.message ? e.message : String(e)) }), ok); return; }
+  showModal(h('h2', { text: `Load ${nw.cat.name}?` }),
+    h('p', { text: `This replaces ${w.cat.name} with ${nw.cat.name} from “${fileName}” (day ${dayOf(nw)}). Your current cat is kept as a save called “before-import”; /load before-import brings it back.` }),
+    h('div', { class: 'row2' },
+      h('button', { class: 'btn primary', type: 'button', text: 'Load it', onclick: async () => {
+        closeModal();
+        const kept = await storage.write('before-import', serialize(w), { backup: false }).catch(() => false);
+        if (!kept) { sys('Could not keep a copy of the current cat, so nothing was changed.'); return; }
+        swapWorld(nw); await saveNow('main'); sys(`Loaded ${nw.cat.name} from the file.`);
+      } }),
+      h('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: closeModal })));
 }
 async function reloadLast() { try { const r = await loadSlot('main', { catchup: false }); if (r) { swapWorld(r.world); sys('Reloaded the last save.'); } else sys('No save found.'); } catch (e) { sys('Could not load: ' + e.message); } }
 
@@ -200,7 +219,7 @@ async function boot() {
   settings = Object.assign(defaultSettings(), await storage.readSettings() || {}); settings.usage = Object.assign({ date: '', calls: 0 }, settings.usage);
   brain = new Brain({ getSettings: () => settings, saveSettings: persistSettings, http: storage.http }); brain.onChange = () => { chatSig = ''; };
   net = new Net({ getSettings: () => settings, saveSettings: persistSettings, http: storage.http }); net.cfg();
-  where = await storage.where().catch(() => '');
+  where = await storage.where().catch(() => ''); storage.keep();
   buildNeeds($('needs'));
   renderer = createRenderer($('view')); new ResizeObserver(() => requestAnimationFrame(fit)).observe($('stagecol')); fit();
   let away = null, fresh = false, note = '';

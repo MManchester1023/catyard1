@@ -14,7 +14,10 @@ const ls = { get: k => { try { return localStorage.getItem(k); } catch { return 
 
 export const storage = {
   isDesktop,
-  async where() { if (!isDesktop) return 'browser storage'; return (await dir()).d; },
+  async where() { if (!isDesktop) return 'browser storage (this site, in this browser)'; return (await dir()).d; },
+
+  // browsers may clear a site's storage when space runs low; asking makes that much less likely. Harmless if refused.
+  async keep() { try { if (!isDesktop && navigator.storage && navigator.storage.persist) return await navigator.storage.persist(); } catch { /* ignore */ } return false; },
 
   async read(slot) {
     slot = safe(slot);
@@ -27,7 +30,19 @@ export const storage = {
   // atomic write, rolling backups. returns true on success
   async write(slot, text, { backup = true } = {}) {
     slot = safe(slot);
-    if (!isDesktop) return ls.set('catyard:' + slot, text);
+    if (!isDesktop) {
+      // same idea as the desktop files: a rolling set of older copies, at most one new copy every 10 minutes
+      if (backup) {
+        try {
+          const cur = ls.get('catyard:' + slot), last = +ls.get(`catyard:${slot}.bakstamp`) || 0;
+          if (cur && Date.now() - last > BACKUP_EVERY_MS) {
+            for (let i = BACKUPS; i >= 2; i--) { const a = ls.get(`catyard:${slot}.bak${i - 1}`); if (a != null) ls.set(`catyard:${slot}.bak${i}`, a); }
+            ls.set(`catyard:${slot}.bak1`, cur); ls.set(`catyard:${slot}.bakstamp`, String(Date.now()));
+          }
+        } catch { /* backups are best effort */ }
+      }
+      return ls.set('catyard:' + slot, text);
+    }
     const { d } = await dir(), p = await T.path.join(d, slot + '.json'), tmp = await T.path.join(d, slot + '.tmp');
     await T.fs.writeTextFile(tmp, text);
     if (backup && (await T.fs.exists(p))) {
@@ -44,14 +59,15 @@ export const storage = {
 
   // the newest backup that parses, used if the main save is unreadable
   async readBackup(slot) {
-    slot = safe(slot); if (!isDesktop) return null;
+    slot = safe(slot);
+    if (!isDesktop) { for (let i = 1; i <= BACKUPS; i++) { const t = ls.get(`catyard:${slot}.bak${i}`); if (t) return t; } return null; }
     const { d } = await dir();
     for (let i = 1; i <= BACKUPS; i++) { const p = await T.path.join(d, `${slot}.bak${i}.json`); try { if (await T.fs.exists(p)) return await T.fs.readTextFile(p); } catch { /* next */ } }
     return null;
   },
 
   async list() {
-    if (!isDesktop) { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('catyard:')) out.push(k.slice(8)); } } catch { /* ignore */ } return out.sort(); }
+    if (!isDesktop) { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('catyard:')) { const n = k.slice(8); if (n !== 'settings' && !/\.bak/.test(n)) out.push(n); } } } catch { /* ignore */ } return out.sort(); }
     const { d } = await dir(); const ents = await T.fs.readDir(d);
     return ents.map(e => e.name).filter(n => /^[a-z0-9_-]+\.json$/.test(n) && !/\.bak\d\.json$/.test(n)).map(n => n.replace(/\.json$/, '')).sort();
   },
@@ -71,10 +87,10 @@ export const storage = {
   },
 
   // the exported story: a text file in the app's exports folder (desktop) or a download (browser). returns where it went
-  async writeExport(name, text) {
+  async writeExport(name, text, mime = 'text/plain') {
     name = String(name).replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 80) || 'cat-yard.txt';
     if (!isDesktop) {
-      const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' })), a = document.createElement('a');
+      const url = URL.createObjectURL(new Blob([text], { type: mime + ';charset=utf-8' })), a = document.createElement('a');
       a.href = url; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); return 'your downloads (' + name + ')';
     }
     const { base } = await dir(), d = await T.path.join(base, 'exports'); try { await T.fs.mkdir(d, { recursive: true }); } catch { /* exists */ }
