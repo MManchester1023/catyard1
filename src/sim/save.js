@@ -1,0 +1,62 @@
+// Turning a world into a small JSON save and back. Transient things (birds, mice, the current
+// action) are rebuilt on load; everything the cat has lived through is kept.
+import { makeWorld, makeCat, catchUp, VERSION } from './sim.js';
+import { start } from './acts.js';
+import { uid } from './util.js';
+import { makeTastes, ensureOfferState } from './offerings.js';
+import { ensureTablet } from './tablet.js';
+import { ensureCraft } from './recipes.js';
+import { ensureFeel } from './feelings.js';
+
+const KEEP_W = ['v', 'clock', 'dayLen', 'speed', 'paused', 'log', 'logId', 'journal', 'chat', 'pending', 'weather', 'stash', 'easel', 'mysteries', 'fed', 'stats', 'createdAt', 'items', 'treats', 'wantT', 'rippleT', 'thiefT', 'lastChatAt', 'offers', 'tablet', 'table', 'deco', 'hist', 'days'];
+
+export function serialize(w) {
+  const data = { app: 'cat-yard', version: VERSION, savedAt: Date.now(), w: {}, cat: null, o: { bowl: w.o.bowl.food, yarn: { x: w.o.yarn.x, y: w.o.yarn.y } } };
+  for (const k of KEEP_W) data.w[k] = w[k];
+  const { act, ...cat } = w.cat; data.cat = cat;
+  return JSON.stringify(data);
+}
+
+// deep merge so saves from older versions pick up new default fields
+function merge(dst, src) {
+  if (!src || typeof src !== 'object') return dst;
+  for (const k of Object.keys(src)) {
+    const v = src[k];
+    if (v && typeof v === 'object' && !Array.isArray(v) && dst[k] && typeof dst[k] === 'object' && !Array.isArray(dst[k])) merge(dst[k], v);
+    else if (v !== undefined) dst[k] = v;
+  }
+  return dst;
+}
+const finite = (o) => { if (o && typeof o === 'object') for (const k of Object.keys(o)) { if (typeof o[k] === 'number' && !Number.isFinite(o[k])) o[k] = 0; else finite(o[k]); } return o; };
+
+export function deserialize(text) {
+  const data = JSON.parse(text);
+  if (!data || data.app !== 'cat-yard' || !data.w || !data.cat) throw new Error('Not a Cat Yard save file');
+  if (data.version > VERSION) throw new Error('This save is from a newer version of the app');
+  const w = makeWorld(data.cat.name);
+  w.items = []; w.treats = []; w.log = []; w.journal = []; w.pending = [];
+  merge(w, finite(data.w));
+  merge(w.cat, finite(data.cat));
+  if (!data.cat.tastes) w.cat.tastes = makeTastes(w.cat.quirk);
+  w.offers = Array.isArray(data.w.offers) ? data.w.offers : []; ensureOfferState(w); ensureTablet(w); ensureCraft(w); ensureFeel(w.cat); w.netq = []; w.netOn = false;
+  if (data.o) { w.o.bowl.food = data.o.bowl; if (data.o.yarn) { w.o.yarn.x = data.o.yarn.x; w.o.yarn.y = data.o.yarn.y; } }
+  // a treasure that was in the cat's mouth goes back on the ground
+  const c = w.cat;
+  if (c.carry && c.carry.type !== 'mouse') w.items.push({ id: uid(), type: c.carry.type, color: c.carry.color, x: c.x, y: c.y, age: 0 });
+  c.carry = null; c.pose = 'sit'; c.hidden = false; c.z = 0; c.pu = 0; c.wig = false;
+  w.asks = []; w.mice = []; w.ripple = null; w.thief = null; w.onNote = null;
+  start(w, 'idle'); w.lastThoughtId = w.cat.thoughtId;
+  w.savedAt = data.savedAt;
+  return w;
+}
+
+// fast-forward the time the app was closed, capped so reopening stays quick
+export const MAX_AWAY_SECONDS = 3 * 3600;
+export function catchUpFromSave(w, nowMs = Date.now()) {
+  const away = Math.max(0, (nowMs - (w.savedAt || nowMs)) / 1000);
+  if (away < 30) return null;
+  const used = Math.min(away, MAX_AWAY_SECONDS);
+  const r = catchUp(w, used);
+  r.awayRealSeconds = away; r.capped = away > MAX_AWAY_SECONDS;
+  return r;
+}

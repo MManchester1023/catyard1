@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#222">
+<canvas id="c" style="width:960px;height:600px;display:block"></canvas>
+<script type="module">
+import { createRenderer } from '../src/render.js';
+import { makeWorld, tick } from '../src/sim/sim.js';
+import { start } from '../src/sim/acts.js';
+const w = makeWorld('Miso'); window.w = w; window.start = start; window.tick = tick;
+const r = createRenderer(document.getElementById('c')); r.resize(960);
+window.draw = (t = 3) => r.draw(w, t);
+window.run = (secs) => { for (let i = 0; i < secs * 10; i++) tick(w, 0.1); };
+window.ready = true;
+</script>
