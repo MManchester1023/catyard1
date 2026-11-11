@@ -76,14 +76,14 @@ Chat commands (no admin mode needed): `offer item <type> [color]`, `offer materi
 
 ## Quirks: Collector, Van Gogh, Hunter, Night owl, Techie, Garfield, Bob the Builder
 
-Every cat has exactly one quirk, picked at random for a new cat and shown in the **Cat** tab under *Quirk*. Cats from an older save get one the first time they are loaded.
+Every cat has exactly one quirk, picked at random for a new cat and shown in the **Cat** tab's *Overview* under *Quirk*. Cats from an older save get one the first time they are loaded.
 
 - **Collector**: covets one kind of small thing, goes out of its way to fetch it, hides the collection (or lays it out on its table) and fusses over it. Other cats keep a gift they love, but only a Collector hoards.
 - **Van Gogh**: obsessed with painting. The urge to create builds faster, it paints more than twice as often (even when tired or hungry), stays longer at the canvas, learns the craft about twice as fast, and is never quite finished. Its made-up pictures are mostly swirling skies.
 - **Hunter**: hunts whenever it can. It notices mice and birds from far off, stalks them whether or not it is hungry and tries again almost at once.
 - **Night owl**: its day runs about three hours behind: lively well into the night, deeply asleep from roughly 2am to 7:30am.
-- **Techie**: goes to the tablet first. When it cannot work something out it looks it up, searches for things that fit its interests, and starts its blog early.
-- **Garfield**: hungry sooner, eats at the first excuse, naps in the sun and on the cushion, and would much rather do that than paint, play or explore.
+- **Techie**: goes to the tablet first. It finds the tablet within its first hour or so (it is not held back by the three-new-things-a-day limit), looks things up when it cannot work them out, searches for things that fit its interests, and starts its blog early.
+- **Garfield**: hungry sooner, bored sooner, eats at the first excuse, naps in the sun and on the cushion (but only when it is actually tired, and not back to back), and would much rather do that than paint, play or explore.
 - **Bob the Builder**: gathers more from the oak each day, always has a project, builds faster, and would rather craft than just about anything.
 
 Each quirk has its own thoughts and its own way of talking in chat, and its own Wikipedia searches (a Van Gogh looks up Impressionism, a Hunter looks up lynxes, a Builder looks up beaver dams and so on). In admin mode `quirk trait <collector|vangogh|hunter|nightowl|techie|garfield|builder|none>` changes it.
@@ -109,8 +109,9 @@ Discoveries are slow on purpose, and each mystery can only teach the cat so much
 | The dancing sparks | about 8 days at the very fastest, usually 10 to 20 (it can learn six things a day from them) |
 | Bark and twigs from the oak | at most two pieces a day, and not every scratch gives one |
 | Working out a recipe without the tablet | 4 days |
-| Noticing a part of the yard (pond, tree, easel, tablet…) | it has to get within about 100 px of it, and only three new things sink in per day: about 2 to 3 days for all of them |
-| The bark table | about 6 days (it has to find the oak first, then gets two pieces a day) |
+| Noticing a part of the yard (pond, tree, tablet…) | it has to get within about 100 px of it, and only three new things sink in per day: about 2 to 3 days for all of them (a Techie finds the tablet regardless). The easel only exists once it has built it |
+| The easel | about 3 days: it needs two oak frames, which is 4 bark (it has to find the oak first, then gets two pieces a day) |
+| The bark table | about 3 days more: two oak frames and 2 bark, 6 bark in all |
 | Getting curious about the stars | at least 4 clear nights of gazing, then a few days more by chance (usually day 4 to 9) |
 | Understanding the stars | roughly 2 to 3 weeks in all: about 12 clues (three a day), then a page on the tablet (or 6 days without it) |
 | A shooting star | on about half of clear nights once it understands; a wish at most every 5 days, and only if it is looking |
@@ -123,29 +124,36 @@ Whenever something happens to the cat (a gift, a page, a finished painting, a pi
 
 ## Making things
 
-The cat scratches the oak, and now and then a piece of **bark** or a **twig** comes loose. It can carry 12 of each. Pieces collect in a small pile (beside the table once there is one). What it can make:
+The cat scratches the oak, and now and then a piece of **bark** or a **twig** comes loose. It can carry 12 of each. Pieces collect in a small pile (beside the table once there is one). The **Crafting** tab shows what it is carrying, whether it has an easel yet, what it can make and what it has made.
+
+The **oak frame** is a building part: two pieces of bark make one, and bigger things are made out of frames. A cat that needs frames for a project makes them without being asked. A spare frame is hung around one of its paintings (as the old bark frame was), so a finished painting stands framed on the table.
 
 | Recipe | Needs | How it learns it |
 | --- | --- | --- |
-| Bark table | 4 bark | Already knows. The stash moves out of hiding onto the tabletop. It builds this first: until it exists, bark is saved for it. |
-| Bark frame | 2 bark, 1 twig | Already knows. Frames its best painting, which then stands on the table. |
-| Bird feeder | 3 bark, 2 twigs | Looks it up on the tablet. Draws more birds. |
+| Oak frame | 2 bark | Already knows. A part, not a finished thing. |
+| Easel | 2 oak frames | Already knows. **It does not start with one.** Until it has built the easel it cannot paint (the urge to create still builds), and making it is its first big want. |
+| Bark table | 2 oak frames, 2 bark | Already knows. The stash moves out of hiding onto the tabletop. |
+| Bird feeder | 1 oak frame, 1 bark, 2 twigs | Looks it up on the tablet. Draws more birds. |
 | Wind chime | 3 twigs, 1 twine | Looks it up on the tablet. Calms it a little. |
+| Cat tree | 3 oak frames, 2 bark, 5 twigs, 3 twine | Looks it up on the tablet (see *Secrets*). |
 
-When it wants to make something it does not know, it goes to the tablet and looks the topic up; the page it reads is what unlocks the recipe. If the tablet turns up nothing twice it works it out itself, and with no connection it does the same after about four days. **Twine can only come from you** (leave it on the mat, or use `/give twine`); it cannot be found in the yard. The **Cat** tab shows what it is carrying, what it knows how to make and what it has made.
+Until the easel and the table exist, the bark it finds goes to them first. A save made before this change keeps the easel it already had.
+
+When it wants to make something it does not know, it goes to the tablet and looks the topic up; the page it reads is what unlocks the recipe. If the tablet turns up nothing twice it works it out itself, and with no connection it does the same after about four days. **Twine can only come from you** (leave it on the mat, or use `/give twine`); it cannot be found in the yard.
 
 ## The yard, washing and being upset
 
 - **Furniture gets used.** The scratching post, the yarn, the sunbeam and the cushion all have their own reasons to be visited (sharpening claws, play, warming up, napping). The cushion is also where string comes from once the cat has worked out that its stuffing is held in by string (see *Making things*): it will pull some out of its bed when it needs it.
+- **Sleep, eating and grooming.** Eating makes it sleepy: a full meal adds 0.3 to tiredness (a small snack, proportionally less), and it always grooms itself after eating. It does not go to bed or nap unless it is actually tired (a little tired is enough for the night, properly tired for a nap in the sun), it wakes when it has slept itself out in the daytime, and once in bed for the night it sleeps on to the morning. Waiting out the rain in the cabin when it is not tired is sitting about, not a nap. One consequence is that cats sleep somewhat more overall than before, since every meal adds tiredness (an ordinary cat around 40% of the time, Garfield around 48%, down from about 56%).
 - **Washing.** It has a proper routine now: it gets dirty, and it washes (front paws, face, then the rest) instead of a quick lick.
-- **It can get upset.** Being left hungry for too long, being alone for too long, a hunt that fails again and again, a collection raided by the crow, and a note on the tablet that nobody answers all upset it. The Cat tab shows *Upset* and why, it sulks and avoids things for a while, and it is soothed by what it likes: a gift on the mat, a visit with the frog, being fed, a wish granted.
+- **It can get upset.** Being left hungry for too long, being alone for too long, a hunt that fails again and again, a collection raided by the crow, and a note on the tablet that nobody answers all upset it. The Cat tab shows *Upset* and what it is upset about, and the cat says so itself, in its own words, in its thoughts, in chat, on its blog and to Claude; it sulks and avoids things for a while, and it is soothed by what it likes: a gift on the mat, a visit with the frog, being fed, a wish granted.
 - **Birds leave things.** Items turn up in the yard because a bird dropped them, not at random.
 - **Hunting.** Every cat can catch a bird now (about one every five days for an ordinary cat, about one every two for a Hunter). It can also fish in the pond when a fish shows itself, and a caught mouse fills hunger and takes a bit off boredom. Wants like "catch 5 mice" or "catch 5 birds" come up.
 - **The glass.** It comes to the glass for attention much less often than it used to.
 
 ## Its own mind
 
-Beyond hunger, sleep and the rules in `mind.js`, a few things make it *this* cat on *this* day. All of it is saved with the cat, and the Cat tab shows it under *On its mind*, *Favourite things to do*, *Special interest* and *What it remembers*.
+Beyond hunger, sleep and the rules in `mind.js`, a few things make it *this* cat on *this* day. All of it is saved with the cat, and the **Cat** tab shows it under its *Mind* sub-tab: *On its mind*, *Favourite things to do*, *Special interest* and *What it remembers*.
 
 - **Deciding for itself.** A few times a day (about every fifth of a day, when it is not hungry, sleepy, upset or asleep) the cat makes up its mind what it wants to do next, and says why in its diary. The simulation works out what is possible right now; with Claude connected, Claude is shown that menu with the cat's mood, habits, memories and wants and picks one in the cat's voice (at most three times a day). With no Claude, or no answer in time, a built-in whim picks from the same ingredients. The pick is a strong nudge, not an order: hunger and sleep still come first. Whether it did what it set out to do is noted too.
 - **Deeper memory.** The diary only holds the last 150 lines, so the cat keeps the significant things for itself (up to 60): big discoveries, solved mysteries, wishes, being upset, firsts of anything. They fade with the days but each time it thinks about one it lasts longer, so a few stay for good. It brings them up in its thoughts, in chat ("yesterday...", "remember when..."), on its blog and in what Claude is told. It also keeps count of who keeps turning up (the frog, the crow, the birds, the mice, you) so it can say they are regulars. It does not name individual visitors, only events.
@@ -155,7 +163,7 @@ Beyond hunger, sleep and the rules in `mind.js`, a few things make it *this* cat
 
 ## Secrets
 
-Some things the cat has to find out for itself, and the Cat tab hides them until it has:
+The **Cat** tab is split into sub-tabs (*Overview*, *Mind* and *Wondering*). *Wondering* does not appear at all until the cat has actually noticed a mystery, and a mystery only turns up in its thoughts, the diary and the events as the cat meets it (a clue about the moon, the first ripple in the pond, a spark). Some things the cat has to find out for itself, and the Cat tab hides them until it has:
 
 - **The cat tree.** Behind the cabin. A cat can wander round there by chance (a few percent a day), or, once it has looked up cat trees on the tablet and gathered a lot of bark, twigs and twine, build one. It then climbs it, sits at the top and watches the yard.
 - **The shiny coin.** A cat with curiosity over 75 may start wondering about the old oak. If it investigates for long enough (days, not minutes) it finds a gold coin in the roots. The coin goes in the stash (and ranks first), and the cat is *delighted* for two days: nothing upsets it.
@@ -169,6 +177,8 @@ Admin: `secret status|cattree|peek|oak|coin|moon|moonwish|stars|starsdone|meteor
 ## The Stash tab
 
 A list of everything the cat has kept, favourite first. The ranking comes from what it collects, its favourite colour and what has made it feel good, so it changes as its tastes change.
+
+The Cat tab no longer has its own *Keepsakes* list; this tab covers it.
 
 ## Painting: made-up pictures
 
@@ -262,7 +272,7 @@ Type in the chat to talk to the cat. Press **Admin** (or type `admin on`) to run
 ```
 npm install        # installs the Tauri CLI (only needed for the desktop app)
 npm run web        # serves src/ at http://localhost:8765/index.html for the browser version
-npm test           # simulation, save, Claude-layer, offering, tablet, crafting/feelings/history, quirk/frog/pacing, secrets, painting, blog, memory, favourites, character, intent, special-interest, stars and search-variety tests (no network needed)
+npm test           # simulation, save, Claude-layer, offering, tablet, crafting/feelings/history, quirk/frog/pacing, secrets, painting, blog, memory, favourites, character, intent, special-interest, stars, search-variety and refinement (sleep, upset, easel, oak frames) tests (no network needed)
 npm run dev        # desktop app with live files (needs Rust + the Tauri prerequisites)
 npm run build      # local installer (Windows)
 ```
