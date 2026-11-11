@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cat Yard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23e0a458' d='M2 1l4 3h4l4-3v7a6 6 0 0 1-12 0z'/%3E%3Cpath fill='%23222' d='M5 8h2v2H5zm4 0h2v2H9z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <main id="stagecol">
+    <header id="top">
+      <div id="who"><b id="catname">…</b><span id="activity"></span></div>
+      <div id="clock"></div>
+      <div id="ctrl">
+        <label class="sr" for="speed">Speed</label>
+        <select id="speed" title="Simulation speed"><option value="1">1x</option><option value="2">2x</option><option value="4">4x</option><option value="10">10x</option><option value="30">30x</option></select>
+        <button id="pause" type="button">Pause</button>
+        <button id="saveBtn" type="button">Save</button>
+        <span id="savedAt" aria-live="polite"></span>
+      </div>
+    </header>
+    <div id="stage">
+      <canvas id="view" aria-label="The yard. The cat lives here."></canvas>
+      <div id="bubble" hidden></div>
+    </div>
+    <div id="needs" aria-label="Needs"></div>
+  </main>
+
+  <aside id="side">
+    <nav id="tabs" role="tablist">
+      <button role="tab" data-tab="chat" aria-selected="true">Chat</button>
+      <button role="tab" data-tab="cat" aria-selected="false">Cat</button>
+      <button role="tab" data-tab="crafting" aria-selected="false">Crafting</button>
+      <button role="tab" data-tab="stash" aria-selected="false">Stash</button>
+      <button role="tab" data-tab="blog" aria-selected="false" hidden>Blog</button>
+      <button role="tab" data-tab="outside" aria-selected="false">Outside</button>
+      <button role="tab" data-tab="history" aria-selected="false">History</button>
+      <button role="tab" data-tab="gallery" aria-selected="false">Gallery</button>
+      <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    </nav>
+
+    <section id="tab-chat" class="panel">
+      <div id="chatlog" aria-live="polite"></div>
+      <form id="chatform" autocomplete="off">
+        <button id="adminToggle" type="button" aria-pressed="false" title="Admin mode: type commands to change the world">Admin</button>
+        <input id="chatin" type="text" maxlength="400" placeholder="Say something…" aria-label="Message">
+        <button id="sendBtn" type="submit">Send</button>
+      </form>
+    </section>
+    <section id="tab-cat" class="panel" hidden></section>
+    <section id="tab-crafting" class="panel" hidden></section>
+    <section id="tab-stash" class="panel" hidden></section>
+    <section id="tab-blog" class="panel" hidden></section>
+    <section id="tab-outside" class="panel" hidden></section>
+    <section id="tab-history" class="panel" hidden></section>
+    <section id="tab-gallery" class="panel" hidden></section>
+    <section id="tab-settings" class="panel" hidden></section>
+  </aside>
+</div>
+
+<div id="modal" hidden><div id="modalbox" role="dialog" aria-modal="true"></div></div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
