@@ -7,6 +7,7 @@ import { makeTastes, ensureOfferState } from './offerings.js';
 import { ensureTablet } from './tablet.js';
 import { ensureBlog } from './blog.js';
 import { ensureCraft, foundFromBefore } from './recipes.js';
+import { ensureEconomy } from './economy.js';
 import { ensureFeel } from './feelings.js';
 import { ensureMemory } from './memory.js';
 import { ensureFinds } from './finds.js';
@@ -17,7 +18,7 @@ import { meetFrog } from './frog.js';
 import { makeTemper } from './temper.js';
 import { restoreRng, useRng } from './rng.js';
 
-const KEEP_W = ['v', 'rng', 'clock', 'dayLen', 'speed', 'paused', 'log', 'logId', 'journal', 'chat', 'pending', 'weather', 'stash', 'easel', 'easelMade', 'shake', 'toys', 'mysteries', 'fed', 'stats', 'createdAt', 'items', 'treats', 'wantT', 'rippleT', 'thiefT', 'lastChatAt', 'offers', 'tablet', 'table', 'deco', 'hist', 'days', 'frog', 'pace', 'catTree', 'moonWishDay', 'starWishDay', 'meteorPlan', 'blog'];
+const KEEP_W = ['v', 'rng', 'clock', 'dayLen', 'speed', 'paused', 'log', 'logId', 'journal', 'chat', 'pending', 'weather', 'stash', 'easel', 'easelMade', 'shake', 'toys', 'orders', 'mysteries', 'fed', 'stats', 'createdAt', 'items', 'treats', 'wantT', 'rippleT', 'thiefT', 'lastChatAt', 'offers', 'tablet', 'table', 'deco', 'hist', 'days', 'frog', 'pace', 'catTree', 'moonWishDay', 'starWishDay', 'meteorPlan', 'blog'];
 
 export function serialize(w) {
   const data = { app: 'cat-yard', version: VERSION, savedAt: Date.now(), w: {}, cat: null, o: { bowl: w.o.bowl.food, yarn: { x: w.o.yarn.x, y: w.o.yarn.y } } };
@@ -51,7 +52,7 @@ export function deserialize(text) {
   if (!data.cat.base) w.cat.base = null; // (an older save's character starts from the traits it has, not from a new cat's)
   if (!data.cat.tastes) w.cat.tastes = makeTastes(w.cat.quirk);
   if (data.cat.quirkV !== 2) { w.cat.temper = makeTemper(); w.cat.quirkV = 2; } // saves from before every cat had exactly one quirk are given one, once
-  w.offers = Array.isArray(data.w.offers) ? data.w.offers : []; ensureOfferState(w); ensureTablet(w); ensureBlog(w); ensureCraft(w); if (!data.cat.ideas) foundFromBefore(w); ensureFeel(w.cat); ensureMemory(w.cat); ensureFinds(w.cat); ensureChar(w.cat); ensureIntent(w.cat); ensureInterest(w.cat); w.netq = []; w.netOn = false;
+  w.offers = Array.isArray(data.w.offers) ? data.w.offers : []; ensureOfferState(w); ensureTablet(w); ensureBlog(w); ensureCraft(w); ensureEconomy(w); if (!data.cat.ideas) foundFromBefore(w); ensureFeel(w.cat); ensureMemory(w.cat); ensureFinds(w.cat); ensureChar(w.cat); ensureIntent(w.cat); ensureInterest(w.cat); w.netq = []; w.netOn = false;
   if (!(w.pace > 0)) w.pace = 1;
   if (!w.frog && w.mysteries.ripples.solved) meetFrog(w, true); // a cat that had already found out what lives in the pond before frogs became friends
   if (data.o) { w.o.bowl.food = data.o.bowl; if (data.o.yarn) { w.o.yarn.x = data.o.yarn.x; w.o.yarn.y = data.o.yarn.y; } }

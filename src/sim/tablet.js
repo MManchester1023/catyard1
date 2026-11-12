@@ -11,6 +11,7 @@ import { feel } from './feelings.js';
 import { learnFromPage, unlockRecipe } from './craft.js';
 import { RECIPES } from './recipes.js';
 import { draftWish, publishWish, wishPending } from './wishes.js';
+import { shopChoice, shopPending, placeOrder } from './economy.js';
 import { blogPending, publishPost, BLOG_THOUGHTS } from './blog.js';
 import { wantsToResearch, interestRequest, interestPage, interestMiss } from './interest.js';
 import { starsPage, starsNeedsReading } from './stars.js';
@@ -32,7 +33,7 @@ export function ensureTablet(w) {
 // can the cat use it right now? (it has to have found it, and either be online or have something to re-read)
 export function canUseTablet(w) {
   ensureTablet(w); const t = w.tablet;
-  return !!w.cat.mem.known.tablet && (w.netOn || t.pages.length >= 3 || wishPending(w) || blogPending(w)) && w.clock - t.lastUse > w.dayLen * 0.22;
+  return !!w.cat.mem.known.tablet && (w.netOn || t.pages.length >= 3 || wishPending(w) || blogPending(w) || shopPending(w)) && w.clock - t.lastUse > w.dayLen * 0.22;
 }
 export const lookupWant = w => w.cat.wants.find(x => x.kind === 'lookup') || null;
 
@@ -162,6 +163,7 @@ export function describeTablet(a) {
     case 'boot': return 'Waking the tablet';
     case 'write': return 'Typing a note to the human on the tablet';
     case 'blog': return 'Typing up a blog post on the tablet';
+    case 'shop': return 'Shopping on the tablet';
     case 'wait': return 'Waiting for the tablet to load';
     case 'read': return `Reading about ${a.page ? a.page.title : 'something'}`;
     case 'nosignal': return 'Frowning at a dead tablet';
@@ -176,14 +178,19 @@ export function tabletTick(w, a, dt, { arrive, finish }) {
   if (a.phase === 'boot') {
     if (a.t < 1.4) return;
     const dw = !a.wrote && draftWish(w); if (dw) { a.wish = dw; a.phase = 'write'; a.t = 0; return; }
+    const so = !a.shopped && shopChoice(w); if (so) { a.order = so; a.phase = 'shop'; a.t = 0; c.thought = pick(['Money in the account. Time to spend it.', 'Let me see what the shop has.', 'I have earned this. Browsing.']); c.thoughtId++; c.thoughtAt = w.clock; return; }
     const dp = !a.blogged && blogPending(w) && w.blog.draft; if (dp) { a.post = dp; a.phase = 'blog'; a.t = 0; c.thought = pick(BLOG_THOUGHTS); c.thoughtId++; c.thoughtAt = w.clock; return; }
-    if (!w.netOn && (a.wrote || a.blogged) && !cachedPage(w)) { w.tablet.lastUse = w.clock; w.tablet.uses++; finish(); return; }
+    if (!w.netOn && (a.wrote || a.blogged || a.shopped) && !cachedPage(w)) { w.tablet.lastUse = w.clock; w.tablet.uses++; finish(); return; }
     if (w.netOn) { const req = Object.assign({ id: uid(), state: 'queued', bornMs: Date.now() }, pickRequest(w)); w.netq.push(req); a.req = req; a.phase = 'wait'; a.t = 0; }
     else { const pg = cachedPage(w); if (pg) { a.page = pg; a.repeat = true; a.phase = 'read'; a.t = 0; a.dur = 6; } else { a.phase = 'nosignal'; a.t = 0; } }
     return;
   }
   if (a.phase === 'write') {
     if (a.t >= 6) { publishWish(w, a.wish); a.wish = null; a.wrote = true; a.phase = 'boot'; a.t = 1.5; }
+    return;
+  }
+  if (a.phase === 'shop') {
+    if (a.t >= 5) { placeOrder(w, a.order && shopChoice(w) ? a.order : null); a.order = null; a.shopped = true; a.phase = 'boot'; a.t = 1.5; }
     return;
   }
   if (a.phase === 'blog') {

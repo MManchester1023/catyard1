@@ -21,7 +21,7 @@ export function ensureChar(c) {
 }
 
 // ---------- what each of these is, in words ----------
-export const DO = { paint: 'paint', tablet: 'use the tablet', gaze: 'go and look at the sky', perch: 'climb up high and watch', investigate: 'go and investigate', craft: 'make something', gather: 'scratch the oak for bark', stashvisit: 'go and check the stash', frog: 'sit with the frog', cattree: 'sit in the cat tree', post: 'scratch the post', yarn: 'chase the yarn', lounge: 'lie in the warm', fish: 'go and watch the fish', listen: 'listen to the chime', explore: 'go for a wander', play: 'play', wash: 'have a proper wash' };
+export const DO = { ball: 'go and bat the ball about', toymouse: 'go and stalk the toy mouse', paint: 'paint', tablet: 'use the tablet', gaze: 'go and look at the sky', perch: 'climb up high and watch', investigate: 'go and investigate', craft: 'make something', gather: 'scratch the oak for bark', stashvisit: 'go and check the stash', frog: 'sit with the frog', cattree: 'sit in the cat tree', post: 'scratch the post', yarn: 'chase the yarn', lounge: 'lie in the warm', fish: 'go and watch the fish', listen: 'listen to the chime', explore: 'go for a wander', play: 'play', wash: 'have a proper wash' };
 
 // ---------- moods of the day ----------
 export const MOODS = {

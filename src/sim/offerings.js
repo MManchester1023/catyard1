@@ -1,6 +1,6 @@
 // Offerings: things the human leaves on the mat by the glass. An object or a short note. The cat notices,
 // reacts according to its own tastes, and its tastes drift a little with what it is given.
-import { rnd, pick, clamp, uid, an, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, TOY_LABEL, TOY_ALIAS } from './util.js';
+import { rnd, pick, clamp, uid, an, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, TOY_LABEL, TOY_ALIAS, TREATS, TREAT_LABEL, TREAT_ALIAS, shopLabel, matText } from './util.js';
 import { note, journal, dayOf, clockStr } from './world.js';
 import { stashColors, itemName } from './quirk.js';
 import { addWant, hasWant, MAX_WANTS, onEvent } from './wants.js';
@@ -73,7 +73,8 @@ export function exposeTo(w, type, color, amount = 0.03) {
 
 // ---------- leaving something ----------
 const clean = s => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
-export const offerLabel = off => (off.kind === 'note' ? `a note: "${off.text.length > 40 ? off.text.slice(0, 37) + '...' : off.text}"` : off.kind === 'toy' ? an(TOY_LABEL[off.type]) : an(itemName(off.type, off.color)));
+const parcelText = c => (c.kind === 'toy' || c.kind === 'treat' ? an(shopLabel(c.kind, c.type)) : matText(c.type, c.n));
+export const offerLabel = off => (off.kind === 'parcel' ? `a parcel from the tablet shop (${parcelText(off.contents)})` : off.kind === 'note' ? `a note: "${off.text.length > 40 ? off.text.slice(0, 37) + '...' : off.text}"` : off.kind === 'toy' || off.kind === 'treat' ? an(shopLabel(off.kind, off.type)) : an(itemName(off.type, off.color)));
 
 export function leaveOffering(w, spec) {
   ensureOfferState(w);
@@ -85,10 +86,15 @@ export function leaveOffering(w, spec) {
     Object.assign(off, { kind: 'note', text });
   } else if (spec.kind === 'material') {
     return { ok: false, error: 'Bark and twigs come from the oak and the birds, and string from the cushion. They cannot be given.' };
+  } else if ((spec.kind === 'toy' || spec.kind === 'treat') && TREAT_ALIAS[String(spec.type || '').toLowerCase()]) {
+    const type = TREAT_ALIAS[String(spec.type).toLowerCase()];
+    if (treatTaken(w, type)) return { ok: false, error: `${an(TREAT_LABEL[type])[0].toUpperCase() + an(TREAT_LABEL[type]).slice(1)} is already on the mat or on its way.` };
+    Object.assign(off, { kind: 'treat', type });
   } else if (spec.kind === 'toy') {
-    const type = TOY_ALIAS[String(spec.type || '').toLowerCase()]; if (!type) return { ok: false, error: `Toys: ball, mouse.` };
+    const type = TOY_ALIAS[String(spec.type || '').toLowerCase()]; if (!type) return { ok: false, error: `Toys: ball, mouse. Treats: catnip, tuna.` };
     if (w.toys[type]) return { ok: false, error: `${w.cat.name} already has ${an(TOY_LABEL[type])}.` };
     if (w.offers.some(o => o.kind === 'toy' && o.type === type)) return { ok: false, error: `${an(TOY_LABEL[type])[0].toUpperCase() + an(TOY_LABEL[type]).slice(1)} is already on the mat.` };
+    if (toyTaken(w, type)) return { ok: false, error: `${w.cat.name} has already ordered ${an(TOY_LABEL[type])} from the tablet shop.` };
     Object.assign(off, { kind: 'toy', type });
   } else {
     const type = spec.type || pick(ITEM_TYPES); if (!ITEM_TYPES.includes(type)) return { ok: false, error: `Types: ${ITEM_TYPES.join(', ')}.` };
@@ -99,6 +105,34 @@ export function leaveOffering(w, spec) {
   note(w, `Someone left ${offerLabel(off)} on the mat.`, 'offer');
   return { ok: true, offer: off };
 }
+
+// a toy is owned, on the mat, in a parcel or on order: either way there is no point giving or buying another
+export const toyTaken = (w, type) => !!(w.toys && w.toys[type]) || (w.offers || []).some(o => (o.kind === 'toy' && o.type === type) || (o.kind === 'parcel' && o.contents.kind === 'toy' && o.contents.type === type)) || (w.orders || []).some(o => o.kind === 'toy' && o.type === type);
+
+// a treat is used up, so it can come again, but not two of a kind at once
+export const treatTaken = (w, type) => (w.offers || []).some(o => (o.kind === 'treat' && o.type === type) || (o.kind === 'parcel' && o.contents.kind === 'treat' && o.contents.type === type)) || (w.orders || []).some(o => o.kind === 'treat' && o.type === type);
+// it eats or rolls in it where it lies, and that is that
+export function useTreat(w, type, from) {
+  const c = w.cat, n = c.needs, down = (k, v) => { n[k] = Math.max(0, n[k] - v); }; w.stats.treats = (w.stats.treats || 0) + 1;
+  const by = from === 'shop' ? 'I bought' : 'The human gave me';
+  if (type === 'catnip') {
+    down('fun', 0.55); down('create', 0.3); down('tired', 0.1); feel(w, ['treat:catnip', 'act:offering'], { joy: 0.3, fun: -0.2 }, 'playful'); c.thoughtHint = 'nip';
+    note(w, `${c.name} rolled in the catnip and was thoroughly silly for a while.`, 'offer');
+    journal(w, `${by} catnip. I rolled in it. I do not remember much, except that it was the best afternoon of my life and I was somewhat undignified.`, 'treat');
+  } else {
+    down('hunger', 0.6); feel(w, ['treat:tuna', 'act:offering'], { joy: 0.2 }, 'warm');
+    note(w, `${c.name} ate the tin of tuna down to the last flake.`, 'offer');
+    journal(w, `${by} tuna. I ate it very quickly and then licked the tin until there was nothing in the tin. I have no regrets.`, 'treat');
+  }
+}
+// an order from the tablet shop turns up on the mat as a parcel (economy.js)
+export function leaveParcel(w, order) {
+  ensureOfferState(w); const used = new Set(w.offers.map(o => o.slot)); let slot = 0; while (used.has(slot)) slot++;
+  const off = { id: uid(), slot, day: dayOf(w), at: w.clock, state: 'new', kind: 'parcel', contents: { kind: order.kind, type: order.type, n: order.n } };
+  w.offers.push(off); note(w, `A parcel from the tablet shop arrived on the mat (${parcelText(off.contents)}).`, 'money');
+  return off;
+}
+const PARCEL_REACT = ['My order! The slab does more than show me birds.', 'It came. I ordered it, and it came. Money is a strange and wonderful thing.', 'A parcel, and I paid for it myself. This is how grown cats do things.', 'There it is. I will open it very casually.'];
 
 // the next thing the cat has not looked at yet (it waits a few seconds before noticing)
 export const pendingOffer = w => (w.offers || []).find(o => o.state === 'new' && w.clock - o.at >= 4) || null;
@@ -126,6 +160,10 @@ const NOTE_REACT = {
   neutral: ['I read it twice. "{quote}" I do not understand all of it. I like that.', 'A note. Paper has a good smell.', '"{quote}". I will think about this.'],
   neg: ['That felt sharp. But it is still paper. I will keep it anyway.', 'Hm. Some words are heavier than they look.'],
 };
+const TREAT_REACT = {
+  catnip: ['Catnip. I can smell it from here. I am going to be unreasonable.', 'That is catnip. I will not be responsible for what happens next.', 'CATNIP. Please move away. This is private.'],
+  tuna: ['Tuna. A whole tin. I am not going to share it.', 'It smells of the sea and of being loved. Tuna.', 'A tin of tuna. I will be eating this immediately.'],
+};
 const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] || '');
 
 function likingOf(w, off) {
@@ -136,6 +174,7 @@ function likingOf(w, off) {
   }
   // how it takes a gift depends on the moment as much as the gift: a lonely cat is easy to please, a hungry one is not
   const mood = (n.lonely - 0.4) * 0.2 - Math.max(0, n.hunger - 0.65) * 0.25 + (c.mood.joy - 0.45) * 0.15;
+  if (off.kind === 'treat') return clamp(0.78 + mood * 0.5 + rnd(-0.04, 0.04));
   if (off.kind === 'toy') return clamp(0.68 + (c.temper === 'hunter' && off.type === 'toymouse' ? 0.15 : 0) + mood + c.bond * 0.05 + rnd(-0.05, 0.05)); // (a toy is almost always welcome)
   const novel = !stashColors(w)[off.color];
   return clamp(0.12 + 0.42 * t.color[off.color] + 0.34 * t.type[off.type] + (novel ? 0.1 : 0) + c.bond * 0.1 + mood + rnd(-0.08, 0.08));
@@ -144,6 +183,11 @@ function likingOf(w, off) {
 // the cat looks at it for the first time. returns the reaction and applies its effects
 export function inspectOffer(w, off) {
   ensureOfferState(w);
+  if (off.kind === 'parcel') { // (its own order arriving: not a gift, so no taste, wish or bond is involved)
+    const text = pick(PARCEL_REACT), f = feel(w, ['act:offering', 'shop'], { joy: 0.12, lonely: -0.03 }, 'proud');
+    off.state = 'seen'; w.cat.thought = text; w.cat.thoughtId++; w.cat.thoughtAt = w.clock;
+    return { liking: 0.8, tier: 'delight', text, keep: true, felt: f.label };
+  }
   const c = w.cat, wish = off.kind === 'note' ? null : matchWish(w, off);
   let l = likingOf(w, off); if (wish) l = Math.max(l, 0.92);
   const tr = tier(l);
@@ -152,6 +196,8 @@ export function inspectOffer(w, off) {
     const mood = l >= 0.6 ? 'pos' : l < 0.35 ? 'neg' : 'neutral', words = off.text.split(' ').slice(0, 6).join(' ');
     text = fill(pick(NOTE_REACT[mood]), { quote: words + (off.text.split(' ').length > 6 ? '...' : '') }); keep = true;
     learnWords(w, off.text);
+  } else if (off.kind === 'treat') {
+    keep = true; text = pick(TREAT_REACT[off.type]);
   } else if (off.kind === 'toy') {
     keep = true; keys.push('toy:' + off.type);
     text = pick(TOY_REACT[off.type][l >= 0.7 ? 'delight' : l >= 0.5 ? 'pleased' : 'other']);
@@ -189,6 +235,21 @@ export function finishOffer(w, off) {
     wonderAbout(w, off.text);
     return false;
   }
+  if (off.kind === 'parcel') { // it opens it where it lies; what was in it is its own from now on
+    w.offers = w.offers.filter(x => x !== off); const k = off.contents;
+    if (k.kind === 'treat') { note(w, `${c.name} opened the parcel: ${an(TREAT_LABEL[k.type])}.`, 'money'); useTreat(w, k.type, 'shop'); }
+    else if (k.kind === 'toy') {
+      w.toys[k.type] = { day: dayOf(w), from: 'shop' }; const o = w.o[k.type]; o.vx = o.vy = 0; w.stats.toys = (w.stats.toys || 0) + 1;
+      note(w, `${c.name} opened the parcel and carried ${an(TOY_LABEL[k.type])} off into the yard.`, 'money');
+      journal(w, `I bought ${an(TOY_LABEL[k.type])} with my own money and it lives in the yard now. I have never been so independent.`, 'toy');
+    } else {
+      receiveMaterial(w, k.type, k.n);
+      note(w, `${c.name} opened the parcel: ${matText(k.type, k.n)}.`, 'money');
+      journal(w, `The parcel held ${matText(k.type, k.n)}. Delivered, to the mat, for money. I could get used to this.`, 'craft');
+    }
+    return false;
+  }
+  if (off.kind === 'treat') { w.offers = w.offers.filter(x => x !== off); useTreat(w, off.type, 'gift'); return false; }
   if (off.kind === 'toy') { // it carries the toy out into the yard, and that is where it stays
     w.offers = w.offers.filter(x => x !== off); w.toys[off.type] = { day: dayOf(w), from: 'gift' };
     const o = w.o[off.type]; o.vx = o.vy = 0; w.stats.toys = (w.stats.toys || 0) + 1;

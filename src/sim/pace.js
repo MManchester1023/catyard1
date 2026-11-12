@@ -31,6 +31,9 @@ export const PACE = {
   frogPerDay: 1,                                   // frog sightings that count in one day
   frogDayChance: 0.65,                             // chance that a given day is one the frog shows itself properly
   barkPerDay: 2,                                   // bits of bark or twig the oak gives it in a day, however long it scratches (was unlimited)
+  saleDays: 1.1,                                   // how long a framed painting waits for a buyer, on average (game days)
+  priceBase: 4, priceScore: 46,                    // what a painting sells for: this plus this times its score (0 to 1), give or take a fifth
+  orderDays: 0.3,                                  // how long an order from the tablet shop takes to reach the mat (game days)
   oakSight: 2.6,                                   // the old oak is the biggest thing in the yard: it is noticed from this many times further away than anything else (its notice is what starts the urge to build an easel)
   discoverRadius: 110,                             // how close it has to get to a part of the yard to notice it (was 190)
   placesPerDay: 3,                                 // parts of the yard it can take in on one day, however much it wanders (was: all of them in the first half day)

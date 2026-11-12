@@ -15,6 +15,7 @@ import { ensureChar, characterTick } from './character.js';
 import { ensureIntent, intentTick } from './intent.js';
 import { ensureInterest, interestTick } from './interest.js';
 import { considerWish, wishTick } from './wishes.js';
+import { economyTick, ensureEconomy } from './economy.js';
 import { isUpset, upsetLevel, upsetTick } from './upset.js';
 import { secretsRoll, moonWishTick, coinActive } from './secrets.js';
 import { meteorTick } from './stars.js';
@@ -39,7 +40,7 @@ export function makeCat(name) {
     needs: { hunger: 0.4, thirst: 0.3, tired: 0.1, fun: 0.35, dirty: 0.3, wet: 0, lonely: 0.25, create: 0.35, fear: 0 },
     mood: { joy: 0.45 }, act: null, thought: '', thoughtId: 0, thoughtAt: -99, thoughtHint: null,
     reeval: 1, carry: null, huntCool: 0, begAt: -999, zoomAt: -999, attAt: -999, groomNext: false, bond: 0.2, words: {}, wants: [], doneWants: 0,
-    inv: { bark: 0, twig: 0, twine: 0 }, recipes: {}, ideas: {}, crafted: [], wishes: [], lastWishAt: -999, assoc: {}, lastTasteSay: -999,
+    inv: { bark: 0, twig: 0, twine: 0 }, recipes: {}, ideas: {}, money: 0, ledger: [], crafted: [], wishes: [], lastWishAt: -999, assoc: {}, lastTasteSay: -999,
     quirk, temper: makeTemper(), quirkV: 2, tastes: makeTastes(quirk), keepsakes: [], offerHist: [], art: makeArt(), mem: { known: { house: 1, bowl: 1, water: 1 }, nap: {}, lastMeal: null, caught: 0, missed: 0 },
   };
 }
@@ -55,7 +56,7 @@ export function makeWorld(name, opt = {}) {
     weather: { type: 'clear', rain: 0, cloud: 0.15, timer: rnd(160, 300), forced: null },
     o: makeObjects(), mice: [], birds: [], flies: [], sparks: [], treats: [], items: [], offers: [], tablet: null, netq: [], netOn: false,
     table: null, deco: {}, hist: [], days: {}, lastThoughtId: 0, lastDid: null, frog: null, pace: 1, catTree: null, moonWishDay: -99, starWishDay: -99, meteor: null, meteorPlan: null,
-    stash: { site: null, items: [], seed: 1, known: null }, toys: { ball: null, toymouse: null }, easel: null, easelMade: null, shake: { day: 0, n: 0, at: -999 }, leaves: [], ripple: null, rippleT: rnd(50, 100), thief: null, thiefT: dayLen * rnd(2, 4),
+    stash: { site: null, items: [], seed: 1, known: null }, toys: { ball: null, toymouse: null }, orders: [], easel: null, easelMade: null, shake: { day: 0, n: 0, at: -999 }, leaves: [], ripple: null, rippleT: rnd(50, 100), thief: null, thiefT: dayLen * rnd(2, 4),
     mysteries: makeMysteries(), fed: 0, mouseT: rnd(30, 70), itemT: rnd(20, 50), wantT: 30, createdAt: Date.now(),
     stats: { meals: 0, naps: 0, mice: 0, misses: 0, treats: 0, zoomies: 0, gifts: 0, scratch: 0, collected: 0, found: 0, paintings: 0, wants: 0, offerings: 0, crafted: 0, gathered: 0, wishes: 0, birds: 0, frogVisits: 0, fish: 0 },
   };
@@ -130,7 +131,7 @@ export function tick(w, dt) {
   const hunter = c.temper === 'hunter'; // there is more to hunt where a Hunter lives
   if (w.mouseT <= 0) { if (w.mice.length < (hunter ? 2 : 1) && w.weather.rain < 0.3) spawnMouse(w); w.mouseT = rnd(60, 150) / ((h > 16.5 && h < 21) || (h > 4.5 && h < 8) ? 1.6 : 1) / (hunter ? 1.7 : 1); }
   w.mice.forEach(m => mouseTick(w, m, dt)); w.mice = w.mice.filter(m => !m.gone && !m.dead);
-  leavesTick(w, dt); w.birds.forEach(b => birdTick(w, b, dt)); w.flies.forEach(f => flyTick(w, f, dt)); w.sparks.forEach(s => sparkTick(w, s, dt));
+  leavesTick(w, dt); economyTick(w, dt); w.birds.forEach(b => birdTick(w, b, dt)); w.flies.forEach(f => flyTick(w, f, dt)); w.sparks.forEach(s => sparkTick(w, s, dt));
   rippleTick(w, dt, h, isNight(w)); frogTick(w, dt); fishTick(w, dt);
   // the first time it is awake in the yard when the sparks are out, it sees them (and only then can it want to catch one)
   { const sp = w.mysteries.sparks; if (!sp.seen && w.sparks.some(s => s.on) && c.pose !== 'sleep' && c.pose !== 'inside' && !c.hidden) { sp.seen = true; note(w, `${c.name} noticed tiny lights dancing along the fence.`, 'mystery'); journal(w, 'There are lights by the fence. Small ones. They move when I look at them, and when I do not look at them, and they have never once explained themselves.', 'mystery'); c.thoughtHint = 'sawSparks'; } }

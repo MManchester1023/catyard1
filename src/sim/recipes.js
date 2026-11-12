@@ -3,9 +3,11 @@
 import { matText, MATERIALS } from './util.js';
 
 export const dayNo = w => Math.floor(w.clock / w.dayLen) + 1;
-// frames hung round paintings (the first kind of frame it ever made)
-const hungFrames = w => w.cat.crafted.filter(x => x.recipe === 'frame' && x.work).length;
-export const paintingToFrame = w => w.cat.art.count > hungFrames(w) && hungFrames(w) < 3;
+// A painting it has framed is for sale (economy.js). It only has a few for sale at a time, and frames the rest as those sell.
+export const FOR_SALE_MAX = 3;
+const forSaleNow = w => w.cat.art.works.filter(x => x.status === 'forSale').length;
+export const unlistedWork = w => w.cat.art.works.filter(x => !x.status).sort((a, b) => b.score - a.score)[0] || null;
+export const paintingToFrame = w => !!unlistedWork(w) && forSaleNow(w) < FOR_SALE_MAX;
 // oak frames are parts: the easel, the bird feeder, the wind chime and the cat tree are each built out of some. It only makes
 // the ones it is going to use (and frames a painting with any that are left over)
 const BUILT = { easel: w => !!w.easelMade, table: w => !!w.table, feeder: w => !!(w.deco && w.deco.feeder), chime: w => !!(w.deco && w.deco.chime), cattree: w => !!w.catTree };

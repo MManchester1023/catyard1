@@ -3,7 +3,7 @@
 // more, the rest it also has to look up on the tablet. Building the table moves the stash out of hiding and onto the tabletop.
 import { rnd, uid, an, MAT_LABEL, MAT_CAP } from './util.js';
 import { note, journal, dayOf, clockStr } from './world.js';
-import { RECIPES, knows, found, learned, rawCost, rawHeld, partsHeld, costText, frameDemand, frameSpare, paintingToFrame } from './recipes.js';
+import { RECIPES, knows, found, learned, rawCost, rawHeld, partsHeld, costText, frameDemand, frameSpare, paintingToFrame, unlistedWork } from './recipes.js';
 import { feel } from './feelings.js';
 import { onEvent } from './wants.js';
 import { layoutStash } from './quirk.js';
@@ -17,7 +17,7 @@ export const have = (w, m) => w.cat.inv[m] || 0;
 export const craftWant = (w, id) => w.cat.wants.find(x => x.kind === 'craft' && x.recipe === id) || null;
 
 // the recipes it is working toward right now: ones it can make, wants to make, and has not made yet
-export const goals = w => Object.keys(RECIPES).filter(id => RECIPES[id].can(w) && knows(w, id) && (id === 'table' || id === 'easel' || (id === 'frame' && frameDemand(w) > 0) || craftWant(w, id)));
+export const goals = w => Object.keys(RECIPES).filter(id => RECIPES[id].can(w) && knows(w, id) && (id === 'table' || id === 'easel' || (id === 'frame' && (frameDemand(w) > 0 || (frameSpare(w) < 1 && paintingToFrame(w)))) || craftWant(w, id)));
 export function shortfall(w, id) { const out = {}; for (const [m, n] of Object.entries(RECIPES[id].cost)) if (have(w, m) < n) out[m] = n - have(w, m); return out; }
 // the raw materials a goal still needs, counting the frames it is short of (the frames themselves are made out of bark)
 export function rawShortfall(w, id) {
@@ -120,11 +120,11 @@ function buildTable(w) {
 export function hangSpareFrames(w) {
   const c = w.cat; let n = 0;
   while (frameSpare(w) > 0 && paintingToFrame(w)) {
-    const hung = c.crafted.filter(x => x.recipe === 'frame' && x.work).map(x => x.work);
-    const best = c.art.works.slice().sort((a, b) => b.score - a.score).find(x => !hung.includes(x.title)) || c.art.works[0];
-    c.inv.frame--; c.crafted.unshift({ id: uid(), recipe: 'frame', name: 'framed painting', work: best ? best.title : 'a painting', day: dayOf(w), time: clockStr(w) }); if (c.crafted.length > 16) c.crafted.pop();
+    const best = unlistedWork(w); if (!best) break; // (the best one it has not framed yet: a framed painting goes up for sale)
+    c.inv.frame--; c.crafted.unshift({ id: uid(), recipe: 'frame', name: 'framed painting', work: best.title, day: dayOf(w), time: clockStr(w) }); if (c.crafted.length > 16) c.crafted.pop();
+    best.status = 'forSale'; best.listed = { day: dayOf(w), time: clockStr(w) };
     c.art.xp += 6; n++;
-    journal(w, `I put a frame round "${best ? best.title : 'a painting'}". It looks like it matters now.`, 'craft'); note(w, `${c.name} framed "${best ? best.title : 'a painting'}".`, 'craft');
+    journal(w, `I put a frame round "${best.title}" and set it out for sale. It looks like it matters now. Someone will want it.`, 'craft'); note(w, `${c.name} framed "${best.title}" and put it up for sale.`, 'craft');
   }
   return n;
 }
@@ -144,7 +144,7 @@ export function finishCraft(w, id) {
   else if (id === 'easel') buildEasel(w);
   else if (id === 'frame') {
     c.inv.frame = (c.inv.frame || 0) + 1;
-    journal(w, frameDemand(w) > 0 || frameSpare(w) === 0 ? 'I made an oak frame. Bigger things are built out of these.' : 'I made an oak frame. There is nothing to build with it, so it can go round a painting.', 'craft'); note(w, `${c.name} made an oak frame.`, 'craft');
+    journal(w, frameDemand(w) > 0 || frameSpare(w) === 0 ? 'I made an oak frame. Bigger things are built out of these.' : 'I made an oak frame. There is nothing to build with it, so it can go round a painting and the painting can be sold.', 'craft'); note(w, `${c.name} made an oak frame.`, 'craft');
     hangSpareFrames(w);
   } else if (id === 'feeder') { w.deco.feeder = true; journal(w, 'I hung a bird feeder by the oak. This is not hunting. This is hospitality with a purpose.', 'craft'); note(w, `${c.name} put up a bird feeder.`, 'craft'); }
   else if (id === 'cattree') foundCatTree(w, 'made');

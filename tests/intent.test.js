@@ -132,4 +132,10 @@ const calm = () => { const w = fresh(); const c = w.cat; atHour(w, 5, 12); c.tra
   }
   ok('12 days for every kind of cat: at least one every day or two, mostly followed through');
 }
+{ // every activity it can take an impulse for has words for it (a toy it was given once crashed the impulse for want of a phrase)
+  const { SCORE_KEY } = await import('../src/sim/finds.js');
+  const missing = [...Object.keys(SCORE_KEY).filter(k => k !== 'wash' && k !== 'hunt'), 'explore', 'play'].filter(k => !DO[k]);
+  assert.deepEqual(missing, [], 'impulses with no words: ' + missing);
+  ok('every impulse has a phrase');
+}
 console.log('intent tests passed');

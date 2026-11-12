@@ -20,6 +20,8 @@ import { startStars, launchMeteor, starWish, wishReady } from './stars.js';
 import { solve, moonFinal, frogVisitsForMoon } from './mysteries.js';
 import { upsetBy } from './upset.js';
 import { wishLabel } from './wishes.js';
+import { forSale, cash, money, ensureEconomy } from './economy.js';
+import { SHOP, shopLabel, TOY_LABEL as TOYL, MAT_LABEL as MATL } from './util.js';
 import { ensureBlog, composePost, markBlogRead, blogStarted } from './blog.js';
 import { ensureMemory, memoryTick, strength, when, regulars } from './memory.js';
 import { favourites, favShift } from './finds.js';
@@ -65,7 +67,7 @@ const HELP = {
   recipes: 'recipes - everything it can make, and what each needs',
   wishes: 'wishes - notes the cat has left you on the tablet',
   blog: 'blog status | blog post (make the cat write a post now, starting the blog if it has not) | blog read (mark everything read) | blog clear',
-  give: 'give <ball|mouse> - leave a toy on the mat for the cat (same as offer toy). Each toy can be given once; the cat keeps it in the yard',
+  give: 'give <ball|mouse|catnip|tuna> - leave a toy or treat on the mat for the cat (same as offer toy). Each toy can be given once and stays in the yard; catnip and tuna are used up, so they can come again',
   craft: 'craft give <bark|twig|twine> [n] | craft learn <recipe> | craft now <recipe> | craft table',
   wish: 'wish add <type> [color] | wish clear',
   reset: 'reset confirm [seed] - start over with a brand new cat (give a seed number to start from that exact cat; see seed)',
@@ -73,9 +75,11 @@ const HELP = {
   memories: 'memories   (what the cat remembers, how strongly, and who it counts as a regular; works without admin mode)',
   mind: 'mind | mind mood <kind> | mind intent <what> | mind whim | mind favs   (today\'s mood, habits, what it means to do, favourite things; plain "mind" works without admin mode)',
   interest: 'interest | interest start [topic] | interest done   (its special interest and what it has read about it)',
+  account: 'account | account add <n> (admin)   (its money, the paintings for sale, what it has ordered, recent sales and purchases; also: money, shop)',
+  shop: 'shop   (what the tablet shop sells and what each costs)',
   admin: 'admin on | admin off',
 };
-const OPEN = new Set(['seed', 'mind', 'memories', 'help', 'status', 'save', 'saves', 'admin', 'brain', 'offer', 'tastes', 'feelings', 'history', 'export', 'inventory', 'recipes', 'wishes', 'give']);
+const OPEN = new Set(['seed', 'mind', 'memories', 'help', 'status', 'save', 'saves', 'admin', 'brain', 'offer', 'tastes', 'feelings', 'history', 'export', 'inventory', 'recipes', 'wishes', 'give', 'account', 'money', 'shop']);
 const num = (s, lo, hi) => { const v = parseFloat(s); return Number.isFinite(v) ? clamp(v, lo, hi) : null; };
 const bad = (usage) => ({ lines: ['Usage: ' + usage] });
 
@@ -229,6 +233,10 @@ export function runCommand(w, line, ctx = {}) {
       const t = thingsSummary(w);
       return L([`carrying: ${t.mats.join(', ') || 'nothing'} (it can hold ${INV_CAP} of each)`, `table: ${t.table ? 'built, the stash lives on it' : 'not built yet'}`, `made so far: ${t.crafted.length ? t.crafted.slice(0, 6).map(x => x.name).join(', ') : 'nothing'}`]);
     }
+    case 'account': case 'money': { ensureEconomy(w); const on = forSale(w);
+      if (a[0] === 'add') { if (!ctx.admin) return L('Admin mode is off. Type /admin on first.'); const n = Math.round(num(a[1], -500, 500) || 0); if (!n) return bad(HELP.account); c.money = Math.max(0, c.money + n); return L(`Money: ${cash(c.money)}.`); }
+      return L([`money: ${cash(money(w))} (earned ${cash(w.stats.earned || 0)} from ${w.stats.sales || 0} painting${w.stats.sales === 1 ? '' : 's'})`, `for sale: ${on.map(x => `"${x.title}"`).join(', ') || 'nothing'}`, `on its way: ${(w.orders || []).map(o => o.kind === 'toy' || o.kind === 'treat' ? shopLabel(o.kind, o.type) : `${o.n} ${o.type}`).join(', ') || 'nothing'}`, ...c.ledger.slice(0, 5).map(e => `d${e.day} ${e.text}: ${e.amt > 0 ? '+' : '-'}${cash(Math.abs(e.amt))}`)]); }
+    case 'shop': return L(['the tablet shop (the cat orders from it; an order reaches the mat as a parcel):', ...SHOP.map(x => `  ${shopLabel(x.kind, x.type)}: ${cash(x.price)}${x.kind === 'material' ? ' each' : ''}`)]);
     case 'recipes': return L(thingsSummary(w).recipes.map(r => `${r.name}: ${r.known ? 'knows how' : 'has to look it up on the tablet'} - needs ${r.cost}${r.made ? ` (made ${r.made})` : ''}`));
     case 'blog': {
       ensureBlog(w); const b = w.blog, sub = (a[0] || 'status').toLowerCase();

@@ -12,6 +12,7 @@ import { moodToday, habitPull, stubPull } from './character.js';
 import { intentPull } from './intent.js';
 import { interestActive } from './interest.js';
 import { wishPending } from './wishes.js';
+import { shopPending } from './economy.js';
 import { blogPending } from './blog.js';
 import { deepNightOf } from './temper.js';
 import { knows, easelUrge } from './recipes.js';
@@ -175,7 +176,7 @@ export const ACTIVITIES = [
   { key: 'tablet', // anything it wants to look up, write or read pulls it there; the Techie goes first when stuck
     prep: x => { x.lw = lookupWant(x.w); },
     when: x => x.dry && x.awake && x.fit && canUseTablet(x.w),
-    score: x => { const { w, c } = x; return 0.3 + x.T.curious * 0.45 + (x.lw ? x.lw.strength * 0.9 : 0) + (wishPending(w) ? 0.55 : 0) + (interestActive(w) ? 0.4 : 0) + (blogPending(w) ? 0.6 : 0) + (starsNeedsReading(w) ? 0.6 : 0) + (c.wants.some(y => y.kind === 'learn') ? 0.6 : 0) + x.dusk * 0.15 + (x.tech ? (c.wants.some(y => y.kind === 'learn' || y.kind === 'lookup' || y.kind === 'solve') || wishPending(w) ? 1.7 : 0.4) : 0) + x.N(); } },
+    score: x => { const { w, c } = x; return 0.3 + x.T.curious * 0.45 + (x.lw ? x.lw.strength * 0.9 : 0) + (wishPending(w) ? 0.55 : 0) + (shopPending(w) ? 0.5 : 0) + (interestActive(w) ? 0.4 : 0) + (blogPending(w) ? 0.6 : 0) + (starsNeedsReading(w) ? 0.6 : 0) + (c.wants.some(y => y.kind === 'learn') ? 0.6 : 0) + x.dusk * 0.15 + (x.tech ? (c.wants.some(y => y.kind === 'learn' || y.kind === 'lookup' || y.kind === 'solve') || wishPending(w) ? 1.7 : 0.4) : 0) + x.N(); } },
   { key: 'gather', // scratch the oak for bark and twigs when something it means to build needs them
     prep: x => { x.gn = x.dry && x.k.tree && gatherRoom(x.w) ? gatherNeed(x.w) : null; },
     when: x => x.gn && x.awake && x.fit && x.n.hunger < 0.9,

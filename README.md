@@ -14,6 +14,7 @@ It is plain JavaScript with no bundler and no framework, so it runs as a normal 
 - [The yard](#the-yard)
 - [Making things](#making-things)
 - [Painting](#painting)
+- [Money: selling paintings and the tablet shop](#money-selling-paintings-and-the-tablet-shop)
 - [Offerings: the mat](#offerings-the-mat)
 - [The tablet](#the-tablet)
 - [Notes from the cat](#notes-from-the-cat)
@@ -157,7 +158,7 @@ The cat wonders about the moon, the ripples in the pond and the sparks that danc
 
 The cat scratches the oak, and now and then a piece of **bark** or a **twig** comes loose (at most two pieces a day). Birds drop parts too. It can carry 12 of each.
 
-The **oak frame** is a building part: two pieces of bark make one, and bigger things are built from frames. A cat makes the frames a project needs without being asked. A spare frame is hung around one of its paintings.
+The **oak frame** is a building part: two pieces of bark make one, and bigger things are built from frames. A cat makes the frames a project needs without being asked, and also makes them for its paintings: a painting in a frame is **put up for sale** (see [Money](#money-selling-paintings-and-the-tablet-shop)). Only three framed paintings are out for sale at a time; it frames the best one it has not framed yet.
 
 **Recipes are worked out, not handed over.** A new cat has no recipes in front of it. It gathers bark and twigs toward the thing it wants most (the easel first, then the table), and the moment it is *carrying what a thing is made of* (a frame counts as the two bark in it) the recipe turns up: "I am carrying four bark and three twigs, and it came to me what that is for: an easel." Until then the Crafting tab does not list it. The easel and the table need nothing more. The feeder, chime and cat tree also have to be looked up on the tablet, so they need both the parts and the research. Twine cannot be scratched off the oak, so a recipe that is short only of twine waits for some, and the cat starts wanting to know where string comes from. Once a recipe is found, the Crafting tab shows what the thing is, what it costs and how many of each part the cat has.
 
@@ -182,12 +183,31 @@ Once it has an easel, the cat paints when the urge builds and the light is good,
 
 Everything the cat has kept, favourite first. The ranking comes from what it collects, its favourite colour and what has made it feel good, so it changes as its tastes do.
 
+## Money: selling paintings and the tablet shop
+
+A painting the cat has framed is **for sale**. Now and then (on average every 1.1 days, `PACE.saleDays`) a buyer turns up and it sells, for $4 plus up to $46 for how good it is (`PACE.priceBase`, `PACE.priceScore`), give or take a fifth: a poor painting fetches a few dollars, a fine one around $40. The money goes into the cat's account, which you can see in the **Crafting** tab (and with `account`). Sold paintings stay in the Gallery, marked with their price. The money is for the game only.
+
+When it has money it sits down at the tablet and uses the **shop**, which currently sells:
+
+| | Price |
+| --- | --- |
+| Bark | $3 each |
+| Twigs | $4 each |
+| Twine | $6 each |
+| A ball | $28 |
+| A toy mouse | $20 |
+| A sprig of catnip | $12 |
+| A tin of tuna | $8 |
+
+It buys the bark, twigs or twine it is short of for what it means to make first (twine too: it cannot scratch that off a tree), and otherwise a toy it does not have yet, saving up if it cannot afford it (a Hunter prefers the mouse). It has at most two orders at a time. An order takes about a third of a day (`PACE.orderDays`) and then turns up on the **offering mat** as a parcel, which the cat opens: materials go into its things and a toy goes out into the yard. If the mat is full the parcel waits. Each toy exists once, so a toy it has ordered cannot also be given to it. More things will be added to the shop later.
+
 ## Offerings: the mat
 
 The mat sits by the glass at the front of the yard and holds three things at once. In the **Outside** tab you can leave:
 
 - **An object**: a marble, button, feather or bottle cap, in any colour.
-- **A toy**: a ball or a toy mouse. These are the only gifts of their kind: each can be given once, the cat carries it into the yard and plays with it (it chases and bats it like the yarn; the ball rolls further, the mouse stops short), and playing eases its urge to make things.
+- **A treat**: catnip or tuna. They are used up the moment the cat has them, so unlike toys they can be given or bought again and again (one of each kind on the mat or on order at a time). Catnip makes it roll about and be silly, which eases boredom and the urge to make things; tuna fills its tummy. The cat buys catnip when it is restless, and tuna when it is hungry, before it saves up for a toy. You give them from the same list as toys (`give catnip`, `give tuna`).
+- **A toy**: a ball or a toy mouse. Each toy exists once, whether you give it or the cat buys it itself at the tablet shop. The cat carries it into the yard and plays with it (it chases and bats it like the yarn; the ball rolls further, the mouse stops short), and playing eases its urge to make things.
 - **A note** of up to 140 characters.
 
 The cat notices after a moment, walks over and reacts according to its own tastes and its day: a lonely, well-fed cat is easy to please, a hungry one is not. Objects it likes go to the stash; the rest are eventually tidied away. After several gifts that made it feel good its favourite colour can change, and after many, so can the thing it collects. Notes are read and kept (the last six are shown), and a word it does not know can become something it wants to look up.
@@ -208,7 +228,7 @@ A tablet stands on a stump in the yard. Once the cat finds it, it now and then s
 
 ## Notes from the cat
 
-When the cat needs something only you can bring (an object it has been hoping for, or the kind of thing it collects), it types a note on the tablet. You are told in the chat, and the note appears in the **Outside** tab with a **Give it** button. When the thing arrives it knows you read the note, and it is delighted. Unanswered notes fade after five days. It does not write notes during its first day or so.
+When the cat needs something only you can bring (an object it has been hoping for, or the kind of thing it collects), it types a note on the tablet. If it is held up for want of bark or twigs and cannot afford to buy them, it asks you, for free, to **shake the oak**: click the tree in the yard and the oak drops what it asked for, which answers the note (these notes have no Give it button, and nobody sulks if they go unanswered, they just fade after three days). You are told in the chat, and the note appears in the **Outside** tab with a **Give it** button. When the thing arrives it knows you read the note, and it is delighted. Unanswered notes fade after five days. It does not write notes during its first day or so.
 
 ## The blog
 
@@ -278,6 +298,7 @@ Type in the chat to talk to the cat. Press **Admin** (or type `admin on`) to run
 | `give <ball\|mouse>` | Shortcut for offering a toy |
 | `tastes`, `feelings` | What it likes and why |
 | `inventory`, `recipes`, `wishes` | What it carries, what it can make, what it has asked for |
+| `account` (also `money`), `shop` | Its money, what is for sale, what is on its way and recent sales; what the shop sells. `account add <n>` (admin) adds money |
 | `history [N]`, `history <did\|thought\|event\|diary\|chat> [N]`, `history day N`, `history days`, `history find <text>` | Read back what happened |
 | `memories`, `mind` | What it remembers; its mood, habits and intentions |
 | `export` | Write out the whole story |
@@ -348,6 +369,8 @@ Layout:
 | `.github/workflows/` | `pages.yml` publishes the browser version, `build.yml` builds the Windows installer |
 
 When releasing, update the build line in `src/sim/version.js`.
+
+**Balance test.** `tests/balance.test.js` runs the cat for 8 days under every temperament (and none), on two fixed seeds, and checks the everyday rhythm stays inside a band: sleep share, night-time wakefulness (night owl has its own band), hunts and meals per day (hunter has its own), no long stretches of near-starving or thirst, and that it still paints. The bands are measured values widened by about a third, a tripwire for tuning drift rather than a statement of ideals. If you change tuning on purpose and it trips, check it feels right, then move the band in the test. It takes a few seconds.
 
 **Randomness.** Everything random in `src/sim` goes through `random()` in `rng.js`, never `Math.random` (the network layer, `web.js`, is the one exception). Each world has its own seeded generator, saved with it, and the live loop moves in fixed steps of 1/60 s, so the same seed and the same inputs give the same world. Tests call `seedTests(1)` at the top, so every world they make gets a fixed seed; `CAT_SEED=7 npm test` runs them with a different set (in PowerShell: `$env:CAT_SEED=7; npm test`). Use `withRandom(value, fn)` from `rng.js` to load the dice in a test. `tests/seed.test.js` checks all of this, including that nothing in `src/sim` calls `Math.random`.
 

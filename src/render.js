@@ -284,7 +284,9 @@ export function createRenderer(canvas) {
     for (const off of w.offers || []) {
       const sp = slotPos(w, off.slot);
       if (off.kind === 'item') { g.fillStyle = 'rgba(0,0,0,0.22)'; ell(g, sp.x, sp.y + 2, 7, 2.4); g.fill(); drawItem(g, off.type, off.color, sp.x, sp.y - 1.5, 9, 0); }
+      else if (off.kind === 'treat') { g.fillStyle = 'rgba(0,0,0,0.22)'; ell(g, sp.x, sp.y + 2, 7, 2.4); g.fill(); if (off.type === 'tuna') { g.fillStyle = '#9aa3ab'; g.fillRect(sp.x - 5, sp.y - 6, 10, 7); g.fillStyle = '#d9dee2'; g.fillRect(sp.x - 5, sp.y - 6, 10, 2); g.fillStyle = '#3f78c4'; g.fillRect(sp.x - 5, sp.y - 3, 10, 3); } else { g.fillStyle = '#4f9a47'; g.fillRect(sp.x - 5, sp.y - 4, 10, 5); g.fillStyle = '#7cc46a'; g.fillRect(sp.x - 3, sp.y - 7, 3, 5); g.fillRect(sp.x + 1, sp.y - 6, 3, 4); } }
       else if (off.kind === 'toy') drawToy(g, off.type, sp.x, sp.y - 1, 1, 0);
+      else if (off.kind === 'parcel') { g.fillStyle = 'rgba(0,0,0,0.22)'; ell(g, sp.x, sp.y + 3, 9, 2.6); g.fill(); g.fillStyle = '#b98a54'; g.fillRect(sp.x - 8, sp.y - 8, 16, 11); g.fillStyle = '#d2a56d'; g.fillRect(sp.x - 8, sp.y - 8, 16, 3); g.fillStyle = '#e8d9b0'; g.fillRect(sp.x - 1.2, sp.y - 8, 2.4, 11); g.strokeStyle = 'rgba(70,45,25,0.5)'; g.lineWidth = 0.6; g.strokeRect(sp.x - 8, sp.y - 8, 16, 11); }
       else { g.save(); g.translate(sp.x, sp.y - 1); g.rotate(-0.12); g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(-6, -3, 14, 10); g.fillStyle = '#f6f0dc'; g.fillRect(-7, -5, 14, 10); g.fillStyle = 'rgba(90,70,50,0.55)'; for (let i = 0; i < 3; i++) g.fillRect(-5, -3 + i * 3, 10 - (i === 2 ? 4 : 0), 1.2); g.fillStyle = '#d9453b'; ell(g, 4.5, 3, 1.6, 1.6); g.fill(); g.restore(); }
       if (off.state === 'new') { g.globalAlpha = 0.45 + 0.4 * Math.sin(t * 4); g.strokeStyle = '#fff6c0'; g.lineWidth = 1.6; ell(g, sp.x, sp.y, 13, 5.5); g.stroke(); g.globalAlpha = 1; }
     }

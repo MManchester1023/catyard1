@@ -46,4 +46,21 @@ export const MAT_PLURAL = { bark: 'pieces of bark', twig: 'twigs', twine: 'lengt
 export const TOYS = ['ball', 'toymouse'];
 export const TOY_LABEL = { ball: 'ball', toymouse: 'toy mouse' };
 export const TOY_ALIAS = { ball: 'ball', mouse: 'toymouse', toymouse: 'toymouse', 'toy mouse': 'toymouse' };
+// Treats are used up the moment the cat has them (it eats or rolls in it): unlike toys, they can be given or bought again and again.
+export const TREATS = ['catnip', 'tuna'];
+export const TREAT_LABEL = { catnip: 'sprig of catnip', tuna: 'tin of tuna' };
+export const TREAT_ALIAS = { catnip: 'catnip', nip: 'catnip', tuna: 'tuna', 'tin of tuna': 'tuna', fish: 'tuna' };
+// The tablet shop: what the cat can buy with what its paintings earn, and what each costs. (economy.js has the rules. More will be added.)
+export const SHOP = [
+  { id: 'bark', kind: 'material', type: 'bark', price: 3 },
+  { id: 'twig', kind: 'material', type: 'twig', price: 4 },
+  { id: 'twine', kind: 'material', type: 'twine', price: 6 },
+  { id: 'ball', kind: 'toy', type: 'ball', price: 28 },
+  { id: 'toymouse', kind: 'toy', type: 'toymouse', price: 20 },
+  { id: 'catnip', kind: 'treat', type: 'catnip', price: 12 },
+  { id: 'tuna', kind: 'treat', type: 'tuna', price: 8 },
+];
+export const shopItem = id => SHOP.find(x => x.id === id) || null;
+// what something from the shop is called, whatever kind it is
+export const shopLabel = (kind, type, n = 1) => (kind === 'toy' ? TOY_LABEL[type] : kind === 'treat' ? TREAT_LABEL[type] : n === 1 ? MAT_LABEL[type] : MAT_PLURAL[type]);
 export const matText = (type, n = 1) => `${n} ${n === 1 ? MAT_LABEL[type] : MAT_PLURAL[type]}`;

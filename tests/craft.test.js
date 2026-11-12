@@ -124,7 +124,7 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
 {
   const w = makeWorld('Fern'), c = w.cat; calm(w); knowAll(w); ensureTablet(w); w.netOn = false;
   assert(!withRandom(0.1, () => considerWish(w)), 'no notes in its first hours here'); w.clock = 2 * w.dayLen;
-  c.wishes = []; c.lastWishAt = -999;
+  c.wishes = []; c.lastWishAt = -999; c.money = 100; // (with money it would just buy what it lacked, so it has no reason to ask you to shake the oak: that is in economy.test.js)
   const wish = withRandom(0.1, () => considerWish(w)); assert(wish && wish.state === 'draft' && wish.kind === 'item' && wish.type === c.quirk.item, JSON.stringify(wish));
   assert(!c.wishes.some(x => x.kind === 'material'), 'it never asks the human for bark, twigs or string: those come from the oak, the birds and the cushion');
   assert(wishPending(w) && draftWish(w) === wish, 'it now has a reason to go to the tablet');

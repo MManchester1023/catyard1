@@ -5,6 +5,7 @@ import { random } from './rng.js';
 import { rnd, uid, MATERIALS, MAT_CAP } from './util.js';
 import { note, dayOf, blocked, randomOpenPoint } from './world.js';
 import { PACE } from './pace.js';
+import { openWishes, answerNeed } from './wishes.js';
 
 const MAX_ITEMS = 7; // (the same limit as for anything lying in the yard)
 const LEAF_LIFE = 1.9;
@@ -19,6 +20,7 @@ export function treeHit(w, x, y) {
 
 // bark or a twig, whichever it has more room for
 function oakMaterial(w) {
+  const asked = openWishes(w).find(x => x.kind === 'need' && (w.cat.inv[x.type] || 0) < MAT_CAP); if (asked) return asked.type; // (if it has asked for one, that is the one that falls)
   const inv = w.cat.inv || {}, room = ['bark', 'twig'].filter(m => MATERIALS.includes(m)).map(m => [m, Math.max(0, 1 - (inv[m] || 0) / MAT_CAP)]);
   const total = room.reduce((s, r) => s + r[1], 0); if (total <= 0) return null;
   let r = random() * total; for (const [m, v] of room) { r -= v; if (v > 0 && r <= 0) return m; } // (never one it has no room for, even on a roll of exactly 0)
@@ -39,6 +41,7 @@ export function shakeTree(w, x, y) {
   if (blocked(w, px, py)) { const p = randomOpenPoint(w, t.x - 60, t.x + 40, t.y, t.y + 40); px = p.x; py = p.y; }
   const it = { id: uid(), type, color: null, x: px, y: py, age: 0, from: 'tree' }; w.items.push(it); s.n++;
   note(w, `${type === 'bark' ? 'A piece of bark' : 'A twig'} shook loose from the oak.`, 'craft');
+  answerNeed(w, type);
   return { dropped: it };
 }
 

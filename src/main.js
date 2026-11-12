@@ -86,7 +86,7 @@ function hud(now) {
   else if (activeTab === 'stash') { const sig = w.stash.items.length + ':' + Object.keys(w.cat.assoc || {}).length + ':' + w.cat.quirk.favColor + w.cat.quirk.item + (w.stash.site ? w.stash.site.label : ''); if (sig !== stashSig) { stashSig = sig; renderStash($('tab-stash'), w); } }
   else if (activeTab === 'blog') { const sig = (w.blog ? w.blog.posts.length + ':' + (w.blog.draft ? 1 : 0) + ':' + w.blog.title + ':' + w.blog.posts.map(x => x.title).join('|').length : ''); if (sig !== blogSig) { blogSig = sig; const f = new Set((w.blog ? w.blog.posts : []).filter(x => !x.read).map(x => x.id)); renderBlog($('tab-blog'), w, new Set([...blogFresh, ...f])); f.forEach(id => blogFresh.add(id)); markBlogRead(w); } }
   else if (activeTab === 'history') { if (historyUpdate) historyUpdate(); }
-  else if (activeTab === 'gallery') { const sig = w.cat.art.count + ':' + w.cat.art.works.map(x => x.title).join('|').length; if (sig !== gallerySig) { gallerySig = sig; renderGallery($('tab-gallery'), w, openWork); } }
+  else if (activeTab === 'gallery') { const sig = w.cat.art.count + ':' + w.cat.art.works.map(x => x.title + (x.status || '')).join('|').length; if (sig !== gallerySig) { gallerySig = sig; renderGallery($('tab-gallery'), w, openWork); } }
   renderChat();
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
