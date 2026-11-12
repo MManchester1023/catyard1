@@ -102,7 +102,8 @@ function drawChime(g, w, t) {
   [[-6, 14], [-2, 20], [2, 16], [6, 22]].forEach(([dx, len], i) => { const sx = x + dx + sway * (0.3 + i * 0.1); g.strokeStyle = '#d9bf84'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(x + dx, y + 6); g.lineTo(sx, y + 6 + 3); g.stroke(); g.fillStyle = i % 2 ? '#c9d4dc' : '#aebcc7'; g.fillRect(sx - 1.2, y + 9, 2.4, len); });
 }
 const SKY = [[0, '#0b1130', '#1c2757'], [5, '#141c4a', '#33407a'], [6.3, '#6c5a9c', '#f2a67a'], [8, '#6fb0e6', '#d8eefa'], [12, '#4f9ee0', '#cfe8f7'], [16.5, '#5fa6e0', '#f4e6c2'], [18.5, '#d9704f', '#f7c77a'], [20, '#3b2f6c', '#c5688a'], [21.5, '#101a3a', '#27315e'], [24, '#0b1130', '#1c2757']];
-const TINT = [[0, 20, 28, 70, 0.5], [5, 24, 30, 80, 0.46], [6.3, 255, 150, 100, 0.18], [8, 255, 220, 180, 0.04], [12, 255, 255, 255, 0], [16.5, 255, 230, 190, 0.05], [18.5, 255, 120, 70, 0.2], [20, 70, 45, 110, 0.36], [21.5, 20, 28, 70, 0.5], [24, 20, 28, 70, 0.5]];
+// (daytime is a soft cool shade, not clear glass: at noon the yard was brighter than was comfortable. The last number of each row is how strongly it shades.)
+const TINT = [[0, 20, 28, 70, 0.5], [5, 24, 30, 80, 0.46], [6.3, 255, 150, 100, 0.18], [8, 70, 60, 85, 0.12], [12, 40, 52, 86, 0.2], [16.5, 72, 56, 76, 0.14], [18.5, 255, 120, 70, 0.2], [20, 70, 45, 110, 0.36], [21.5, 20, 28, 70, 0.5], [24, 20, 28, 70, 0.5]];
 function key(tab, h) { let i = 0; while (i < tab.length - 2 && h > tab[i + 1][0]) i++; const a = tab[i], b = tab[i + 1], t = clamp((h - a[0]) / (b[0] - a[0])); return [a, b, t]; }
 const skyAt = h => { const [a, b, t] = key(SKY, h); return [mix(a[1], b[1], t), mix(a[2], b[2], t)]; };
 const tintAt = h => { const [a, b, t] = key(TINT, h); const L = i => Math.round(a[i] + (b[i] - a[i]) * t); return { c: `rgb(${L(1)},${L(2)},${L(3)})`, a: a[4] + (b[4] - a[4]) * t }; };

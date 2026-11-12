@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/sim.test.js && node tests/save.test.js && node tests/llm.test.js && node tests/offer.test.js && node tests/tablet.test.js && node tests/craft.test.js && node tests/temper.test.js && node tests/secrets.test.js && node tests/art.test.js && node tests/blog.test.js && node tests/memory.test.js && node tests/finds.test.js && node tests/character.test.js && node tests/intent.test.js && node tests/interest.test.js && node tests/stars.test.js && node tests/variety.test.js && node tests/refine.test.js && node tests/urge.test.js && node tests/seed.test.js && node tests/structure.test.js",
+    "test": "node tests/sim.test.js && node tests/save.test.js && node tests/llm.test.js && node tests/offer.test.js && node tests/tablet.test.js && node tests/craft.test.js && node tests/temper.test.js && node tests/secrets.test.js && node tests/art.test.js && node tests/blog.test.js && node tests/memory.test.js && node tests/finds.test.js && node tests/character.test.js && node tests/intent.test.js && node tests/interest.test.js && node tests/stars.test.js && node tests/variety.test.js && node tests/refine.test.js && node tests/urge.test.js && node tests/yard.test.js && node tests/seed.test.js && node tests/structure.test.js",
     "web": "npx --yes http-server src -p 8765 -c-1",
     "tauri": "tauri",
     "dev": "tauri dev",

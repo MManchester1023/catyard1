@@ -335,13 +335,21 @@ export function mouseTick(w, m, dt) {
 }
 
 export function makeFly(i) { return { x: rnd(600, 840), y: rnd(500, 560), z: rnd(15, 40), ang: rnd(0, 6.28), sp: rnd(22, 38), t: rnd(0, 9), flee: 0, hue: i, on: false }; }
+// Turn a heading a fraction k of the way towards a target heading, the short way round. (atan2 jumps from +pi to -pi
+// straight to the west of a point; blending across that jump swung the heading through 0, which points east, and pinned
+// butterflies against the right-hand wall.)
+export function turnToward(ang, target, k) {
+  let d = (target - ang) % (2 * Math.PI); if (d > Math.PI) d -= 2 * Math.PI; else if (d < -Math.PI) d += 2 * Math.PI;
+  return ang + d * Math.min(1, k);
+}
 export function flyTick(w, f, dt) {
   const on = sunOf(hourOf(w)) > 0.3 && w.weather.rain < 0.2; f.on = on; if (!on) return;
   f.t += dt; f.flee = Math.max(0, f.flee - dt);
   f.ang += rnd(-1, 1) * 3 * dt;
-  if (Math.hypot(f.x - 716, f.y - 530) > 190) f.ang += (Math.atan2(530 - f.y, 716 - f.x) - f.ang) * Math.min(1, dt * 2);
-  const sp = f.sp * (f.flee > 0 ? 3 : 1);
-  f.x = clamp(f.x + Math.cos(f.ang) * sp * dt, 20, W - 20); f.y = clamp(f.y + Math.sin(f.ang) * sp * dt * 0.6, GY0 + 90, GY1);
+  if (Math.hypot(f.x - 716, f.y - 530) > 190) f.ang = turnToward(f.ang, Math.atan2(530 - f.y, 716 - f.x), dt * 2);
+  const sp = f.sp * (f.flee > 0 ? 3 : 1), nx = f.x + Math.cos(f.ang) * sp * dt, ny = f.y + Math.sin(f.ang) * sp * dt * 0.6;
+  f.x = clamp(nx, 20, W - 20); f.y = clamp(ny, GY0 + 90, GY1);
+  if (f.x !== nx) f.ang = Math.PI - f.ang; if (f.y !== ny) f.ang = -f.ang; // (a wall turns it round rather than holding it there)
   f.z = 24 + Math.sin(f.t * 1.7) * 12;
 }
 
@@ -350,7 +358,7 @@ export function makeSpark(i) { return { x: rnd(600, 840), y: rnd(470, 560), z: r
 export function sparkTick(w, s, dt) {
   const h = hourOf(w), on = (h > 18.8 || h < 5.2) && w.weather.rain < 0.3; s.on = on; if (!on) return;
   s.t += dt; s.ang += rnd(-1, 1) * 2 * dt;
-  if (Math.hypot(s.x - 716, s.y - 520) > 150) s.ang += (Math.atan2(520 - s.y, 716 - s.x) - s.ang) * Math.min(1, dt * 2);
+  if (Math.hypot(s.x - 716, s.y - 520) > 150) s.ang = turnToward(s.ang, Math.atan2(520 - s.y, 716 - s.x), dt * 2);
   s.x += Math.cos(s.ang) * 14 * dt; s.y += Math.sin(s.ang) * 8 * dt; s.z = 28 + Math.sin(s.t * 0.9 + s.ph) * 16;
 }
 
