@@ -191,6 +191,11 @@ export function pushHist(w, k, text, tag = '') {
   w.hist.push({ id: ++w.logId, day: dayOf(w), time: clockStr(w), k, text: short(text), tag });
   if (w.hist.length > HIST_MAX + 100) w.hist.splice(0, w.hist.length - HIST_MAX);
 }
+// what Claude decided for the cat, kept so you can see it working (newest first)
+export const CHOICES_MAX = 40;
+export function logChoice(w, kind, text) { const c = w.cat; if (!Array.isArray(c.choices)) c.choices = []; c.choices.unshift({ day: dayOf(w), time: clockStr(w), kind, text: String(text).slice(0, 240) }); if (c.choices.length > CHOICES_MAX) c.choices.pop(); w.stats.claudeChoices = (w.stats.claudeChoices || 0) + 1; }
+// a painting that has been framed for sale, or sold, is no longer on the easel
+export const clearEasel = (w, work) => { if (w.easel && w.easel.work && work && w.easel.work.id === work.id) w.easel = null; };
 export function note(w, text, kind = 'info') {
   w.log.unshift({ id: ++w.logId, day: dayOf(w), time: clockStr(w), text, kind });
   if (w.log.length > 120) w.log.pop();

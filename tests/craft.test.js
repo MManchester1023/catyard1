@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, tick, catchUp } from '../src/sim/sim.js';
 import { start, done } from '../src/sim/acts.js';
 import { feel, affinity, topFeelings } from '../src/sim/feelings.js';
-import { selfTaught, scratchTree, collectDrop, finishCraft, startable, shortfall, gatherNeed, nextCraft, INV_CAP, unlockRecipe, markFound } from '../src/sim/craft.js';
+import { selfTaught, scratchTree, collectDrop, finishCraft, startable, shortfall, gatherNeed, goals, nextCraft, INV_CAP, unlockRecipe, markFound } from '../src/sim/craft.js';
 import { RECIPES, knows } from '../src/sim/recipes.js';
 import { considerWish, publishWish, matchWish, wishTick, openWishes, draftWish, wishPending } from '../src/sim/wishes.js';
 import { leaveOffering, inspectOffer, finishOffer } from '../src/sim/offerings.js';
@@ -224,5 +224,14 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
     for (const k of Object.keys(c.assoc)) assert(Number.isFinite(c.assoc[k].v) && Math.abs(c.assoc[k].v) <= 1.0001);
   }
   ok('nine days, three cats: no NaN, stays in the yard, gathers bark, builds the table (within three weeks), caps hold');
+}
+{
+  // it does not go back to the oak for what it is already carrying: parts for the easel in the pack count in full, and
+  // the frames it has to make out of bark are counted once (it used to count them twice and ignore the bark it held)
+  const w = makeWorld('Held'); w.netOn = false; w.cat.mem.known.tree = 1; w.cat.ideas.easel = { day: 1 }; w.cat.ideas.frame = { day: 1 };
+  const ec = RECIPES.easel.cost, fb = RECIPES.frame.cost.bark; w.cat.inv = { bark: ec.frame * fb, twig: ec.twig, twine: 0, frame: 0 };
+  const g = gatherNeed(w); assert.ok(!(g && g.bark), 'bark in hand covers the easel frames, so it asks for none: ' + JSON.stringify(g)); // (any twigs left are for the table it will want next)
+  w.cat.inv = { bark: ec.frame * fb - fb, twig: ec.twig, twine: 0, frame: 0 }; const h = gatherNeed(w); assert.ok(h && h.bark === fb && !h.twig, 'one more frame of bark, and no more: ' + JSON.stringify(h));
+  console.log('  ok gathering counts what it already carries, and the frames only once');
 }
 console.log('\nALL OK');

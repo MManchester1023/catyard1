@@ -94,7 +94,7 @@ The yard is on the left with the cat's needs under it. The panel on the right ha
 
 The cat has hunger, thirst, tiredness, boredom, loneliness and a creative urge. A day lasts 20 real minutes by default.
 
-- **Eating** makes it sleepy: a full meal adds 0.3 to tiredness, a snack proportionally less. It always grooms itself after eating.
+- **Eating** makes it sleepy: a full meal adds 0.16 to tiredness (it was 0.3), a snack proportionally less. It always grooms itself after eating.
 - **Sleep.** It does not go to bed or nap unless it is tired. A little tired is enough at night; a daytime nap needs it properly tired. By day it wakes once it has slept itself out; once in bed for the night it sleeps on to the morning. Waiting out the rain in the cabin when it is not tired is sitting about, not a nap. An ordinary cat sleeps around 40% of the time.
 - **Washing.** It gets dirty and washes properly: front paws, face, then the rest.
 - **Furniture.** The scratching post, yarn, sunbeam and cushion each have their own use (claws, play, warmth, naps).
@@ -279,9 +279,12 @@ Without a key the cat uses a built-in offline voice. With one, Claude writes its
 
 - **What it sets its mind on** (up to 5 times a day): the next thing it wants to do.
 - **Its goals** (up to 3 questions a day): which of the possible wants it works towards over the next few days.
+- **Its own projects** (up to 2 a day, at most 2 at once): something it thinks of itself, in its own words ("watch the sky until it does something"), with a reason, the everyday activity it mostly involves and how many times it means to do it (2 to 6). The activity gets a pull while the project lasts, each time it sets about it counts, and when the count is reached the project is done. Projects only exist with Claude connected; offline there are the stock wants.
 - **What it paints** (up to 2 a day): the subject of the next painting, used once and only if it is still possible (no moon in daytime).
 - **Its special interests:** what it becomes fascinated by (a subject from the list, one it has loved before, or one Claude invents), why, and up to 4 specific things to look up about it on Wikipedia. Interests are permanent: it keeps a list of its passions and goes back to them, reading further each time and never rereading a page.
 - **Notes you leave on the mat:** Claude says what it makes of the note, writes a reply in the chat, and, if the note asks for something it could do, may decide to do it.
+
+Everything Claude decides is listed, with the reason, under **What Claude decided** on the cat's Wants tab (and `brain status` counts them), so you can see it working. When a call fails, the status line says why in plain words (key not accepted, model not found, rate limited, out of credit, offline).
 
 Each choice has an offline fallback (the old weighted choice), a daily budget, and a wait of a tenth of a day: if Claude does not answer in time, the cat decides for itself. Everything else (needs, sleep, hunting, crafting, mysteries) is always decided by the simulation, so the cat behaves much the same either way.
 

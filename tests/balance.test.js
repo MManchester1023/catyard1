@@ -6,14 +6,15 @@ import assert from 'node:assert/strict';
 import { makeWorld, tick } from '../src/sim/sim.js';
 import { hourOf } from '../src/sim/world.js';
 import { TEMPER_IDS } from '../src/sim/temper.js';
+import { start } from '../src/sim/acts.js';
 import { seedTests } from '../src/sim/rng.js';
 
 const DAYS = 8, SEEDS = [3, 7];
-// measured (8 days, seeds 1-16, every temperament): sleep .41-.64, night awake .08-.30 (night owl .37-.54), hunts/day 0-1.8 (hunter 2.6-6.3),
-// meals/day 3.9-8.9 (garfield highest), hungry>0.9 at most 7% of the time, thirsty>0.9 at most 12.5%
+// measured (8 days, seeds 1-16, every temperament, after meals were made less tiring): sleep .35-.56, night awake .13-.32 (night owl .38-.60),
+// hunts/day 0.1-2.8 (hunter 2.5-4.6), meals/day 4.1-10 (garfield highest), hungry>0.9 at most 8% of the time, thirsty>0.9 at most 14%
 const BAND = {
-  sleep: [0.35, 0.70], night: [0.05, 0.35], nightowl: [0.30, 0.65],
-  hunts: [0, 3], hunterHunts: [2, 7.5], meals: [3, 11], hungerHi: 0.10, thirstHi: 0.18,
+  sleep: [0.28, 0.70], night: [0.05, 0.40], nightowl: [0.28, 0.70],
+  hunts: [0, 3.6], hunterHunts: [2, 7.5], meals: [3, 12], hungerHi: 0.12, thirstHi: 0.20,
 };
 
 const run = (seed, temper) => {
@@ -44,4 +45,13 @@ for (const t of [null, ...TEMPER_IDS]) for (const seed of SEEDS) {
   assert.ok(r.paint > 0, `BALANCE DRIFT [${tag}] painted nothing in ${DAYS} days`);
 }
 console.log(`  ok ${runs} runs (${DAYS} days each) stay inside the balance bands`);
+
+{
+  // eating makes a cat a little sleepy, not very: a proper meal adds well under a fifth
+  seedTests(3); const w = makeWorld('Meal'); w.netOn = false; const c = w.cat; w.o.bowl.food = 1; c.needs.hunger = 0.85; c.needs.tired = 0.2; w.weather.timer = 1e9; w.weather.type = 'clear'; w.weather.rain = 0;
+  start(w, 'eat', { from: 'bowl' }); const m0 = w.stats.meals; let guard = 0; while (w.stats.meals === m0 && guard++ < 4000) { c.reeval = 1e9; tick(w, 0.1); }
+  assert.ok(w.stats.meals > m0, 'it had its meal'); const gain = c.needs.tired - 0.2;
+  assert.ok(gain > 0.05 && gain < 0.2, 'a meal makes it a little tired, not very: ' + gain.toFixed(2));
+  console.log('  ok a proper meal makes it ' + gain.toFixed(2) + ' more tired');
+}
 console.log('\nALL OK');

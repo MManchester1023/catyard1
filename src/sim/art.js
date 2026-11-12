@@ -1,6 +1,6 @@
 // Paw painting: skill growth, works as small deterministic recipes, and a painter that draws them.
 import { rnd, pick, clamp, uid, mulberry32, COLORS } from './util.js';
-import { hourOf, dayOf, sunOf, isNight, moonPos, note, journal } from './world.js';
+import { hourOf, dayOf, sunOf, isNight, moonPos, note, journal, logChoice } from './world.js';
 import { stashColors } from './quirk.js';
 import { onEvent } from './wants.js';
 import { random } from './rng.js';
@@ -71,6 +71,7 @@ export function claudeSubject(w, ask, answer) {
   const a = w.cat.art, q = a.subjAsk; if (!q || q.id !== ask.id) return null; a.subjAsk = null;
   const o = q.menu[parseInt(answer && answer.pick, 10) - 1]; if (!o) return null;
   a.nextSubject = { key: o.key, why: String((answer && answer.why) || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200), until: w.clock + w.dayLen * SUBJECT_KEEP };
+  logChoice(w, 'painting', `${subjectLabel(o.key)}${a.nextSubject.why ? ' - ' + a.nextSubject.why : ''}`);
   return a.nextSubject;
 }
 

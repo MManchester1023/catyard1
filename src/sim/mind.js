@@ -10,6 +10,7 @@ import { affinity } from './feelings.js';
 import { SCORE_KEY, isFav, placeLove, FAV_PULL } from './finds.js';
 import { moodToday, habitPull, stubPull } from './character.js';
 import { intentPull } from './intent.js';
+import { projectPull } from './project.js';
 import { interestActive } from './interest.js';
 import { wishPending } from './wishes.js';
 import { shopPending } from './economy.js';
@@ -123,9 +124,9 @@ export const ACTIVITIES = [
 
   // ----- what makes this cat this cat -----
   { key: 'collect', // only a Collector goes out of its way for trinkets; anyone picks up building parts and moon gifts
-    prep: x => { x.item = x.dry ? bestItem(x.w, x.c) : null; if (x.item) x.opts.collect = { item: x.item }; },
+    prep: x => { x.item = x.dry ? bestItem(x.w, x.c, x.col) : null; if (x.item) x.opts.collect = { item: x.item }; },
     when: x => x.item,
-    score: x => (0.5 + itemValue(x.w, x.item) * 0.45 + wantPull(x.w, ['find']) * 0.5 + x.T.curious * 0.15) * (1 - x.deepNight * 0.7) * (x.col || MATERIALS.includes(x.item.type) || x.item.moon ? 1 : 0.3) },
+    score: x => (0.5 + (MATERIALS.includes(x.item.type) ? 0.3 : 0) + itemValue(x.w, x.item) * 0.45 + wantPull(x.w, ['find']) * 0.5 + x.T.curious * 0.15) * (1 - x.deepNight * 0.7) * (x.col || MATERIALS.includes(x.item.type) || x.item.moon ? 1 : 0.3) },
   { key: 'stashvisit', when: x => x.w.stash.site && x.awake && x.dry,
     score: x => clamp(((x.w.clock - (x.q.lastVisit || 0)) / x.w.dayLen - 0.12) * 2.2, 0, 0.95) * (x.col ? 1 : 0.4) + wantPull(x.w, ['guard']) * 0.9 + (x.n.fear || 0) * 0.7 * (x.col ? 1 : 0.5) + x.N() },
   { key: 'paint', // (needs the easel it built; Garfield can rarely be bothered)
@@ -178,8 +179,8 @@ export const ACTIVITIES = [
     when: x => x.dry && x.awake && x.fit && canUseTablet(x.w),
     score: x => { const { w, c } = x; return 0.3 + x.T.curious * 0.45 + (x.lw ? x.lw.strength * 0.9 : 0) + (wishPending(w) ? 0.55 : 0) + (shopPending(w) ? 0.5 : 0) + (interestActive(w) ? 0.4 : 0) + (blogPending(w) ? 0.6 : 0) + (starsNeedsReading(w) ? 0.6 : 0) + (c.wants.some(y => y.kind === 'learn') ? 0.6 : 0) + x.dusk * 0.15 + (x.tech ? (c.wants.some(y => y.kind === 'learn' || y.kind === 'lookup' || y.kind === 'solve') || wishPending(w) ? 1.7 : 0.4) : 0) + x.N(); } },
   { key: 'gather', // scratch the oak for bark and twigs when something it means to build needs them
-    prep: x => { x.gn = x.dry && x.k.tree && gatherRoom(x.w) ? gatherNeed(x.w) : null; },
-    when: x => x.gn && x.awake && x.fit && x.n.hunger < 0.9,
+    prep: x => { x.gn = x.dry && x.k.tree && gatherRoom(x.w) ? gatherNeed(x.w) : null; x.gnc = x.gn && x.dry ? nextCraft(x.w) : null; },
+    when: x => x.gn && !x.gnc && x.awake && x.fit && x.n.hunger < 0.9, // (if it is already carrying what it needs for something, it makes that first)
     score: x => 0.36 + wantPull(x.w, ['craft']) * 0.55 + x.T.curious * 0.12 + (x.bob ? 0.3 : 0) + easelUrge(x.w) * 0.6 + x.N() },
   { key: 'craft', prep: x => { x.nc = x.dry ? nextCraft(x.w) : null; if (x.nc) x.opts.craft = { recipe: x.nc }; },
     when: x => x.nc && x.awake && x.fit,
@@ -257,7 +258,7 @@ export function decide(w, cur) {
 
   // the mood of the day tilts what it fancies; a habit pulls at its hour; a stubborn notion pulls hard (but hunger and sleep still win)
   const upset = isUpset(w), mm = upset ? {} : moodToday(w).mul, calm = n.hunger < 0.8 && n.tired < TOO_TIRED && !upset; // (an upset cat sulks: no mood of the day, no notions)
-  for (const key in S) if (S[key] > 0) { if (mm[key]) S[key] *= mm[key]; if (calm) S[key] += habitPull(w, key) + stubPull(w, key) + intentPull(w, key); }
+  for (const key in S) if (S[key] > 0) { if (mm[key]) S[key] *= mm[key]; if (calm) S[key] += habitPull(w, key) + stubPull(w, key) + intentPull(w, key) + projectPull(w, key); }
 
   // what has felt good before pulls a little (see feelings.js), and the things it loves most pull hardest
   for (const key in SCORE_KEY) if (S[key] > 0) S[key] += affinity(w, SCORE_KEY[key]) * 0.25 + (isFav(w, SCORE_KEY[key]) ? FAV_PULL : 0);

@@ -63,5 +63,20 @@ const T = w => w.o.tree;
   const back = deserialize(serialize(w)); assert.equal(back.shake.n, w.shake.n, 'the day count is saved');
   ok('the cat picks up what falls, and the day count survives a save');
 }
+{
+  // whoever the cat is, it goes and gets what fell from the oak, even from across the yard and with a trinket lying nearer
+  // (it used to ignore building parts more than ~560 px away, and a trinket it did not care about hid them from view)
+  const TEMPERS_TO_TRY = [null, 'vangogh', 'hunter', 'garfield', 'builder'];
+  for (const temper of TEMPERS_TO_TRY) {
+    seedTests(2); const w = fresh(); w.cat.temper = temper; Object.assign(w.cat.mem.known, { pond: 1, post: 1, tree: 1, flowers: 1, cushion: 1, yarn: 1, fence: 1, easel: 1, tablet: 1 }); w.easelMade = { day: 1 };
+    w.clock = 2.4 * w.dayLen; w.weather.type = 'clear'; w.weather.rain = 0; w.weather.timer = 1e9; w.mouseT = w.itemT = w.thiefT = 1e9; w.cat.x = 120; w.cat.y = 500;
+    const q = w.cat.quirk; w.items.push({ id: 'trinket', type: q.item === 'button' ? 'feather' : 'button', color: 'red', x: 200, y: 520, age: 0 });
+    const t = T(w), r = withRandom(0, () => shakeTree(w, t.x, t.y - 100)); const it = r.dropped; assert.ok(it, 'something fell');
+    let got = false; for (let i = 0; i < w.dayLen * 0.5 * 10 && !got; i++) { tick(w, 0.1); if (!w.items.includes(it)) got = true; }
+    assert.ok(got, `a ${temper || 'plain'} cat picked up what fell from the oak`);
+  }
+  seedTests(1);
+  ok('what falls from the oak is picked up by every kind of cat, near or far');
+}
 
 console.log('\nALL OK');

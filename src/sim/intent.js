@@ -4,7 +4,7 @@
 // a built-in whim does the same from the same ingredients. Either way the pick is a strong nudge that the simulation
 // honours (hunger and sleep still come first), the reason goes in the diary, and what it chose is something it can talk about.
 import { clamp, pick } from './util.js';
-import { dayOf, journal } from './world.js';
+import { dayOf, journal, logChoice } from './world.js';
 import { SCORE_KEY, isFav } from './finds.js';
 import { moodToday, habitPull, DO, ensureChar, acted } from './character.js';
 import { affinity, keyName } from './feelings.js';
@@ -62,7 +62,7 @@ const wantKinds = key => ({ paint: ['master'], craft: ['craft'], gather: ['craft
 export function applyIntent(w, key, why, by = 'whim') {
   const c = ensureIntent(w.cat); if (!DO[key]) return null;
   c.intent = { key, label: DO[key], why: String(why || '').slice(0, 220), until: w.clock + w.dayLen * INTENT_LEN, by, day: dayOf(w), done: false }; c.intentAt = w.clock; c.intentAsk = null;
-  w.stats.intents = (w.stats.intents || 0) + 1;
+  w.stats.intents = (w.stats.intents || 0) + 1; if (by === 'claude') logChoice(w, 'activity', `${DO[key]}${c.intent.why ? ' - ' + c.intent.why : ''}`);
   journal(w, `I have decided to ${DO[key]}. ${c.intent.why}`.trim(), 'intent');
   c.thought = `I am going to ${DO[key]}.`; c.thoughtId++; c.thoughtAt = w.clock; c.reeval = 0.2; // (so it acts on it now, not when it next gets round to thinking)
   return c.intent;

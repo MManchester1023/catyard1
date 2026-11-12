@@ -1,6 +1,6 @@
 // Standing wants: things the cat is after over days, beyond hunger and sleep.
 import { rnd, pick, uid, clamp, an, COLOR_NAMES } from './util.js';
-import { note, journal, dayOf } from './world.js';
+import { note, journal, dayOf, logChoice } from './world.js';
 import { itemName, stashColors, quirkWord } from './quirk.js';
 import { RECIPES, knows, found } from './recipes.js';
 import { paceOf } from './pace.js';
@@ -21,6 +21,7 @@ export function wantText(w, x) {
     case 'lookup': return `find out what "${x.word}" is`;
     case 'craft': return `make ${an(RECIPES[x.recipe].name)}`;
     case 'learn': return RECIPES[x.recipe].learnText || `work out how to make ${an(RECIPES[x.recipe].name)}`;
+    case 'project': return x.text;
     case 'catch': return `catch ${x.target} ${x.prey === 'bird' ? 'birds' : 'mice'}${x.progress ? ` (${x.progress} so far)` : ''}`;
   }
   return x.kind;
@@ -38,7 +39,7 @@ export function addWant(w, base) {
 
 export function genWants(w) {
   const c = w.cat, q = c.quirk;
-  if (c.wants.length >= MAX_WANTS) return;
+  if (c.wants.filter(x => x.kind !== 'project').length >= MAX_WANTS) return; // (its own projects are in addition to these)
   const cand = [];
   const have = stashColors(w);
   const missing = COLOR_NAMES.filter(col => col !== 'black' && !have[col]);
@@ -89,10 +90,11 @@ export const goalPrompt = (w, ask) => {
 // Claude's answer (llm.js): a number from the menu
 export function claudeGoal(w, ask, answer) {
   const c = w.cat, q = c.goalAsk; if (!q || q.id !== ask.id) return null; // (a stale answer)
-  c.goalAsk = null; const n = answer && parseInt(answer.pick, 10), o = q.menu[n - 1]; if (!o || c.wants.length >= MAX_WANTS) return null;
+  c.goalAsk = null; const n = answer && parseInt(answer.pick, 10), o = q.menu[n - 1]; if (!o || c.wants.filter(x => x.kind !== 'project').length >= MAX_WANTS) return null;
   const why = String((answer && answer.why) || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200);
   const made = takeWant(w, o.want, why); w.stats.claudeGoals = (w.stats.claudeGoals || 0) + 1;
   if (why) journal(w, `Why: ${why}`, 'want');
+  logChoice(w, 'goal', `${made.text}${why ? ' - ' + why : ''}`);
   return made;
 }
 
@@ -128,7 +130,7 @@ export function wantsTick(w, dtDays) {
   const c = w.cat;
   for (const x of [...c.wants]) {
     x.strength = clamp(x.strength + dtDays * 0.06, 0, 1);
-    if (dayOf(w) - x.day >= (x.kind === 'craft' || x.kind === 'learn' ? 9 * Math.max(1, paceOf(w)) : x.kind === 'catch' ? (x.prey === 'bird' ? 14 : 8) : 4) && x.kind !== 'guard') {
+    if (dayOf(w) - x.day >= (x.kind === 'craft' || x.kind === 'learn' ? 9 * Math.max(1, paceOf(w)) : x.kind === 'project' ? 6 : x.kind === 'catch' ? (x.prey === 'bird' ? 14 : 8) : 4) && x.kind !== 'guard') {
       c.wants = c.wants.filter(y => y !== x);
       journal(w, `I have stopped wanting to ${x.text}. For now.`, 'want');
       note(w, `${c.name} gave up on wanting to ${x.text}.`, 'want');

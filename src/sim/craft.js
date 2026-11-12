@@ -2,7 +2,7 @@
 // builds them. A recipe turns up when it is carrying what the thing is made of (findRecipes); the easel and table need nothing
 // more, the rest it also has to look up on the tablet. Building the table moves the stash out of hiding and onto the tabletop.
 import { rnd, uid, an, MAT_LABEL, MAT_CAP } from './util.js';
-import { note, journal, dayOf, clockStr } from './world.js';
+import { note, journal, dayOf, clockStr, clearEasel } from './world.js';
 import { RECIPES, knows, found, learned, rawCost, rawHeld, partsHeld, costText, frameDemand, frameSpare, paintingToFrame, unlistedWork } from './recipes.js';
 import { feel } from './feelings.js';
 import { onEvent } from './wants.js';
@@ -27,9 +27,16 @@ export function rawShortfall(w, id) {
 }
 // what it still has to scratch off the tree, or null
 export function gatherNeed(w) {
-  const need = { bark: 0, twig: 0 }; for (const id of goals(w)) { if (id === 'frame') continue; const s = rawShortfall(w, id); need.bark += s.bark; need.twig += s.twig; }
-  const f = goals(w).includes('frame') ? Math.max(0, frameDemand(w) - goals(w).filter(g => g !== 'frame').reduce((m, g) => m + (shortfall(w, g).frame || 0), 0)) : 0; // (frames wanted but not yet counted against a goal)
-  if (f) for (const [m, n] of Object.entries(RECIPES.frame.cost)) need[m] = (need[m] || 0) + n * f;
+  // Everything its goals are made of, counted once, less what it already carries. (It used to count the bark for a goal's
+  // frames without looking at the bark in its pack, and then count the frames again, so a cat with the parts for the easel
+  // in hand still wanted to go and scratch the oak.)
+  const gs = goals(w), tot = { bark: 0, twig: 0 }, inv = w.cat.inv;
+  for (const id of gs) { if (id === 'frame') continue; for (const m of ['bark', 'twig']) tot[m] += RECIPES[id].cost[m] || 0; }
+  if (gs.includes('frame')) { // frames still to make: what the goals call for, and one for a painting waiting, less the frames it carries
+    const fm = frameDemand(w) + (frameSpare(w) < 1 && paintingToFrame(w) ? 1 : 0);
+    for (const [m, n] of Object.entries(RECIPES.frame.cost)) if (m in tot) tot[m] += n * fm;
+  }
+  const need = { bark: Math.max(0, tot.bark - (inv.bark || 0)), twig: Math.max(0, tot.twig - (inv.twig || 0)) };
   return need.bark || need.twig ? need : seekNeed(w);
 }
 // Before it has worked out what to make, it gathers anyway, toward the thing it is most inclined to want (the easel, then
@@ -122,7 +129,7 @@ export function hangSpareFrames(w) {
   while (frameSpare(w) > 0 && paintingToFrame(w)) {
     const best = unlistedWork(w); if (!best) break; // (the best one it has not framed yet: a framed painting goes up for sale)
     c.inv.frame--; c.crafted.unshift({ id: uid(), recipe: 'frame', name: 'framed painting', work: best.title, day: dayOf(w), time: clockStr(w) }); if (c.crafted.length > 16) c.crafted.pop();
-    best.status = 'forSale'; best.listed = { day: dayOf(w), time: clockStr(w) };
+    best.status = 'forSale'; best.listed = { day: dayOf(w), time: clockStr(w) }; clearEasel(w, best);
     c.art.xp += 6; n++;
     journal(w, `I put a frame round "${best.title}" and set it out for sale. It looks like it matters now. Someone will want it.`, 'craft'); note(w, `${c.name} framed "${best.title}" and put it up for sale.`, 'craft');
   }

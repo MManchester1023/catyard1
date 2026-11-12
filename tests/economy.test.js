@@ -50,6 +50,16 @@ const paint = (w, n, score = 0.5) => { for (let i = 0; i < n; i++) w.cat.art.wor
   ok('a framed painting sells at random, for what it is worth');
 }
 {
+  // a painting that is framed for sale, or sold, is taken off the easel; a save from before is tidied
+  const w = mk(), c = w.cat; ensureEconomy(w); paint(w, 2, 0.6); const [a, b] = c.art.works;
+  w.easel = { work: a, progress: 1 }; c.inv.frame = 2; hangSpareFrames(w);
+  assert.ok(a.status === 'forSale' || b.status === 'forSale'); const listed = c.art.works.find(x => x.status === 'forSale');
+  w.easel = { work: listed, progress: 1 }; sell(w, listed); assert.equal(w.easel, null, 'sold: gone from the easel');
+  w.easel = { work: b, progress: 1 }; const other = c.art.works.find(x => x !== b && !x.status) || b; w.easel = { work: other, progress: 1 }; if (!other.status) assert.ok(w.easel, 'an unsold painting stays on the easel');
+  const old = mk(); ensureEconomy(old); paint(old, 1, 0.5); old.cat.art.works[0].status = 'sold'; old.easel = { work: old.cat.art.works[0], progress: 1 }; ensureEconomy(old); assert.equal(old.easel, null, 'an older save is tidied');
+  ok('framed or sold paintings leave the easel; unsold ones stay');
+}
+{
   // a save from before this: paintings that were already framed are for sale
   const w = mk(), c = w.cat; paint(w, 2, 0.4); c.crafted.unshift({ id: 'f1', recipe: 'frame', name: 'framed painting', work: c.art.works[1].title, day: 2 }); delete c.money; delete c.ledger; w.orders = null;
   ensureEconomy(w); assert.equal(c.money, 0); assert.equal(c.art.works[1].status, 'forSale'); assert.ok(!c.art.works[0].status); assert.ok(Array.isArray(w.orders));

@@ -8,6 +8,9 @@ import { genWants, claudeGoal, goalPrompt, GOALS_PER_DAY } from '../src/sim/want
 import { subjectTick, claudeSubject, subjectPrompt, pickSubject, SUBJECTS_PER_DAY } from '../src/sim/art.js';
 import { interestTick, claudeInterest, interestPrompt, interestRequest, interestMiss, startInterest, finishInterest, interestPage, interestActive } from '../src/sim/interest.js';
 import { leaveOffering, inspectOffer } from '../src/sim/offerings.js';
+import { projectTick, claudeProject, projectPrompt, projectPull, projects, projectProgress, MAX_PROJECTS, PROJECTS_PER_DAY } from '../src/sim/project.js';
+import { start } from '../src/sim/acts.js';
+import { friendlyError } from '../src/sim/llm.js';
 import { seedTests, withRandom } from '../src/sim/rng.js';
 seedTests(1);
 const ok = m => console.log('  ok ' + m);
@@ -103,5 +106,35 @@ const mk = (name = 'Pip') => { const w = makeWorld(name); w.netOn = false; w.wea
   assert.ok(w.chat.length > before && /pond now/.test(w.chat.at(-1).text) && w.chat.at(-1).from === 'cat', 'it answers the note in the chat');
   assert.ok(w.cat.intent && w.cat.intent.by === 'claude' && /note made me want/.test(w.cat.intent.why), 'and decides to do what it suggested: ' + JSON.stringify(w.cat.intent));
   ok('through the Brain: goal, subject, interest and a note that is answered and acted on');
+}
+{
+  // personal projects: the cat's own words, its reason, an activity it pulls towards, a count; done when it has done it enough
+  const off = mk(); off.llmOn = false; off.clock = 3 * off.dayLen; off.scoreSnap = { gaze: 0.5, fish: 0.4, explore: 0.3, post: 0.3 }; projectTick(off); assert.ok(!off.cat.projectAsk, 'offline: no projects');
+  const w = mk(); w.llmOn = true; w.clock = 3 * w.dayLen; w.cat.needs.hunger = 0.2; w.scoreSnap = { gaze: 0.6, fish: 0.5, explore: 0.4, post: 0.3, lounge: 0.3 }; projectTick(w);
+  const q = w.cat.projectAsk; assert.ok(q && q.menu.length >= 3 && w.asks.some(a => a.type === 'project'), 'it asks Claude for a project');
+  assert.match(projectPrompt(w, { id: q.id }), /personal project/); assert.equal(claudeProject(w, { id: 'stale' }, { project: 'Watch the pond until it blinks', activity: 1, times: 3 }), null);
+  const gi = q.menu.findIndex(o => o.key === 'gaze') + 1 || 1, key = q.menu[gi - 1].key;
+  assert.equal(claudeProject(w, { id: q.id }, { project: 'x', activity: gi, times: 3 }), null, 'too short to be a project'); w.cat.projectAsk = q;
+  const p = claudeProject(w, { id: q.id }, { project: 'Watch the sky until it does something', why: 'It never does and I respect that.', activity: gi, times: 99 });
+  assert.ok(p && p.kind === 'project' && p.bias === key && p.target === 6 && /Watch the sky/.test(p.text) && p.by === 'claude', 'a project, with the count held to 2-6');
+  assert.ok(w.cat.wants.includes(p) && w.journal.some(e => /respect that/.test(e.text)) && w.cat.choices.some(x => x.kind === 'project'), 'it is a want, its reason is in the diary, and the choice is logged');
+  assert.ok(projectPull(w, key) > 0.3 && projectPull(w, 'wash') === 0, 'the activity is pulled, nothing else');
+  // each time it sets about the activity counts; done at the target
+  for (let k = 0; k < p.target; k++) { start(w, key === 'gaze' ? 'gaze' : 'idle', {}); w.cat.act.type = w.cat.act.type; projectProgress(w); if (!w.cat.wants.includes(p)) break; }
+  assert.ok(p.progress >= 1 || !w.cat.wants.includes(p), 'setting about it counted: ' + p.progress);
+  if (w.cat.wants.includes(p)) { p.progress = p.target - 1; start(w, key === 'gaze' ? 'gaze' : 'idle', {}); projectProgress(w); assert.ok(!w.cat.wants.includes(p) && w.stats.wants >= 1, 'and the last go finishes it'); }
+  ok('projects: Claude writes them, they pull towards an activity, and each go at it counts');
+  // limits
+  const u = mk(); u.llmOn = true; u.clock = 3 * u.dayLen; u.scoreSnap = { gaze: 0.6, fish: 0.5, explore: 0.4 }; let asked = 0; for (let k = 0; k < 10; k++) { u.cat.projectAsk = null; u.cat.projectAt = -1e9; projectTick(u); if (u.cat.projectAsk) asked++; } assert.ok(asked <= PROJECTS_PER_DAY, 'at most ' + PROJECTS_PER_DAY + ' a day: ' + asked);
+  const v = mk(); v.llmOn = true; v.clock = 3 * v.dayLen; v.scoreSnap = { gaze: 0.6, fish: 0.5, explore: 0.4 }; for (let k = 0; k < MAX_PROJECTS; k++) v.cat.wants.push({ kind: 'project', text: 'p' + k, bias: 'gaze', strength: 0.5, progress: 0, target: 3, day: 1, id: 'p' + k }); projectTick(v); assert.ok(!v.cat.projectAsk, 'no room for more than ' + MAX_PROJECTS);
+  ok('projects are budgeted and capped');
+}
+{
+  // errors a person can act on
+  assert.match(friendlyError(401), /API key.*Settings/); assert.match(friendlyError(404), /model/i); assert.match(friendlyError(429), /busy or rate limited/); assert.match(friendlyError(400, '{"error":{"message":"Your credit balance is too low"}}'), /credit/); assert.match(friendlyError(503), /trouble/); assert.match(friendlyError(418, 'teapot'), /HTTP 418 teapot/);
+  const s = JSON.parse(JSON.stringify(DEFAULTS)); s.apiKey = 'k'; const b = new Brain({ getSettings: () => s, saveSettings: () => {}, http: async () => { throw new TypeError('Failed to fetch'); } });
+  const r = await b.test(); assert.ok(!r.ok && /Could not reach Claude/.test(r.message), r.message);
+  const b2 = new Brain({ getSettings: () => s, saveSettings: () => {}, http: async () => ({ ok: false, status: 401, text: async () => '{"error":"x"}' }) }); const r2 = await b2.test(); assert.match(r2.message, /did not accept the API key \(HTTP 401\)/);
+  ok('API problems are explained in plain words (key, model, rate limit, credit, offline)');
 }
 console.log('\nALL OK');

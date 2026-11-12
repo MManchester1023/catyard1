@@ -20,6 +20,7 @@ import { CAT_TREE, catTreeSpot, foundCatTree } from './cattree.js';
 import { enjoyAct, favStart, foundThing } from './finds.js';
 import { noteAct } from './character.js';
 import { intentFulfilled } from './intent.js';
+import { projectProgress } from './project.js';
 import { random } from './rng.js';
 import { PACE } from './pace.js';
 
@@ -113,7 +114,7 @@ export function start(w, type, opts = {}) {
     case 'cattree': { const s = catTreeSpot(); a.tx = s.x; a.ty = s.y; a.sf = 1; a.dur = rnd(18, 36); c.catTreeAt = w.clock; think(w, 'catTreeGo'); break; }
     case 'wash': { a.from = k.pond && random() < 0.5 ? 'pond' : 'water'; aim(a.from); c.washAt = w.clock; think(w, 'washGo'); break; }
   }
-  c.reeval = rnd(0.8, 1.4); noteAct(w); intentFulfilled(w); favStart(w);
+  c.reeval = rnd(0.8, 1.4); noteAct(w); intentFulfilled(w); projectProgress(w); favStart(w);
   const dtxt = describe(w), ld = w.lastDid; // the history records what it set out to do
   if (!ld || ld.text !== dtxt || w.clock - ld.at > 60) { pushHist(w, 'did', dtxt); w.lastDid = { text: dtxt, at: w.clock }; }
 }
@@ -198,7 +199,7 @@ export function actTick(w, dt) {
         } else if (a.from === 'prey') { n.hunger = clamp(n.hunger - 0.06 * dt); a.eaten += 0.06 * dt; if (a.t > 6) finished = true; }
         else if (a.t > 2.5) finished = true;
         if (finished) {
-          if (a.from !== 'treat' && a.eaten > 0.12) { n.tired = clamp(n.tired + 0.3 * Math.min(1, a.eaten / 0.55)); /* a full stomach makes a cat sleepy: 0.3 for a proper meal, less for a snack */ w.stats.meals++; c.mem.lastMeal = clockStr(w); note(w, a.from === 'bowl' ? `${c.name} ate at the bowl.` : `${c.name} finished off the catch.`, 'food'); }
+          if (a.from !== 'treat' && a.eaten > 0.12) { n.tired = clamp(n.tired + 0.16 * Math.min(1, a.eaten / 0.55)); /* a full stomach makes a cat a little sleepy: 0.16 for a proper meal, less for a snack */ w.stats.meals++; c.mem.lastMeal = clockStr(w); note(w, a.from === 'bowl' ? `${c.name} ate at the bowl.` : `${c.name} finished off the catch.`, 'food'); }
           if (a.from === 'bowl' && o.bowl.food <= 0.001 && n.hunger > 0.3) note(w, 'The food bowl ran empty.', 'food');
           c.groomNext = true; done(w); // (a cat always washes after eating)
         }

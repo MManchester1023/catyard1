@@ -55,10 +55,11 @@ export function itemValue(w, it) {
   const t = w.cat.tastes; if (t) v += ((t.color[it.color] ?? 0.3) - 0.3) * 0.5 + ((t.type[it.type] ?? 0.3) - 0.3) * 0.3; // what has felt good before
   return v;
 }
-export function bestItem(w, from) {
+export function bestItem(w, from, collector = true) {
   let best = null, bv = 0.45;
   for (const it of w.items) {
-    const d = Math.hypot(it.x - from.x, it.y - from.y), v = itemValue(w, it) - d / 1400 + (it.moon ? 0.6 : 0); // (a wish from the moon is hard to ignore)
+    // (only a collector cares about trinkets, so for anyone else a trinket does not count against the building parts lying next to it)
+    const d = Math.hypot(it.x - from.x, it.y - from.y), mat = MATERIALS.includes(it.type), v = (itemValue(w, it) - d / (mat ? 4000 : 1400)) * (collector || mat || it.moon ? 1 : 0.3) + (it.moon ? 0.6 : 0); // (a wish from the moon is hard to ignore)
     if (v > bv) { bv = v; best = it; }
   }
   return best;

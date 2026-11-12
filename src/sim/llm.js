@@ -1,7 +1,7 @@
 // The optional Claude connection. The simulation never waits on this: if there is no key, no network,
 // or the daily cap is reached, the offline voice in thoughts.js carries on and nothing breaks.
 import { ITEM_PLURAL, ITEM_LABEL, COAT_LABEL } from './util.js';
-import { hourOf, clockStr, dayOf, journal, note, moonPhase } from './world.js';
+import { hourOf, clockStr, dayOf, journal, note, moonPhase, logChoice } from './world.js';
 import { LEVEL_NAMES, levelOf, subjectLabel } from './art.js';
 import { stashColors } from './quirk.js';
 import { MYSTERY_INFO, discovered } from './mysteries.js';
@@ -19,11 +19,22 @@ import { characterDigest } from './character.js';
 import { intentDigest, intentPrompt, claudeIntent, intentMenu, applyIntent } from './intent.js';
 import { interestDigest, interestPrompt, claudeInterest } from './interest.js';
 import { goalPrompt, claudeGoal } from './wants.js';
+import { projectPrompt, claudeProject } from './project.js';
 import { subjectPrompt, claudeSubject } from './art.js';
 
 export const DEFAULTS = { apiKey: '', model: 'claude-haiku-5-5', on: true, dailyCap: 250, museEvery: 420, usage: { date: '', calls: 0, inTok: 0, outTok: 0 } };
 const API = 'https://api.anthropic.com/v1/messages';
 const clip = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').replace(/^["'\s]+|["'\s]+$/g, '').slice(0, n);
+// What went wrong, in words a person can act on (the status is kept in brackets so it can still be searched for)
+export function friendlyError(status, body = '') {
+  const t = String(body || '');
+  if (status === 401 || status === 403) return `Claude did not accept the API key (HTTP ${status}). Check the key in Settings.`;
+  if (status === 404) return 'Claude could not find that model (HTTP 404). Check the Model field in Settings.';
+  if (status === 429) return 'Claude is busy or rate limited (HTTP 429). The cat carries on with its own voice and will try again.';
+  if (status === 400 && /credit|billing/i.test(t)) return 'The Anthropic account is out of credit (HTTP 400). Add credit in the Console.';
+  if (status >= 500) return `Claude is having trouble (HTTP ${status}). The cat carries on and will try again later.`;
+  return `HTTP ${status} ${t.slice(0, 120)}`.trim();
+}
 const today = () => new Date().toISOString().slice(0, 10);
 const moods = (c, w) => { const n = c.needs; return w && c.upset && c.upset.until > w.clock ? 'upset about ' + (upsetAbout(w) || upsetReason(w)) : n.hunger > 0.75 ? 'hungry' : n.tired > 0.8 ? 'sleepy' : n.fun > 0.7 ? 'bored' : n.lonely > 0.7 ? 'lonely' : c.mood.joy > 0.6 ? 'happy' : 'calm'; };
 
@@ -124,15 +135,19 @@ export class Brain {
         headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({ model: s.model, max_tokens: maxTokens, temperature: 1, system, messages: [{ role: 'user', content: user }] }),
       });
-      if (!res.ok) { let t = ''; try { t = (await res.text()).slice(0, 160); } catch { /* ignore */ } throw new Error(`HTTP ${res.status} ${t}`.trim()); }
+      if (!res.ok) { let t = ''; try { t = (await res.text()).slice(0, 160); } catch { /* ignore */ } throw new Error(friendlyError(res.status, t)); }
       const j = await res.json(); const u = j.usage, us = this.usage(); if (u) { us.inTok += (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0); us.outTok += u.output_tokens || 0; }
       return (j.content || []).map(b => b.text || '').join('');
+    } catch (e) { // (the browser says only "Failed to fetch" when it is offline, blocked or the address is wrong)
+      if (e && e.name === 'AbortError') throw new Error('Claude took too long to answer. It will try again later.');
+      if (e && (e.name === 'TypeError' || /failed to fetch|networkerror|load failed/i.test(e.message || ''))) throw new Error('Could not reach Claude: offline, or something is blocking api.anthropic.com. The cat carries on without it.');
+      throw e;
     } finally { clearTimeout(timer); }
   }
 
   async test() {
     try { const t = await this.call('Reply with the single word OK.', 'ping', 8); this._set('idle'); return { ok: true, message: 'Connected. Reply: ' + clip(t, 30) }; }
-    catch (e) { this._set('error', clip(e.message, 120)); return { ok: false, message: clip(e.message, 200) }; }
+    catch (e) { this._set('error', clip(e.message, 160)); return { ok: false, message: clip(e.message, 200) }; }
   }
 
   // answer the human. returns true if the cat spoke
@@ -180,7 +195,7 @@ export class Brain {
           const j = parseJson(out), t = clip(j && j.reaction, 200);
           if (isNote && j) {
             const reply = clip(j.reply, 260); if (reply && reply !== 'null') catSays(w, reply);
-            const n = parseInt(j.act, 10); if (menu[n - 1] && !(c.needs.hunger > 0.8) && c.pose !== 'sleep') { const why = clip(j.why, 160); applyIntent(w, menu[n - 1].key, `The human's note made me want to. ${why}`.trim(), 'claude'); w.stats.noteActs = (w.stats.noteActs || 0) + 1; }
+            const n = parseInt(j.act, 10); if (menu[n - 1] && !(c.needs.hunger > 0.8) && c.pose !== 'sleep') { const why = clip(j.why, 160); applyIntent(w, menu[n - 1].key, `The human's note made me want to. ${why}`.trim(), 'claude'); w.stats.noteActs = (w.stats.noteActs || 0) + 1; logChoice(w, 'note', `${menu[n - 1].label} - because of the note: "${clip(hst.src, 60)}"`); }
           }
           if (t) { hst.text = t; const e = w.journal.find(x => x.id === hst.jid); if (e) e.text = (hst.kind === 'note' ? `A note on the mat: "${clip(hst.src, 140)}" ` : `Someone left ${hst.label} on the mat. `) + t; if (w.clock - c.thoughtAt < 30) { c.thought = t; c.thoughtId++; c.thoughtAt = w.clock; } }
         } else if (ask.type === 'wish') {
@@ -205,11 +220,11 @@ export class Brain {
           this.busy = true; this._set('busy');
           const out = await this.call(SYSTEM(w), `STATE\n${digest(w, true)}\n\n${prompt}`, 150);
           claudeIntent(w, ask, parseJson(out));
-        } else if (ask.type === 'goal' || ask.type === 'subject' || ask.type === 'interest') {
-          const prompt = ask.type === 'goal' ? goalPrompt(w, ask) : ask.type === 'subject' ? subjectPrompt(w, ask) : interestPrompt(w, ask); if (!prompt) return;
+        } else if (ask.type === 'goal' || ask.type === 'subject' || ask.type === 'interest' || ask.type === 'project') {
+          const prompt = ask.type === 'goal' ? goalPrompt(w, ask) : ask.type === 'subject' ? subjectPrompt(w, ask) : ask.type === 'project' ? projectPrompt(w, ask) : interestPrompt(w, ask); if (!prompt) return;
           this.busy = true; this._set('busy');
-          const out = await this.call(SYSTEM(w), `STATE\n${digest(w, true)}\n\n${prompt}`, ask.type === 'interest' ? 260 : 150), j = parseJson(out);
-          (ask.type === 'goal' ? claudeGoal : ask.type === 'subject' ? claudeSubject : claudeInterest)(w, ask, j);
+          const out = await this.call(SYSTEM(w), `STATE\n${digest(w, true)}\n\n${prompt}`, ask.type === 'interest' ? 260 : ask.type === 'project' ? 220 : 150), j = parseJson(out);
+          (ask.type === 'goal' ? claudeGoal : ask.type === 'subject' ? claudeSubject : ask.type === 'project' ? claudeProject : claudeInterest)(w, ask, j);
         } else if (ask.type === 'blog') {
           const post = w.blog && w.blog.posts.find(x => x.id === ask.id); if (!post) return;
           this.busy = true; this._set('busy');

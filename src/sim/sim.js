@@ -14,6 +14,7 @@ import { ensureFinds, favTick, favShift, foundPlace } from './finds.js';
 import { ensureChar, characterTick } from './character.js';
 import { ensureIntent, intentTick } from './intent.js';
 import { ensureInterest, interestTick } from './interest.js';
+import { projectTick } from './project.js';
 import { considerWish, wishTick } from './wishes.js';
 import { economyTick, ensureEconomy } from './economy.js';
 import { isUpset, upsetLevel, upsetTick } from './upset.js';
@@ -164,7 +165,7 @@ export function tick(w, dt) {
   offerTick(w); upsetTick(w, dt);
 
   // wants
-  w.wantT -= dt; if (w.wantT <= 0) { w.wantT = w.dayLen / 6; characterTick(w); intentTick(w); interestTick(w); subjectTick(w); memoryTick(w); findRecipes(w); genWants(w); selfTaught(w); hangSpareFrames(w); considerWish(w); wishTick(w); considerBlog(w); refreshFavourites(w); favShift(w); secretsRoll(w); }
+  w.wantT -= dt; if (w.wantT <= 0) { w.wantT = w.dayLen / 6; characterTick(w); intentTick(w); interestTick(w); subjectTick(w); projectTick(w); memoryTick(w); findRecipes(w); genWants(w); selfTaught(w); hangSpareFrames(w); considerWish(w); wishTick(w); considerBlog(w); refreshFavourites(w); favShift(w); secretsRoll(w); }
   moonWishTick(w); meteorTick(w, dt);
   wantsTick(w, dayDt);
 

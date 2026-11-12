@@ -60,7 +60,7 @@ const hold = w => { w.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; w
     assert.equal(c.act.type, 'groom', `${t}: it washes after eating (is now ${c.act.type})`);
     ends.push(c.needs.tired - t0);
   }
-  assert(ends.every(g => g > 0.2 && g < 0.5), 'a proper meal adds about 0.3 tiredness: ' + ends.map(x => x.toFixed(2)));
+  assert(ends.every(g => g > 0.1 && g < 0.25), 'a proper meal adds a little tiredness (about 0.16): ' + ends.map(x => x.toFixed(2)));
   // a snack adds less than a meal
   const s = calm(fresh(), 12), sc = s.cat; Object.assign(sc.needs, { hunger: 0.3, tired: 0.1 }); s.o.bowl.food = 1; start(s, 'eat', { from: 'bowl' }); sc.reeval = 1e9;
   for (let i = 0; i < 1200 && sc.act.type === 'eat'; i++) tick(s, 0.1); assert(sc.needs.tired - 0.1 < ends[0], 'a small meal tires it less');

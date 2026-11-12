@@ -2,7 +2,7 @@
 // cat's account and it spends it at the shop on the tablet: toys, and the bark, twigs and twine it needs to make things.
 // An order takes a little while and then turns up on the offering mat as a parcel (offerings.js), which the cat opens.
 import { rnd, an, SHOP, shopItem, shopLabel, matText } from './util.js';
-import { note, journal, dayOf, clockStr } from './world.js';
+import { note, journal, dayOf, clockStr, clearEasel } from './world.js';
 import { PACE } from './pace.js';
 import { feel } from './feelings.js';
 import { gatherNeed, rawShortfall, goals } from './craft.js';
@@ -18,6 +18,7 @@ export const cash = n => '$' + n;
 export function ensureEconomy(w) {
   const c = w.cat; if (!(c.money >= 0)) c.money = 0; if (!Array.isArray(c.ledger)) c.ledger = [];
   if (!Array.isArray(w.orders)) w.orders = [];
+  if (w.easel && w.easel.work && (c.art.works || []).some(x => x.id === w.easel.work.id && x.status)) w.easel = null; // (a save from when sold paintings stayed on the easel)
   if (!w.stats.sales) w.stats.sales = 0; if (!w.stats.earned) w.stats.earned = 0; if (!w.stats.orders) w.stats.orders = 0;
   for (const f of c.crafted || []) if (f.recipe === 'frame' && f.work) { const wk = (c.art.works || []).find(x => x.title === f.work && !x.status); if (wk) { wk.status = 'forSale'; wk.listed = { day: f.day || 1, legacy: true }; } }
 }
@@ -28,7 +29,7 @@ export const forSale = w => (w.cat.art.works || []).filter(x => x.status === 'fo
 export const priceOf = work => Math.max(2, Math.round((PACE.priceBase + work.score * PACE.priceScore) * (1 + rnd(-0.2, 0.2))));
 export function sell(w, work, price = priceOf(work)) {
   const c = w.cat; ensureEconomy(w);
-  work.status = 'sold'; work.sold = { day: dayOf(w), price }; c.money += price; w.stats.sales++; w.stats.earned += price;
+  work.status = 'sold'; work.sold = { day: dayOf(w), price }; clearEasel(w, work); c.money += price; w.stats.sales++; w.stats.earned += price;
   entry(w, `Sold "${work.title}"`, price);
   note(w, `${c.name}'s painting "${work.title}" sold for ${cash(price)}.`, 'money');
   journal(w, `"${work.title}" sold for ${cash(price)}. Somebody I will never meet is going to look at it every day. I hope they look at it properly. The money is in my account.`, 'money');

@@ -4,7 +4,7 @@
 // talks about it, writes about it and wonders about it. Then, after a while, something else catches its eye.
 // The subject is random, tilted a little by what kind of cat it is.
 import { pick, clamp, uid } from './util.js';
-import { dayOf, journal, note, clockStr } from './world.js';
+import { dayOf, journal, note, clockStr, logChoice } from './world.js';
 import { scaled } from './pace.js';
 import { feel } from './feelings.js';
 import { random } from './rng.js';
@@ -85,7 +85,7 @@ export function claudeInterest(w, ask, answer) {
   if (!topic) return startInterest(w, offlineTopic(w));
   const why = String((answer && answer.why) || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200);
   const angles = (Array.isArray(answer && answer.angles) ? answer.angles : []).map(cleanTopic).filter(x => x.length >= 3);
-  w.stats.claudeInterests = (w.stats.claudeInterests || 0) + 1;
+  w.stats.claudeInterests = (w.stats.claudeInterests || 0) + 1; logChoice(w, 'interest', `${topic}${why ? ' - ' + why : ''}${angles.length ? ' (looking up: ' + angles.join(', ') + ')' : ''}`);
   return startInterest(w, topic, { why, angles, by: 'claude' });
 }
 

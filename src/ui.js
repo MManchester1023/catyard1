@@ -113,6 +113,9 @@ function wantsSections(w) {
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Wants' }),
     c.wants.length ? c.wants.map(x => h('div', { class: 'item' }, h('div', { text: cap(x.text) }), h('div', { class: 'muted small', text: `since day ${x.day}` }), meter(x.strength))) : h('div', { class: 'muted', text: 'Nothing right now.' }),
     h('div', { class: 'muted small', text: `${c.doneWants} fulfilled so far` })));
+  const ch = c.choices || [];
+  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What Claude decided' }),
+    ch.length ? ch.slice(0, 12).map(x => h('div', { class: 'item' }, h('div', { class: 'small', text: `${cap(x.kind)}: ${x.text}` }), h('div', { class: 'muted small', text: `day ${x.day}, ${x.time}` }))) : h('div', { class: 'muted small', text: 'Nothing yet. When Claude is connected, the cat\u2019s choices (what it does, wants, paints and reads about, and why) are listed here.' })));
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Painting' }),
     w.easelMade ? [h('div', { class: 'big', text: `Level ${lvl}: ${LEVEL_NAMES[lvl]}` }),
       lvl < 12 ? [meter((a.xp - cur) / (next - cur)), h('div', { class: 'muted small', text: `${Math.round(next - a.xp)} xp to ${LEVEL_NAMES[lvl + 1]}` })] : null,
