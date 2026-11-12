@@ -94,7 +94,7 @@ export function scratchTree(w) {
 // ---------- the cushion: once it has worked out where string comes from, it can pull some out of its bed ----------
 export const bedCap = w => Math.max(1, Math.round(2 / paceOf(w)));
 export const bedRoom = w => { const c = w.cat; return (c.sDay === dayOf(w) ? c.sToday || 0 : 0) < bedCap(w); };
-export const stringWanted = w => knows(w, 'string') && (w.cat.inv.twine || 0) < 4 && goals(w).some(id => (shortfall(w, id).twine || 0) > 0);
+export const stringWanted = w => knows(w, 'string') && (w.cat.inv.twine || 0) < 4 && (goals(w).some(id => (shortfall(w, id).twine || 0) > 0) || paintingToFrame(w));
 export function scratchBed(w) {
   const c = w.cat;
   if (!bedRoom(w) || c.inv.twine >= INV_CAP || random() > 0.5 * Math.min(1, barkLuck(w) * 2)) { feel(w, ['act:bed'], { joy: 0.01 }, 'content'); return null; }
@@ -126,12 +126,12 @@ function buildTable(w) {
 // a spare oak frame goes round a painting
 export function hangSpareFrames(w) {
   const c = w.cat; let n = 0;
-  while (frameSpare(w) > 0 && paintingToFrame(w)) {
+  while (frameSpare(w) > 0 && paintingToFrame(w) && (c.inv.twine || 0) >= 1) { // (a frame needs a piece of string to hold it on)
     const best = unlistedWork(w); if (!best) break; // (the best one it has not framed yet: a framed painting goes up for sale)
-    c.inv.frame--; c.crafted.unshift({ id: uid(), recipe: 'frame', name: 'framed painting', work: best.title, day: dayOf(w), time: clockStr(w) }); if (c.crafted.length > 3000) c.crafted.pop();
+    c.inv.frame--; c.inv.twine--; c.crafted.unshift({ id: uid(), recipe: 'frame', name: 'framed painting', work: best.title, day: dayOf(w), time: clockStr(w) }); if (c.crafted.length > 3000) c.crafted.pop();
     best.status = 'forSale'; best.listed = { day: dayOf(w), time: clockStr(w) }; best.price = priceOf(best); clearEasel(w, best);
     c.art.xp += 6; n++;
-    journal(w, `I put a frame round "${best.title}" and set it out for sale. It looks like it matters now. Someone will want it.`, 'craft'); note(w, `${c.name} framed "${best.title}" and put it up for sale.`, 'craft');
+    journal(w, `I tied a frame round "${best.title}" with a length of string and set it out for sale. It looks like it matters now. Someone will want it.`, 'craft'); note(w, `${c.name} framed "${best.title}" and put it up for sale.`, 'craft');
   }
   return n;
 }

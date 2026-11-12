@@ -30,7 +30,6 @@ export function moonWish(w) {
 // every sixth of a day: does it start wondering about something?
 export function secretsRoll(w) {
   const c = w.cat, k = c.mem.known, T = c.traits, day = dayOf(w), pace = paceOf(w);
-  if (!w.catTree && !c.peekUrge && day >= 2 && random() < PACE.peekChance * (0.6 + T.curious * 0.8) / pace) { c.peekUrge = true; c.thoughtHint = 'peekUrge'; }
   const m = w.mysteries.tree;
   if (!m.interest && !m.solved && k.tree && T.curious > 0.75 && day >= 3 && random() < PACE.treeUrge / pace) {
     m.interest = true; m.seen = true;

@@ -62,6 +62,8 @@ export function genWants(w) {
     const d = r.desire(w); if (d <= 0) continue;
     if (knows(w, id)) cand.push({ kind: 'craft', key: id, recipe: id, w: d }); else if (c.mem.known.tablet) cand.push({ kind: 'learn', key: id, recipe: id, w: d * 0.8 });
   }
+  const sl = cand.find(x => x.kind === 'learn' && x.key === 'string'); // (where string comes from is a plain need, not a choice: it goes and looks it up)
+  if (sl) { const { w: _w, ...rest } = sl; takeWant(w, rest); return; }
   if (!cand.length) return;
   // With Claude connected it chooses its own next goal from what is possible, and says why; otherwise (or if Claude
   // does not answer in time) the weights decide as they always did.

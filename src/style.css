@@ -201,3 +201,9 @@ h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing
 .sec.fold, .fold { border-color: color-mix(in srgb, var(--ink) 28%, transparent); padding-bottom: 12px; }
 .sec.fold:last-child { border-color: color-mix(in srgb, var(--ink) 28%, transparent); margin-bottom: 16px; }
 .scrollbox { padding-bottom: 6px; }
+
+.post { margin-bottom: 10px; }
+.post summary { list-style: revert; }
+.post .ptitle { display: inline-flex; gap: 8px; align-items: baseline; }
+.post .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 2px; }
+.post[open] summary { margin-bottom: 8px; }

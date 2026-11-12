@@ -16,7 +16,7 @@ import { feel } from './feelings.js';
 import { shiftOf, deepNightOf, birdChance } from './temper.js';
 import { frogSpot, frogName, frogDrop, frogVisited } from './frog.js';
 import { missedHunt, caughtSomething } from './upset.js';
-import { CAT_TREE, catTreeSpot, foundCatTree } from './cattree.js';
+import { CAT_TREE, catTreeSpot } from './cattree.js';
 import { enjoyAct, favStart, foundThing } from './finds.js';
 import { noteAct } from './character.js';
 import { intentFulfilled } from './intent.js';
@@ -110,7 +110,6 @@ export function start(w, type, opts = {}) {
     case 'frog': { const f = frogSpot(w); a.tx = f.cx; a.ty = f.cy; a.dur = rnd(16, 24); a.nextBoop = rnd(3, 5); a.boopT = 0; think(w, 'frogGo'); break; }
     case 'fish': { const p = o.pond; a.tx = clamp(w.fish ? w.fish.x : p.x, p.x - p.rx * 0.6, p.x + p.rx * 0.6); a.ty = p.y + p.ry + 12; a.dur = rnd(16, 24); a.strikes = 0; c.fishAt = w.clock; think(w, 'fishGo'); break; }
     case 'listen': { a.tx = o.tree.x - 40; a.ty = o.tree.y + 24; a.dur = rnd(14, 22); c.listenAt = w.clock; think(w, 'listenGo'); break; }
-    case 'peek': { a.tx = CAT_TREE.x + 14; a.ty = CAT_TREE.y + 6; a.sf = 1; a.dur = rnd(4, 6); think(w, 'peekGo'); break; }
     case 'cattree': { const s = catTreeSpot(); a.tx = s.x; a.ty = s.y; a.sf = 1; a.dur = rnd(18, 36); c.catTreeAt = w.clock; think(w, 'catTreeGo'); break; }
     case 'wash': { a.from = k.pond && random() < 0.5 ? 'pond' : 'water'; aim(a.from); c.washAt = w.clock; think(w, 'washGo'); break; }
   }
@@ -139,7 +138,6 @@ export function describe(w) {
     case 'paint': return `Painting ${subjectLabel(a.subject)}`;
     case 'gaze': return a.stars ? 'Gazing at the stars' : 'Gazing at the moon';
     case 'investigate': return a.kind === 'ripples' ? 'Watching the pond' : a.kind === 'tree' ? 'Sniffing around the roots of the oak' : 'Chasing the sparks';
-    case 'peek': return a.phase === 'go' ? 'Wondering what is behind the cabin' : 'Peering round the back of the cabin';
     case 'cattree': return a.phase === 'go' ? 'Heading for the cat tree' : a.phase === 'do' ? 'Sitting at the top of the cat tree' : 'Climbing the cat tree';
     case 'attention': return 'Sitting at the glass';
     case 'offering': return a.phase === 'go' ? 'Checking out something on the mat' : a.offer.kind === 'note' ? 'Reading a note' : `Inspecting ${offerLabel(a.offer)}`;
@@ -293,11 +291,6 @@ export function actTick(w, dt) {
       break;
     }
     case 'beg': if (a.phase === 'go') { c.pose = 'walk'; if (arrive(70)) toDo(); } else { c.pose = 'sit'; if (o.bowl.food > 0.05 || a.t > a.dur) done(w); } break;
-    case 'peek': {
-      if (a.phase === 'go') { c.pose = 'walk'; if (arrive(66)) { toDo(); c.face = -1; } break; }
-      c.pose = a.t < 2 ? 'crouch' : 'sit'; if (a.t > a.dur) { foundCatTree(w, 'found'); done(w); }
-      break;
-    }
     case 'cattree': {
       const tz = CAT_TREE.top;
       if (a.phase === 'go') { c.pose = 'walk'; if (arrive(70)) { a.phase = 'climb'; a.t = 0; c.face = 1; } }

@@ -20,8 +20,8 @@ export function moonPos(w) {
 export function makeObjects() {
   return {
     house: { x: 150, y: 292, fp: { x0: 78, x1: 222, y0: 238, y1: 288 } },
-    bowl: { x: 318, y: 352, food: 0.5 },
-    water: { x: 366, y: 358 },
+    bowl: { x: 258, y: 326, food: 0.5 },
+    water: { x: 304, y: 330 },
     cushion: { x: 222, y: 380 },
     post: { x: 258, y: 488 },
     pond: { x: 640, y: 470, rx: 84, ry: 30 },

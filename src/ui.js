@@ -286,13 +286,16 @@ export function renderStash(el, w) {
 
 // ----- Blog tab: what the cat writes on the tablet -----
 // fresh: ids of the posts that were unread when the tab was opened (they get a 'new' tag)
+const blogOpen = new Map();
 export function renderBlog(el, w, fresh = new Set()) {
   const c = w.cat, b = w.blog;
   if (!b || !b.started) { el.replaceChildren(h('div', { class: 'muted', text: b && b.draft ? `${c.name} has decided to start a blog and is about to write the first post at the tablet.` : `${c.name} has not started a blog yet. It needs to have found the tablet and have a few days of life to write about.` })); return; }
-  const post = p => h('article', { class: 'post' },
-    h('h3', {}, p.title, fresh.has(p.id) ? h('span', { class: 'chip new', text: 'new' }) : null),
-    h('div', { class: 'muted small', text: `Day ${p.day}, ${p.time}${p.by === 'claude' ? ' · written with Claude' : ''}` }),
-    h('div', { class: 'chips' }, h('span', { class: 'chip', text: 'feeling ' + p.mood }), p.want ? h('span', { class: 'chip', text: 'wants to ' + p.want }) : null),
+  // every post is folded except the newest; the ones you open or close yourself stay that way
+  const newest = b.posts[0] && b.posts[0].id;
+  const post = p => h('details', { class: 'post fold', open: (blogOpen.has(p.id) ? blogOpen.get(p.id) : p.id === newest) ? true : null, ontoggle: e => { blogOpen.set(p.id, e.target.open); } },
+    h('summary', {}, h('div', { class: 'ptitle' }, h('b', { text: p.title }), fresh.has(p.id) ? h('span', { class: 'chip new', text: 'new' }) : null),
+      h('div', { class: 'muted small', text: `Day ${p.day}, ${p.time}${p.by === 'claude' ? ' · written with Claude' : ''}` }),
+      h('div', { class: 'chips' }, h('span', { class: 'chip', text: 'feeling ' + p.mood }), p.want ? h('span', { class: 'chip', text: 'wants to ' + p.want }) : null)),
     ...p.body.split('\n\n').map(t => h('p', { text: t })));
   el.replaceChildren(
     h('div', { class: 'sec' }, h('div', { class: 'big', text: b.title }), h('div', { class: 'muted small', text: `by ${c.name} · ${b.posts.length} post${b.posts.length === 1 ? '' : 's'} · what it does, thinks, feels and wants${b.draft ? ' · writing the next one' : ''}` })),

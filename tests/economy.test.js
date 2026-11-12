@@ -26,7 +26,7 @@ const paint = (w, n, score = 0.5) => { for (let i = 0; i < n; i++) w.cat.art.wor
   assert.ok(!paintingToFrame(w), 'nothing to frame without paintings');
   paint(w, 5, 0.3); c.art.works[2].score = 0.9; const best = c.art.works[2];
   assert.equal(unlistedWork(w), best, 'it frames its best first');
-  c.inv.frame = 5; hangSpareFrames(w);
+  c.inv.frame = 5; hangSpareFrames(w); assert.equal(forSale(w).length, 0, 'no string, no framing'); c.inv.twine = 5; hangSpareFrames(w); assert.equal(c.inv.twine, 5 - FOR_SALE_MAX, 'each frame takes a piece of string');
   assert.equal(forSale(w).length, FOR_SALE_MAX, `only ${FOR_SALE_MAX} are out for sale at a time`); assert.equal(best.status, 'forSale');
   assert.ok(w.journal.some(e => /for sale/.test(e.text)) && w.log.some(e => /put it up for sale/.test(e.text)), 'and says so');
   assert.equal(c.inv.frame, 2, 'frames beyond that are kept');
@@ -52,7 +52,7 @@ const paint = (w, n, score = 0.5) => { for (let i = 0; i < n; i++) w.cat.art.wor
 {
   // a painting that is framed for sale, or sold, is taken off the easel; a save from before is tidied
   const w = mk(), c = w.cat; ensureEconomy(w); paint(w, 2, 0.6); const [a, b] = c.art.works;
-  w.easel = { work: a, progress: 1 }; c.inv.frame = 2; hangSpareFrames(w);
+  w.easel = { work: a, progress: 1 }; c.inv.frame = 2; c.inv.twine = 2; hangSpareFrames(w);
   assert.ok(a.status === 'forSale' || b.status === 'forSale'); const listed = c.art.works.find(x => x.status === 'forSale');
   w.easel = { work: listed, progress: 1 }; sell(w, listed); assert.equal(w.easel, null, 'sold: gone from the easel');
   w.easel = { work: b, progress: 1 }; const other = c.art.works.find(x => x !== b && !x.status) || b; w.easel = { work: other, progress: 1 }; if (!other.status) assert.ok(w.easel, 'an unsold painting stays on the easel');

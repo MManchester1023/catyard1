@@ -187,7 +187,6 @@ export const ACTIVITIES = [
     score: x => 0.78 + wantPull(x.w, ['craft']) * 0.5 + (x.bob ? 0.35 : 0) + (x.nc === 'easel' ? easelUrge(x.w) * 0.5 : 0) + x.N() },
 
   // ----- behind the cabin, and the yard's furniture (each used for its own reasons) -----
-  { key: 'peek', when: x => x.c.peekUrge && !x.w.catTree && x.dry && x.awake && x.n.tired < 0.88 && x.out, score: x => 1.25 + x.N() },
   { key: 'cattree', // (the first time, it wants to try it out straight away)
     when: x => x.w.catTree && x.dry && x.awake && x.n.tired < 0.9 && x.out && (x.w.clock - (x.c.catTreeAt || -1e9)) / x.w.dayLen > 0.12,
     score: x => 0.2 + x.T.lazy * 0.25 + x.T.bold * 0.2 + (x.n.fear > 0.3 ? 0.25 : 0) + (x.gf ? 0.25 : 0) + (x.w.catTree && !x.c.catTreeAt ? 0.9 : 0) + (coinActive(x.w) ? 0.1 : 0) + x.N() },

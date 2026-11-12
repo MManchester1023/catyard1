@@ -150,7 +150,8 @@ const hold = w => { w.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; w
   assert.deepEqual(shortfall(w, 'feeder'), { frame: 1, bark: 2, twig: 1, twine: 1 });
   w.cat.recipes.feeder = null; w.cat.recipes.cattree = null; delete w.cat.ideas.feeder; delete w.cat.ideas.cattree; c.inv.frame = 2; assert.equal(frameSpare(w), 2);
   c.art.count = 2; c.art.works = [{ id: 'a', title: 'First', score: 0.4 }, { id: 'b', title: 'Second', score: 0.8 }]; const xp = c.art.xp;
-  assert.equal(hangSpareFrames(w), 2); assert(c.inv.frame === 0 && c.crafted.filter(x => x.recipe === 'frame' && x.work).length === 2 && c.art.xp > xp, 'both paintings got a frame');
+  assert.equal(hangSpareFrames(w), 0, 'a frame needs a piece of string: with none, nothing is framed'); assert.equal(c.inv.frame, 2);
+  c.inv.twine = 2; assert.equal(hangSpareFrames(w), 2); assert(c.inv.twine === 0 && c.inv.frame === 0 && c.crafted.filter(x => x.recipe === 'frame' && x.work).length === 2 && c.art.xp > xp, 'both paintings got a frame');
   assert.equal(hangSpareFrames(w), 0);
   ok('frames: the feeder and cat tree are built out of them too, and spares go round paintings');
 }

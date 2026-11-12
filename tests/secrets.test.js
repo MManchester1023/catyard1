@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { makeWorld, tick } from '../src/sim/sim.js';
 import { start } from '../src/sim/acts.js';
-import { decide } from '../src/sim/mind.js';
+import { decide, ACTIVITIES } from '../src/sim/mind.js';
 import { unlockRecipe, scratchBed, stringWanted, bedRoom, bedCap, finishCraft, collectDrop, markFound } from '../src/sim/craft.js';
 import { addWant } from '../src/sim/wants.js';
 import { knows } from '../src/sim/recipes.js';
@@ -99,20 +99,17 @@ const calm = (w, hour = 10) => {
 
 // ---- the cat tree
 {
-  const w = calm(mk()); w.cat.peekUrge = true; let d = decide(w, null); assert.equal(d.type, 'peek', 'it goes to look behind the cabin');
-  run(w, 400); assert.ok(w.catTree && w.catTree.how === 'found' && !w.cat.peekUrge, 'it finds a cat tree');
-  assert.ok(w.journal.some(j => /cat tree/.test(j.text)) && w.log.some(e => /cat tree/.test(e.text)));
+  const w = calm(mk()); w.cat.peekUrge = true; assert.notEqual(decide(w, null).type, 'peek', 'nothing sends it to look behind the cabin any more');
+  assert.ok(!ACTIVITIES.some(x => x.key === 'peek'), 'there is no peek activity');
   const w2 = mk(); w2.cat.needs.lonely = 0; w2.catTree = { x: 50, y: 300, how: 'found', day: 1 }; let sat = 0; run(w2, 12000 * 2); assert.ok((w2.stats.catTreeSits || 0) >= 2, 'it sits in it: ' + w2.stats.catTreeSits);
   assert.ok(!foundCatTree(w2, 'found'), 'there is only one');
   const m = calm(mk()); markFound(m, 'cattree'); unlockRecipe(m, 'cattree', 'Cat tree'); m.table = { x: 1, y: 1, day: 1 }; Object.assign(m.cat.inv, { frame: 3, bark: 2, twig: 5, twine: 3 }); addWant(m, { kind: 'craft', key: 'cattree', recipe: 'cattree' });
   assert.ok(knows(m, 'cattree')); assert.ok(finishCraft(m, 'cattree') && m.catTree && m.catTree.how === 'made' && m.cat.inv.bark === 0, 'it builds one from bark, twigs and twine');
   assert.ok(!m.cat.wants.some(x => x.recipe === 'cattree'), 'and stops wanting one');
   const r = deserialize(serialize(m)); assert.ok(r.catTree && r.catTree.how === 'made', 'saved');
-  // the odds are exact, so test the threshold rather than sampling (sampling flaked about 1 run in 100)
-  const probe = f => { const x = mk(); x.clock = 3 * x.dayLen; const edge = PACE.peekChance * (0.6 + x.cat.traits.curious * 0.8); setRandom(() => edge * f); try { secretsRoll(x); } finally { setRandom(null); } return !!x.cat.peekUrge; };
-  assert.ok(probe(0.5) && !probe(1.5), 'the roll succeeds just under the stated chance and fails just over it'); const perDay = PACE.peekChance * (0.6 + 0.5 * 0.8) * 6; assert.ok(perDay > 0.008 && perDay < 0.04, 'about 1-3% a day: ' + (perDay * 100).toFixed(1) + '%');
+  { const x = mk(); x.clock = 3 * x.dayLen; for (let i = 0; i < 4000; i++) secretsRoll(x); assert.ok(!x.cat.peekUrge, 'it never starts wondering what is behind the cabin'); }
   assert.ok(/cat tree/.test(runCommand(mk(), 'secret status', { admin: true }).lines.join(' ')));
-  ok('rare to wonder what is behind the cabin; finds or builds a cat tree; sits in it; saved');
+  ok('builds a cat tree (nothing hides one behind the cabin); sits in it; saved');
 }
 
 // ---- the oak and the coin

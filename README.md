@@ -98,6 +98,8 @@ The cat has hunger, thirst, tiredness, boredom, loneliness and a creative urge. 
 - **Furniture.** The scratching post, yarn, sunbeam and cushion each have their own use (claws, play, warmth, naps).
 - **Hunting.** It stalks mice, can fish when a fish shows itself in the pond, and now and then catches a bird (see [Birds](#birds)). A caught mouse fills hunger and eases boredom.
 - **The glass.** Occasionally it comes to the glass for your attention.
+- **The bowls.** The food and water bowls sit just in front of the house, at the end of the stepping stones.
+- **Thoughts.** A thought stays up long enough to read. If thoughts come faster than that, the next one waits its turn (only the two newest are kept, and one that has waited 20 seconds is dropped). Everything it thinks is still in the History.
 
 ### Quirks
 
@@ -156,7 +158,7 @@ The cat wonders about the moon, the ripples in the pond and the sparks that danc
 
 The cat scratches the oak, and now and then a piece of **bark** or a **twig** comes loose (at most two pieces a day). Birds drop parts too. It can carry 12 of each.
 
-The **oak frame** is a building part: two pieces of bark make one, and bigger things are built from frames. A cat makes the frames a project needs without being asked, and also makes them for its paintings: a painting in a frame is **put up for sale** (see [Money](#money-selling-paintings-and-the-tablet-shop)). Only three framed paintings are out for sale at a time; it frames the best one it has not framed yet.
+The **oak frame** is a building part: two pieces of bark make one, and bigger things are built from frames. A cat makes the frames a project needs without being asked, and also makes them for its paintings: a painting in a frame is **put up for sale** (see [Money](#money-selling-paintings-and-the-tablet-shop)). Framing a painting also takes **one piece of string** to hold the frame on. Only three framed paintings are out for sale at a time, and it frames the best one it has not framed yet. If it has a painting ready but no string, it looks up where string comes from (or, once it knows, pulls some from the cushion) before it will buy any.
 
 **Recipes are worked out, not handed over.** A new cat knows no recipes. It gathers bark and twigs for the thing it wants most (the easel first, then the table), and the moment it is carrying what a thing is made of, the recipe comes to it: "I am carrying four bark and three twigs, and it came to me what that is for: an easel." (A frame counts as the two bark inside it.) Until then the Crafting tab does not list it.
 
@@ -185,7 +187,7 @@ Everything the cat has kept, favourite first. The ranking comes from what it col
 
 ## Money: selling paintings and the tablet shop
 
-A painting the cat has framed is **for sale**. Now and then (on average every 1.1 days, `PACE.saleDays`) a buyer turns up and it sells, for $4 plus up to $46 for how good it is (`PACE.priceBase`, `PACE.priceScore`), give or take a fifth: a poor painting fetches a few dollars, a fine one around $40. The money goes into the cat's account, which you can see in the **Tablet** tab under Account (and with `account`). A painting is priced when it is put up for sale, and sold paintings stay in the Gallery with their price and dates. The money is for the game only.
+A painting the cat has framed is **for sale**. Now and then (on average every 1.1 days, `PACE.saleDays`) a buyer turns up and it sells, for $4 plus up to $46 for how good it is (`PACE.priceBase`, `PACE.priceScore`), give or take a fifth: a poor painting fetches a few dollars, a fine one around $40. The cat is cheered up by every sale: its mood lifts, it feels less lonely and less in need of making something, and it says so at once. The money goes into the cat's account, which you can see in the **Tablet** tab under Account (and with `account`). A painting is priced when it is put up for sale, and sold paintings stay in the Gallery with their price and dates. The money is for the game only.
 
 When it has money it sits down at the tablet and uses the **shop**, which currently sells:
 
@@ -234,7 +236,7 @@ If it is held up for want of bark or twigs and cannot afford to buy them, it ask
 
 ## The blog
 
-Once the cat has found the tablet and has a few days to write about (around day 4, or day 2 for a Techie), it starts a blog with a name that suits its quirk. Each post is drafted from what has happened since the last one, in the cat's own voice, and typed up the next time it sits at the tablet: about one post every day or two. The **Blog** tab appears once the blog has started and shows a dot for unread posts. The cat notices when you read it, and that cheers it up a little.
+Once the cat has found the tablet and has a few days to write about (around day 4, or day 2 for a Techie), it starts a blog with a name that suits its quirk. Each post is drafted from what has happened since the last one, in the cat's own voice, and typed up the next time it sits at the tablet: about one post every day or two. The **Blog** tab appears once the blog has started and shows a dot for unread posts. Posts are folded: only the newest is open, and a folded post still shows its title, date, feeling and what it wants. Open or close any of them and they stay that way. The cat notices when you read it, and that cheers it up a little.
 
 ## History
 
@@ -250,7 +252,7 @@ The whole history lives under **Cat → Memory**, below what the cat remembers.
 
 Some things the cat has to find out for itself.
 
-- **The cat tree.** Behind the cabin. A cat can wander round there by chance, or build one after looking it up on the tablet. It then climbs it and watches the yard.
+- **The cat tree.** The cat builds one after looking it up on the tablet. It then climbs it and watches the yard. (Nothing is hidden behind the cabin any more.)
 - **The shiny coin.** A cat with curiosity over 75 may start wondering about the old oak. If it investigates for days it finds a gold coin in the roots, which ranks first in the stash. It is delighted for two days, and nothing upsets it.
 - **The moon.** Its last step is the frog (about nine visits). Afterwards, on full-moon nights, it can make a *moon wish*: something it wished for turns up sparkling in the stash.
 - **The dancing sparks** only become something it wants to understand after it has seen one.
@@ -345,7 +347,7 @@ Type in the chat to talk to the cat. Press **Admin** (or type `admin on`) to run
 | `craft give\|learn\|now\|table` | Hand it materials, teach a recipe, build something now |
 | `art level\|paint [subject]\|clear` | Painting skill, paint something now, clear the gallery |
 | `frog meet\|out\|hide\|visit` | The pond frog |
-| `secret status\|cattree\|peek\|oak\|coin\|moon\|moonwish\|stars\|starsdone\|meteor\|starwish\|upset <why>` | Trigger or inspect the secrets and being upset |
+| `secret status\|cattree\|oak\|coin\|moon\|moonwish\|stars\|starsdone\|meteor\|starwish\|upset <why>` | Trigger or inspect the secrets and being upset (`secret cattree` puts a cat tree behind the cabin) |
 | `mind mood <kind>` / `mind intent <what>` / `mind whim` / `mind favs` | Set its mood or intention, see its favourites |
 | `interest` / `interest start [topic]` / `interest done` | Its special interest |
 | `wish add <type> [color]` / `wish clear` | Plant or clear a wish note |
@@ -405,6 +407,6 @@ When releasing, update the build line in `src/sim/version.js`.
 - **The page filter** is a word list, not moderation, and Wikipedia text can contain anything.
 - **Recipe pages** are matched by title and keyword. If Wikipedia has no matching page, the cat works the recipe out itself.
 - **Pacing** is tuned by simulating many cats and days, not by watching one for weeks. If something takes too long or too short a time, `pace` and `src/sim/pace.js` are the dials.
-- **Tests are seeded**, so they give the same result every run. They also pass on seeds 1 to 5, 7 to 9, 11 and 12. Two seeds are known to trip a statistical test: `CAT_SEED=6` (the Van Gogh balance band, hungry too much of the time) and `CAT_SEED=10` (the night owl is up less after midnight than the test expects). If another seed turns one up, keep it as a reproducer.
+- **Tests are seeded**, so they give the same result every run. They also pass on seeds 1 to 12. A statistical test can still fail on some other seed; if `CAT_SEED=n` turns one up, keep that seed as a reproducer.
 - **Not reproduced:** a report of the mat vanishing when the table is built. If you see it, note what happened just before.
 - The world is a single yard with one cat. It is deliberately small.

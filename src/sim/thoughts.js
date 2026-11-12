@@ -87,8 +87,6 @@ const T = {
   loungeBeam: ['The sunbeam is exactly my size.', 'Warm patch. I do not need to explain myself.', 'Ten minutes. Maybe twelve.'],
   loungeBed: ['The cushion has been waiting for me.', 'Soft. Soft. Soft.', 'I am not asleep. I am resting my eyes.'],
   sawSparks: ['What are THOSE? Little lights. By the fence.', 'Something is glowing along the fence and nobody has said a word.'],
-  peekUrge: ['What is behind the cabin? I have never looked.', 'There is a whole side of the cabin I have not seen.'],
-  peekGo: ['Round the back. Nobody ever goes round the back.', 'Something about that corner of the yard...'],
   catTreeFound: ['A cat tree. For me. Nobody asked me but it is for me.', 'It was here the whole time. Behind the cabin. Waiting.'],
   catTreeMade: ['I built it. I am sitting in it. It holds.', 'A cat tree, made by a cat, for a cat.'],
   catTreeGo: ['Up. Higher than the post. Higher than anything.', 'My tree. My box. My top.'],

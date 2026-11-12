@@ -48,7 +48,7 @@ const HELP = {
   want: 'want list | want add <text> | want done <n> | want clear',
   quirk: 'quirk item <bottlecap|feather|button|marble> | quirk color <color> | quirk taste <pile|rows|ring|rainbow> | quirk trait <collector|vangogh|hunter|nightowl|techie|garfield|builder|none>',
   frog: 'frog (status) | frog meet (the cat finds the frog now) | frog out | frog hide | frog visit',
-  secret: 'secret status | secret cattree (put the cat tree behind the cabin) | secret peek (the cat wonders what is behind the cabin) | secret oak (it starts wondering about the oak) | secret coin (it finds the coin now) | secret moon (the moon secret is understood) | secret moonwish (a full-moon wish arrives now) | secret stars (it starts wondering about the stars) | secret starsdone (the stars are understood: falling stars grant wishes) | secret meteor (a shooting star falls now, and the cat sees it) | secret starwish (a star wish arrives now) | secret upset <why> (make it upset)',
+  secret: 'secret status | secret cattree (put a cat tree behind the cabin) | secret oak (it starts wondering about the oak) | secret coin (it finds the coin now) | secret moon (the moon secret is understood) | secret moonwish (a full-moon wish arrives now) | secret stars (it starts wondering about the stars) | secret starsdone (the stars are understood: falling stars grant wishes) | secret meteor (a shooting star falls now, and the cat sees it) | secret starwish (a star wish arrives now) | secret upset <why> (make it upset)',
   pace: 'pace [X] - how slowly the cat works things out (theories, the sparks, the frog, recipes): 1 is the default, 2 is twice as slow, 0.5 twice as fast. Range 0.25 to 4',
   stash: 'stash list | stash add <type> <color> [n] | stash steal [n] | stash clear',
   art: 'art level <1-12> | art paint [subject] | art clear (delete the gallery). Subjects: moon pond oak stash sunbeam rain flowers bird yard window, or made-up pictures: swirl splatter waves blocks dots bloom',
@@ -168,7 +168,6 @@ export function runCommand(w, line, ctx = {}) {
     case 'secret': {
       const sub = (a[0] || 'status').toLowerCase(), m = w.mysteries;
       if (sub === 'cattree') return L(foundCatTree(w, 'found') ? `A cat tree now stands behind the cabin.` : 'There already is one.');
-      if (sub === 'peek') { c.peekUrge = true; return L(`${c.name} is wondering what is behind the cabin.`); }
       if (sub === 'oak') { m.tree.interest = true; m.tree.seen = true; return L(`${c.name} has started wondering about the roots of the oak.`); }
       if (sub === 'coin') { m.tree.interest = true; m.tree.seen = true; if (!m.tree.solved) solve(w, 'tree'); return L(c.coinDay ? 'The coin is found.' : 'The coin is found.'); }
       if (sub === 'moon') { const mm = m.moon; mm.theory = mm.theory || 'The moon is watching.'; mm.sawPhases = true; if (!w.frog) meetFrog(w); w.frog.visits = Math.max(w.frog.visits, frogVisitsForMoon(w)); return L(moonFinal(w) ? 'The moon secret is understood: full moons now grant a wish.' : 'The moon is already understood.'); }
@@ -178,7 +177,7 @@ export function runCommand(w, line, ctx = {}) {
       if (sub === 'meteor') { if (!m.stars.solved) return L('The stars have to be understood first (secret starsdone).'); w.starWishDay = -99; launchMeteor(w, true); return L('A shooting star is falling. If it is dark and clear the cat will see it.'); }
       if (sub === 'starwish') { if (!m.stars.solved) return L('The stars have to be understood first (secret starsdone).'); starWish(w); return L('Something glittering is lying in the yard.'); }
       if (sub === 'upset') { const ok = upsetBy(w, 'admin' + random(), 'Somebody made me upset on purpose, I think.', { level: 0.6, days: 0.3, note: 'an admin did it.' }); return L(ok ? `${c.name} is upset.` : 'It would not be upset (the coin?).'); }
-      return L([`cat tree: ${w.catTree ? w.catTree.how + ' on day ' + w.catTree.day : 'not yet'}${c.peekUrge ? ' (wondering what is behind the cabin)' : ''}`,
+      return L([`cat tree: ${w.catTree ? w.catTree.how + ' on day ' + w.catTree.day : 'not yet'}`,
         `oak: ${m.tree.solved ? 'coin found' : m.tree.interest ? Math.floor(m.tree.clues) + ' clues' : 'not interested'} | curiosity ${Math.round(c.traits.curious * 100)}${c.traits.curious > 0.9 ? ' (works out the moon and the oak twice as fast)' : ''}`,
         `stars: ${m.stars.solved ? 'understood, shooting stars grant wishes (' + (w.stats.starWishes || 0) + ' so far' + (wishReady(w) ? ', next one is free' : '') + ')' : m.stars.interest ? Math.floor(m.stars.clues) + ' clues' + (m.stars.enough ? ', needs the tablet' + (m.stars.read ? ' (read)' : '') : '') : 'not interested, ' + (m.stars.nights || 0) + ' nights of looking up'}`,
         `moon: ${m.moon.solved ? 'understood, wishes on full moons (' + (w.stats.moonWishes || 0) + ' so far)' : 'frog visits ' + (w.frog ? w.frog.visits : 0) + ' of ' + frogVisitsForMoon(w) + (m.moon.sawPhases ? '' : ', phases not all seen yet')}`]);

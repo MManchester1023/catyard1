@@ -1,12 +1,12 @@
 // Money. A painting the cat has framed is for sale, and sells now and then, for what it is worth. The money goes into the
 // cat's account and it spends it at the shop on the tablet: toys, and the bark, twigs and twine it needs to make things.
 // An order takes a little while and then turns up on the offering mat as a parcel (offerings.js), which the cat opens.
-import { an, SHOP, shopItem, shopLabel, matText } from './util.js';
+import { an, pick, SHOP, shopItem, shopLabel, matText } from './util.js';
 import { note, journal, dayOf, clockStr, clearEasel } from './world.js';
 import { PACE, priceOf } from './pace.js';
 import { feel } from './feelings.js';
 import { gatherNeed, rawShortfall, goals } from './craft.js';
-import { RECIPES, onlyTwineShort } from './recipes.js';
+import { RECIPES, onlyTwineShort, paintNeedsString } from './recipes.js';
 import { MAX_ON_MAT, ensureOfferState, leaveParcel, toyTaken, treatTaken } from './offerings.js';
 import { random } from './rng.js';
 
@@ -35,7 +35,10 @@ export function sell(w, work, price = work.price || priceOf(work)) {
   entry(w, `Sold "${work.title}"`, price);
   note(w, `${c.name}'s painting "${work.title}" sold for ${cash(price)}.`, 'money');
   journal(w, `"${work.title}" sold for ${cash(price)}. Somebody I will never meet is going to look at it every day. I hope they look at it properly. The money is in my account.`, 'money');
-  feel(w, ['money'], { joy: 0.12 + Math.min(0.1, price / 400) }, 'proud');
+  // a sale is a good moment: it cheers it up and warms it, it lifts the itch to make something, and it says so there and then
+  feel(w, ['money'], { joy: 0.18 + Math.min(0.12, price / 300), lonely: -0.08, fun: -0.08 }, 'proud');
+  c.needs.create = Math.max(0, c.needs.create - 0.1); c.glowUntil = Math.max(c.glowUntil || 0, w.clock + w.dayLen * 0.1);
+  if (!c.pose || c.pose !== 'sleep') { c.thought = pick([`"${work.title}" sold for ${cash(price)}. Somebody wants what I made!`, `Sold! ${cash(price)}, for something I painted. I am glowing.`, `A stranger liked "${work.title}" enough to pay ${cash(price)}. I feel wonderful.`]); c.thoughtId++; c.thoughtAt = w.clock; }
   c.thoughtHint = 'sold';
   return price;
 }
@@ -58,6 +61,9 @@ export function shopChoice(w) {
   if (need) { short.bark = need.bark || 0; short.twig = need.twig || 0; }
   for (const id of goals(w)) short.twine += rawShortfall(w, id).twine || 0;
   for (const id of Object.keys(RECIPES)) if (onlyTwineShort(w, id)) short.twine = Math.max(short.twine, 1);
+  if (paintNeedsString(w)) short.twine = Math.max(short.twine, 1);
+  // it has not worked out where string comes from yet, and means to: it learns that before it pays for any
+  if (short.twine && c.mem.known.cushion && RECIPES.string.can(w)) short.twine = 0;
   let best = null;
   for (const m of ['bark', 'twig', 'twine']) {
     const it = shopItem(m), missing = short[m] - pendingOf(w, m); if (missing < (m === 'twine' ? 1 : 2) || money(w) < it.price) continue;

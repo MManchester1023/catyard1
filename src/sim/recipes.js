@@ -8,6 +8,8 @@ export const FOR_SALE_MAX = 3;
 const forSaleNow = w => w.cat.art.works.filter(x => x.status === 'forSale').length;
 export const unlistedWork = w => w.cat.art.works.filter(x => !x.status).sort((a, b) => b.score - a.score)[0] || null;
 export const paintingToFrame = w => !!unlistedWork(w) && forSaleNow(w) < FOR_SALE_MAX;
+// a frame takes a piece of string to hold it on: a painting that is ready to frame but has no string to frame it with
+export const paintNeedsString = w => paintingToFrame(w) && (w.cat.inv.twine || 0) < 1;
 // oak frames are parts: the easel, the bird feeder, the wind chime and the cat tree are each built out of some. It only makes
 // the ones it is going to use (and frames a painting with any that are left over)
 const BUILT = { easel: w => !!w.easelMade, table: w => !!w.table, feeder: w => !!(w.deco && w.deco.feeder), chime: w => !!(w.deco && w.deco.chime), cattree: w => !!w.catTree };
@@ -30,7 +32,7 @@ export const RECIPES = {
   frame: {
     name: 'oak frame', cost: { bark: 2 }, preset: true, part: true, why: 'bigger things are built out of frames',
     desc: 'Bark pressed flat and pegged into a square. The easel, bird feeder, wind chime and cat tree are built out of frames, and a spare goes round a painting.',
-    can: w => frameDemand(w) > 0 || paintingToFrame(w), desire: w => (frameDemand(w) > 0 ? 0 : paintingToFrame(w) ? 1.0 : 0), // (the ones it needs are made without a want; a spare is for a painting)
+    can: w => frameDemand(w) > 0 || paintingToFrame(w), desire: w => (frameDemand(w) > 0 ? 0 : paintingToFrame(w) && frameSpare(w) < 1 ? 1.0 : 0), // (the ones it needs are made without a want; one spare is kept for a painting)
   },
   easel: {
     name: 'easel', cost: { frame: 2, twig: 3 }, preset: true, order: 0, why: 'I cannot paint on nothing',
@@ -59,7 +61,7 @@ RECIPES.string = {
   name: 'way to get string', knowledge: true, cost: {}, topic: 'Twine', match: /twine|string|thread|cordage|yarn|fib(?:er|re)|rope/i,
   why: 'I keep needing string, and the human is not always here', learnText: 'work out where string comes from',
   desc: 'Not made at the bench. The cushion is stuffed with fibres held in by string, and once the cat understands that it can pull some out whenever it needs it.',
-  can: w => !knows(w, 'string'), desire: w => (w.cat.mem.known.cushion && ['feeder', 'chime', 'cattree'].some(id => (knows(w, id) || onlyTwineShort(w, id)) && RECIPES[id].can(w)) && (w.cat.inv.twine || 0) < 1 ? 1.5 : 0),
+  can: w => !knows(w, 'string'), desire: w => (w.cat.mem.known.cushion && (['feeder', 'chime', 'cattree'].some(id => (knows(w, id) || onlyTwineShort(w, id)) && RECIPES[id].can(w)) || paintNeedsString(w)) && (w.cat.inv.twine || 0) < 1 ? 1.5 : 0),
 };
 RECIPES.cattree = {
   name: 'cat tree', cost: { frame: 3, bark: 2, twig: 5, twine: 3 }, topic: 'Cat tree', match: /cat tree|cat furniture|cat condo|cat tower|scratching post/i, why: 'somewhere tall that is mine',

@@ -27,7 +27,6 @@ export const PACE = {
   starWishGap: 5,                                  // days between wishes from falling stars
   frogForMoon: 9,                                  // visits with the frog: the last step towards the moon's secret (10 before the speed-up)
   treeUrge: 0.066,                                  // chance, each sixth of a day, that a very curious cat starts wondering about the oak
-  peekChance: 0.0039,                              // chance, each sixth of a day, that it wonders what is behind the cabin (about 2% a day)
   coinDays: 2,                                     // how long the shiny coin keeps it delighted
   frogPerDay: 1,                                   // frog sightings that count in one day
   frogDayChance: 0.65,                             // chance that a given day is one the frog shows itself properly

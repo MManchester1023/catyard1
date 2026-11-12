@@ -89,10 +89,17 @@ function hud(now) {
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
+// Thoughts wait their turn: each one stays up long enough to read, then the next takes its place. If they come faster
+// than they can be read, only the two newest are kept, and one that has been waiting too long is dropped.
+const thoughtQ = [], THOUGHT_GAP = 600, THOUGHT_STALE = 20000;
+let bubbleText = '';
+const readTime = t => Math.min(9000, 3200 + t.length * 70);
 function bubble(now) {
   const c = w.cat, b = $('bubble');
-  if (c.thoughtId !== bubbleId) { bubbleId = c.thoughtId; bubbleUntil = now + Math.min(9000, 3200 + c.thought.length * 70); b.textContent = c.thought; }
-  const show = c.thought && now < bubbleUntil && !document.hidden; b.hidden = !show; if (!show) return;
+  if (c.thoughtId !== bubbleId) { bubbleId = c.thoughtId; if (c.thought) { thoughtQ.push({ text: c.thought, at: now }); if (thoughtQ.length > 2) thoughtQ.splice(0, thoughtQ.length - 2); } }
+  while (thoughtQ.length > 1 && now - thoughtQ[0].at > THOUGHT_STALE) thoughtQ.shift();
+  if (thoughtQ.length && now >= bubbleUntil + THOUGHT_GAP) { const t = thoughtQ.shift(); bubbleText = t.text; bubbleUntil = now + readTime(t.text); b.textContent = t.text; }
+  const show = bubbleText && now < bubbleUntil && !document.hidden; b.hidden = !show; if (!show) return;
   const cv = $('view'), s = cv.clientWidth / LW, p = renderer.persp(c.y), x = c.hidden ? w.o.house.x : c.x, y = c.hidden ? 250 : c.y - c.z - 52 * p;
   b.style.left = cv.offsetLeft + Math.max(120, Math.min(cv.clientWidth - 120, x * s)) + 'px'; b.style.top = Math.max(40, cv.offsetTop + y * s) + 'px';
 }
@@ -156,7 +163,7 @@ function tabletCmd(sub) {
 
 function setAdmin(on) { adminMode = on; $('adminToggle').setAttribute('aria-pressed', String(on)); $('chatform').classList.toggle('admin', on); $('chatin').placeholder = on ? 'Admin command (try help)' : `Say something to ${w.cat.name}…`; }
 
-function swapWorld(nw) { w = nw; w.speed = settings.speed || w.speed || 1; chatSig = ''; histSt = { mode: histSt.mode, kinds: histSt.kinds, q: '', limit: 120 }; bubbleId = -1; brain.lastMuse = Date.now(); outsideUpdate = null; if (net) net.tick(w).catch(() => {}); if (activeTab === 'outside') queueMicrotask(() => showTab('outside')); $('chatin').placeholder = adminMode ? 'Admin command (try help)' : `Say something to ${w.cat.name}…`; }
+function swapWorld(nw) { w = nw; w.speed = settings.speed || w.speed || 1; chatSig = ''; histSt = { mode: histSt.mode, kinds: histSt.kinds, q: '', limit: 120 }; bubbleId = -1; thoughtQ.length = 0; bubbleText = ''; bubbleUntil = 0; brain.lastMuse = Date.now(); outsideUpdate = null; if (net) net.tick(w).catch(() => {}); if (activeTab === 'outside') queueMicrotask(() => showTab('outside')); $('chatin').placeholder = adminMode ? 'Admin command (try help)' : `Say something to ${w.cat.name}…`; }
 
 // ---------- exporting the story ----------
 async function exportStory() {

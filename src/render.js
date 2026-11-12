@@ -160,8 +160,8 @@ export function createRenderer(canvas) {
     const gr = g.createLinearGradient(0, 232, 0, LH); gr.addColorStop(0, '#84b266'); gr.addColorStop(1, '#5a8c4c'); g.fillStyle = gr; g.fillRect(0, 232, LW, LH - 232);
     g.fillStyle = 'rgba(255,255,255,0.045)'; for (let i = -6; i < 16; i++) { g.beginPath(); g.moveTo(i * 120, 232); g.lineTo(i * 120 + 60, 232); g.lineTo(i * 120 + 60 - 140, LH); g.lineTo(i * 120 - 140, LH); g.fill(); }
     for (let i = 0; i < 160; i++) { const x = r() * LW, y = 244 + r() * 350, s = 3 + r() * 4; g.strokeStyle = r() < 0.5 ? 'rgba(52,100,48,0.5)' : 'rgba(150,200,110,0.45)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 2, y - s); g.moveTo(x, y); g.lineTo(x + 2, y - s * 0.9); g.stroke(); }
-    // stepping stones from the cabin door to the bowls
-    g.fillStyle = 'rgba(210,205,190,0.9)'; [[170, 312], [200, 330], [238, 344], [276, 356]].forEach(([x, y]) => { ell(g, x, y, 11, 5); g.fill(); g.fillStyle = 'rgba(0,0,0,0.12)'; ell(g, x + 1, y + 1.5, 11, 5); g.fill(); g.fillStyle = 'rgba(210,205,190,0.9)'; ell(g, x, y, 11, 5); g.fill(); });
+    // stepping stones from the cabin door to the bowls, which sit just in front of the house
+    g.fillStyle = 'rgba(210,205,190,0.9)'; [[168, 312], [196, 320], [224, 328]].forEach(([x, y]) => { ell(g, x, y, 11, 5); g.fill(); g.fillStyle = 'rgba(0,0,0,0.12)'; ell(g, x + 1, y + 1.5, 11, 5); g.fill(); g.fillStyle = 'rgba(210,205,190,0.9)'; ell(g, x, y, 11, 5); g.fill(); });
     // mouse holes
     for (const h of [{ x: 430, y: 262 }, { x: 66, y: 372 }, { x: 902, y: 500 }]) { g.fillStyle = '#3a2d25'; ell(g, h.x, h.y, 9, 4); g.fill(); g.fillStyle = '#1c1512'; ell(g, h.x, h.y + 0.5, 6, 2.6); g.fill(); }
     // fence
@@ -177,8 +177,8 @@ export function createRenderer(canvas) {
     g.fillStyle = '#5a4130'; ell(g, 716, 556, 98, 22); g.fill();
     const fc = ['#e86a92', '#f2c14e', '#fff2f2', '#b48ae0', '#ff8a5c']; for (let i = 0; i < 26; i++) { const x = 628 + r() * 176, y = 546 + r() * 20; g.strokeStyle = '#3f7d3e'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 14 - r() * 6); g.stroke(); g.fillStyle = fc[i % 5]; ell(g, x, y - 16 - r() * 5, 4.4, 4.4); g.fill(); g.fillStyle = '#f7dc6f'; ell(g, x, y - 16, 1.4, 1.4); g.fill(); }
     // bowls, cushion, post
-    g.fillStyle = '#b84a3e'; ell(g, 318, 356, 16, 8); g.fill(); g.fillStyle = '#d96a5c'; ell(g, 318, 353, 14, 6.5); g.fill();
-    g.fillStyle = '#3a6fb0'; ell(g, 366, 362, 16, 8); g.fill(); g.fillStyle = '#7fc0ee'; ell(g, 366, 359, 13.5, 6); g.fill();
+    g.fillStyle = '#b84a3e'; ell(g, 258, 330, 16, 8); g.fill(); g.fillStyle = '#d96a5c'; ell(g, 258, 327, 14, 6.5); g.fill();
+    g.fillStyle = '#3a6fb0'; ell(g, 304, 334, 16, 8); g.fill(); g.fillStyle = '#7fc0ee'; ell(g, 304, 331, 13.5, 6); g.fill();
     g.fillStyle = 'rgba(0,0,0,0.14)'; ell(g, 222, 386, 32, 11); g.fill(); g.fillStyle = '#c4768c'; ell(g, 222, 380, 29, 12); g.fill(); g.fillStyle = '#d98fa2'; ell(g, 222, 377, 24, 9); g.fill();
     g.fillStyle = 'rgba(0,0,0,0.16)'; ell(g, 258, 492, 22, 7); g.fill(); g.fillStyle = '#8a6a4b'; ell(g, 258, 490, 19, 6); g.fill(); g.fillStyle = '#c9b184'; g.fillRect(251, 440, 14, 50);
     g.strokeStyle = '#a28b60'; g.lineWidth = 1.4; for (let y = 444; y < 490; y += 5) { g.beginPath(); g.moveTo(251, y); g.lineTo(265, y + 3); g.stroke(); } g.fillStyle = '#8a6a4b'; ell(g, 258, 440, 11, 4); g.fill();
@@ -260,7 +260,7 @@ export function createRenderer(canvas) {
       if (visiting) { g.fillStyle = '#e780ab'; for (let i = 0; i < 3; i++) { const u = ((t * 0.7 + i / 3) % 1); g.globalAlpha = 1 - u; ell(g, px - 9 + i * 8 + Math.sin(t * 2 + i) * 2, py - 11 - u * 14, 1.5, 1.5); g.fill(); } g.globalAlpha = 1; }
     }
     // bowls contents
-    g.fillStyle = '#8a5a3a'; ell(g, 318, 353, 11 * clamp(o.bowl.food * 1.4, 0.001, 1), 4.6 * clamp(o.bowl.food * 1.4, 0.001, 1)); g.fill();
+    g.fillStyle = '#8a5a3a'; ell(g, 258, 327, 11 * clamp(o.bowl.food * 1.4, 0.001, 1), 4.6 * clamp(o.bowl.food * 1.4, 0.001, 1)); g.fill();
 
     // stash
     if (w.stash.site && w.stash.site.table) drawTable(g, w); else if (w.stash.site) { const s = w.stash.site; g.fillStyle = 'rgba(40,28,20,0.55)'; ell(g, s.x, s.y + 3, 38, 15); g.fill(); g.fillStyle = '#6b4a35'; ell(g, s.x, s.y + 2, 30, 11); g.fill(); g.fillStyle = '#4d6f3f'; for (let i = 0; i < 6; i++) { ell(g, s.x - 28 + i * 11, s.y + 11 + (i % 2) * 3, 6, 2.6, 0.3 * i); g.fill(); }
