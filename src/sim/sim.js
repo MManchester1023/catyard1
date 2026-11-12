@@ -22,7 +22,7 @@ import { leavesTick } from './oak.js';
 import { selfTaught, hangSpareFrames, findRecipes } from './craft.js';
 import { makeTemper } from './temper.js';
 import { frogTick } from './frog.js';
-import { discoverRadius, placeCap } from './pace.js';
+import { PACE, discoverRadius, placeCap } from './pace.js';
 import { ensureTablet } from './tablet.js';
 import { ensureBlog, considerBlog } from './blog.js';
 import { makeRng, useRng, nextSeed } from './rng.js';
@@ -117,9 +117,9 @@ export function tick(w, dt) {
   // senses
   if (!c.hidden) {
     const dd = dayOf(w); if (c.mem.dDay !== dd) { c.mem.dDay = dd; c.mem.dToday = 0; }
-    for (const id of PLACES) { // pace.js: only so much of the yard sinks in per day (a techie's tablet does not use up the day's share)
-      const techTablet = id === 'tablet' && c.temper === 'techie';
-      if ((c.mem.dToday < placeCap(w) || techTablet) && !c.mem.known[id] && (id !== 'easel' || w.easelMade) && Math.hypot(c.x - o[id].x, c.y - o[id].y) < discoverRadius(w)) { discover(w, id); if (!techTablet) c.mem.dToday++; }
+    for (const id of PLACES) { // pace.js: only so much of the yard sinks in per day (a techie's tablet and the old oak do not use up the day's share)
+      const techTablet = (id === 'tablet' && c.temper === 'techie') || id === 'tree'; // (the oak, too, is too big to wait its turn)
+      if ((c.mem.dToday < placeCap(w) || techTablet) && !c.mem.known[id] && (id !== 'easel' || w.easelMade) && Math.hypot(c.x - o[id].x, c.y - o[id].y) < discoverRadius(w) * (id === 'tree' ? PACE.oakSight : 1)) { discover(w, id); if (!techTablet) c.mem.dToday++; }
     }
     if (bm.on && !c.mem.known.beam && Math.hypot(c.x - bm.x, c.y - bm.y) < 55) discover(w, 'beam', `${c.name} found a warm patch of sunlight.`);
   }

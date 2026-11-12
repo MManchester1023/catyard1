@@ -79,8 +79,8 @@ const hold = w => { w.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; w
   let found = 0; for (let i = 0; i < 12; i++) { const w = fresh('techie'); for (let t = 0; t < 400 && !w.cat.mem.known.tablet; t += 0.5) tick(w, 0.5); if (w.cat.mem.known.tablet) found++; }
   assert(found >= 11, 'techies that found the tablet within a few minutes: ' + found + ' of 12'); // (before this it took a day or more)
   // and finding it does not use up the day's share of new places
-  const t = fresh('techie'), o = fresh(null); for (const x of [t, o]) { x.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; x.cat.reeval = 1e9; for (const id of ['pond', 'post', 'tree', 'tablet']) { x.cat.x = x.o[id].x; x.cat.y = x.o[id].y; tick(x, 0.001); } }
-  assert(t.cat.mem.known.tablet && t.cat.mem.known.pond && t.cat.mem.known.post && t.cat.mem.known.tree, 'the techie takes in the tablet as well as three other places'); assert(!o.cat.mem.known.tablet, 'another cat has used up its three');
+  const t = fresh('techie'), o = fresh(null); for (const x of [t, o]) { x.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; x.cat.reeval = 1e9; for (const id of ['pond', 'post', 'flowers', 'tablet']) { x.cat.x = x.o[id].x; x.cat.y = x.o[id].y; tick(x, 0.001); } }
+  assert(t.cat.mem.known.tablet && t.cat.mem.known.pond && t.cat.mem.known.post && t.cat.mem.known.flowers, 'the techie takes in the tablet as well as three other places'); assert(!o.cat.mem.known.tablet, 'another cat has used up its three');
   ok('a techie finds the tablet in the first part of the first day (' + found + ' of 12), and it does not cost it a place')
 }
 

@@ -31,6 +31,7 @@ export const PACE = {
   frogPerDay: 1,                                   // frog sightings that count in one day
   frogDayChance: 0.65,                             // chance that a given day is one the frog shows itself properly
   barkPerDay: 2,                                   // bits of bark or twig the oak gives it in a day, however long it scratches (was unlimited)
+  oakSight: 2.6,                                   // the old oak is the biggest thing in the yard: it is noticed from this many times further away than anything else (its notice is what starts the urge to build an easel)
   discoverRadius: 110,                             // how close it has to get to a part of the yard to notice it (was 190)
   placesPerDay: 3,                                 // parts of the yard it can take in on one day, however much it wanders (was: all of them in the first half day)
   urgeExtra: 3.6,                                  // most extra pieces a day the oak gives a cat that is desperate to build its easel (2 before the speed-up: this is what actually shortens the first easel, since the daily allowance is what holds it back)

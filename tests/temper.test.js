@@ -77,9 +77,10 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
   const tour = pace => { const x = fresh(); x.easelMade = { day: 1 }; x.pace = pace; x.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; x.cat.reeval = 1e9; const ids = ['pond', 'post', 'tree', 'flowers', 'cushion', 'yarn', 'fence', 'easel', 'tablet']; const days = [];
     for (let d = 0; d < 6 && days.length < 6; d++) { for (const id of ids) { x.cat.x = x.o[id].x; x.cat.y = x.o[id].y; tick(x, 0.001); } days.push(ids.filter(id => x.cat.mem.known[id]).length); x.clock += x.dayLen; }
     return days; };
-  assert.deepEqual(tour(1), [3, 6, 9, 9, 9, 9], 'standing at every part of the yard on day one it takes in three, then three more each day: ' + tour(1));
-  assert.deepEqual(tour(2).slice(0, 4), [2, 4, 6, 8], 'twice as slow: pace.js halves it');
-  ok('three parts of the yard sink in per day (nine take three days; pace scales it)');
+  // (the old oak is too big to wait its turn: it is noticed as well as the day's three)
+  assert.deepEqual(tour(1), [4, 7, 9, 9, 9, 9], 'standing at every part of the yard on day one it takes the oak and three more, then three more each day: ' + tour(1));
+  assert.deepEqual(tour(2).slice(0, 5), [3, 5, 7, 9, 9], 'twice as slow: pace.js halves it (the oak is still free): ' + tour(2));
+  ok('three parts of the yard sink in per day, and the oak on top of that (pace scales the three)');
 
   assert.equal(scaled(fresh(), PACE.sparksSolve), 42);
   const slow = fresh(); slow.pace = 2; assert.equal(scaled(slow, PACE.sparksSolve), 84);

@@ -239,9 +239,9 @@ Discoveries are slow on purpose.
 
 | Thing | Roughly, at the default pace |
 | --- | --- |
-| Noticing a part of the yard | It has to pass within about 110 px, and only three new places sink in per day: 2 to 3 days for all of them. A Techie finds the tablet regardless. |
+| Noticing a part of the yard | It has to pass within about 110 px, and only three new places sink in per day: 2 to 3 days for all of them. A Techie finds the tablet regardless, and the old oak (the biggest thing in the yard) is noticed from about 2.6 times as far and does not use up the day's three. |
 | Bark and twigs from the oak | At most two pieces a day, and not every scratch gives one |
-| The easel | About 4 days with no help (4 bark and 3 twigs; measured over 24 cats: median 3.9 days, between 2 and 6). Clicking the oak helps |
+| The easel | About 2.7 days with no help (4 bark and 3 twigs; measured over 24 cats: median 2.7 days, between 2.3 and 3.7). Noticing the oak is what starts it, and a cat that is desperate to paint can take up to `urgeExtra` more pieces from the oak a day. Clicking the oak helps |
 | The bark table | A few days more (2 bark and 4 twigs) |
 | Working out a recipe without the tablet | 4 days |
 | A first theory about the moon | 2 to 3 days; understanding it needs 6 different moon phases (about a week) |
