@@ -199,7 +199,7 @@ export function renderCrafting(el, w) {
   };
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Could make' }), todo.length ? h('div', { class: 'crafts' }, ...todo.map(card)) : h('div', { class: 'muted small', text: th.hidden ? 'Nothing waiting.' : 'Everything it knows is built.' }),
     !w.easelMade ? h('div', { class: 'muted small', style: 'margin-top:6px', text: 'No easel yet, so it cannot paint.' }) : null));
-  if (done.length) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Built' }), h('div', { class: 'dots', style: 'gap:6px' }, ...done.map(id => { const b = builtOf(id); return h('span', { class: 'chip', text: cap(RECIPES[id].name) + (b && b.day ? ' · day ' + b.day : '') }); }))));
+  if (done.length) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Built' }), h('div', { class: 'dots', style: 'gap:6px' }, ...done.map(id => { const b = builtOf(id); const m = (c.crafted || []).filter(x => x.recipe === id).pop(), day = (b && b.day) || (m && m.day); return h('span', { class: 'chip', text: cap(RECIPES[id].name) + (day ? ' · day ' + day : '') }); }))));
   const made = th.crafted;
   secs.push(h('details', { class: 'sec fold', open: madeOpen ? true : null, ontoggle: e => { madeOpen = e.target.open; } }, h('summary', {}, h('b', { text: 'Made so far' }), h('span', { class: 'muted small', text: ` ${w.stats.crafted || 0} made · ${w.stats.gathered || 0} gathered` })),
     made.length ? h('div', { class: 'scrollbox' }, ...made.map(x => h('div', { class: 'kv' }, h('span', { text: cap(x.name) }), h('span', { class: 'muted small', text: `day ${x.day}` })))) : h('div', { class: 'muted small', text: 'Nothing yet.' })));
@@ -390,12 +390,14 @@ function renderAccount(el, w) {
 }
 
 // ----- Tablet > Gallery: the painting level, and everything it has put up for sale or sold -----
+let galFilter = 'all';
 function renderGallery(el, w, ctx) {
   let sig = '';
+
   function update() {
     const c = w.cat, a = c.art, works = a.works, lvl = levelOf(a.xp), next = xpForLevel(lvl + 1), cur = xpForLevel(lvl);
-    const next_ = JSON.stringify([!!w.easelMade, Math.round(a.xp), a.count, works.map(x => [x.title, x.status, x.price, x.sold && x.sold.day])]); if (next_ === sig) return; sig = next_;
-    const group = (label, list, line) => list.length ? h('div', { class: 'sec' }, h('h3', { text: `${label} (${list.length})` }), h('div', { id: 'grid' }, ...list.map(wk => { const cv = h('canvas'); paintInto(cv, wk);
+    const next_ = JSON.stringify([galFilter, !!w.easelMade, Math.round(a.xp), a.count, works.map(x => [x.title, x.status, x.price, x.sold && x.sold.day])]); if (next_ === sig) return; sig = next_;
+    const group = (label, list, line, id) => list.length && (galFilter === 'all' || galFilter === id) ? h('div', { class: 'sec' }, h('h3', { text: `${label} (${list.length})` }), h('div', { id: 'grid' }, ...list.map(wk => { const cv = h('canvas'); paintInto(cv, wk);
       return h('button', { class: 'frame', type: 'button', onclick: () => ctx.open && ctx.open(wk) }, cv, h('b', { text: wk.title }), ...line(wk).map(t => h('small', { text: t }))); }))) : null;
     const priced = wk => cash(wk.price || 0);
     el.replaceChildren(...[
@@ -404,10 +406,11 @@ function renderGallery(el, w, ctx) {
           lvl < 12 ? [meter((a.xp - cur) / (next - cur)), h('div', { class: 'muted small', text: `${Math.round(next - a.xp)} xp to ${LEVEL_NAMES[lvl + 1]}` })] : null,
           h('div', { class: 'muted small', style: 'margin-top:6px', text: `${a.count} painting${a.count === 1 ? '' : 's'}${a.count ? `, best ${pct(a.best)}/100` : ''}` })]
           : h('div', { class: 'muted', text: 'No easel yet, so nothing to paint on. It has to build one first (see the Crafting tab).' })),
+      works.length ? h('div', { class: 'seg' }, ...[['all', 'All', works.length], ['unlisted', 'Not for sale', works.filter(x => !x.status).length], ['forSale', 'For sale', works.filter(x => x.status === 'forSale').length], ['sold', 'Sold', works.filter(x => x.status === 'sold').length]].map(([id, l, n]) => h('button', { type: 'button', 'aria-pressed': String(galFilter === id), text: `${l} ${n}`, onclick: () => { galFilter = id; sig = ''; update(); } }))) : null,
       !works.length ? h('div', { class: 'muted', text: `${c.name} has not finished a painting yet. It will, once the urge builds and the light is good.` }) : null,
-      group('For sale', works.filter(x => x.status === 'forSale'), wk => [priced(wk), `Posted day ${wk.listed ? wk.listed.day : wk.day}` + (wk.listed && wk.listed.time ? ', ' + wk.listed.time : '')]),
-      group('Sold', works.filter(x => x.status === 'sold'), wk => [cash(wk.sold.price), `Posted day ${wk.listed ? wk.listed.day : wk.day}`, `Sold day ${wk.sold.day}`]),
-      group('Not for sale yet', works.filter(x => !x.status), wk => [`Painted day ${wk.day}`, `${pct(wk.score)}/100`])].filter(Boolean));
+      group('For sale', works.filter(x => x.status === 'forSale'), wk => [priced(wk), `Posted day ${wk.listed ? wk.listed.day : wk.day}` + (wk.listed && wk.listed.time ? ', ' + wk.listed.time : '')], 'forSale'),
+      group('Sold', works.filter(x => x.status === 'sold'), wk => [cash(wk.sold.price), `Posted day ${wk.listed ? wk.listed.day : wk.day}`, `Sold day ${wk.sold.day}`], 'sold'),
+      group('Not for sale', works.filter(x => !x.status), wk => [`Painted day ${wk.day}`, `${pct(wk.score)}/100`], 'unlisted')].filter(Boolean));
   }
   update(); return update;
 }

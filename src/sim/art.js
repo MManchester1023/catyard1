@@ -121,9 +121,9 @@ export function finishWork(w, work) {
   const c = w.cat, a = c.art, before = levelOf(a.xp);
   const vg = c.temper === 'vangogh'; a.xp += (5 + work.score * 14) * (vg ? 2 : 1); a.count++; a.works.unshift(work); // (the Van Gogh learns the craft about twice as fast)
   if (work.score > a.best) { a.best = work.score; a.hung = work.id; }
-  if (a.works.length > 60) { // keep the best 40 and the newest 20
-    const keep = new Set([...a.works.slice(0, 20), ...[...a.works].sort((x, y) => y.score - x.score).slice(0, 40)].map(x => x.id));
-    a.works = a.works.filter(x => keep.has(x.id) || x.status === 'forSale'); // (and anything out for sale, until it sells)
+  if (a.works.length > 1500) { // keep the best 500 and the newest 500
+    const keep = new Set([...a.works.slice(0, 500), ...[...a.works].sort((x, y) => y.score - x.score).slice(0, 500)].map(x => x.id));
+    a.works = a.works.filter(x => keep.has(x.id) || x.status); // (and anything that was put up for sale or sold)
   }
   c.needs.create = vg ? 0.1 : 0; c.mood.joy = clamp(c.mood.joy + 0.15); w.stats.paintings++;
   note(w, `${c.name} finished a painting: "${work.title}".`, 'art');

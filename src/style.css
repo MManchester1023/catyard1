@@ -194,3 +194,10 @@ h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing
 .scrollbox { max-height: 220px; overflow-y: auto; padding-right: 4px; }
 .histbox { margin-top: 14px; }
 .frame small { display: block; }
+
+.sec.fold { border-bottom: 1px solid var(--line); margin-bottom: 16px; padding: 8px 10px 10px; }
+.sec.fold:last-child { border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+
+.sec.fold, .fold { border-color: color-mix(in srgb, var(--ink) 28%, transparent); padding-bottom: 12px; }
+.sec.fold:last-child { border-color: color-mix(in srgb, var(--ink) 28%, transparent); margin-bottom: 16px; }
+.scrollbox { padding-bottom: 6px; }

@@ -10,7 +10,7 @@ import { RECIPES, onlyTwineShort } from './recipes.js';
 import { MAX_ON_MAT, ensureOfferState, leaveParcel, toyTaken, treatTaken } from './offerings.js';
 import { random } from './rng.js';
 
-export const LEDGER_MAX = 30, ORDERS_MAX = 2;
+export const LEDGER_MAX = 3000, ORDERS_MAX = 2;
 export const money = w => (w.cat.money || 0);
 export const cash = n => '$' + n;
 

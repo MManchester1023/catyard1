@@ -128,7 +128,7 @@ export function hangSpareFrames(w) {
   const c = w.cat; let n = 0;
   while (frameSpare(w) > 0 && paintingToFrame(w)) {
     const best = unlistedWork(w); if (!best) break; // (the best one it has not framed yet: a framed painting goes up for sale)
-    c.inv.frame--; c.crafted.unshift({ id: uid(), recipe: 'frame', name: 'framed painting', work: best.title, day: dayOf(w), time: clockStr(w) }); if (c.crafted.length > 16) c.crafted.pop();
+    c.inv.frame--; c.crafted.unshift({ id: uid(), recipe: 'frame', name: 'framed painting', work: best.title, day: dayOf(w), time: clockStr(w) }); if (c.crafted.length > 3000) c.crafted.pop();
     best.status = 'forSale'; best.listed = { day: dayOf(w), time: clockStr(w) }; best.price = priceOf(best); clearEasel(w, best);
     c.art.xp += 6; n++;
     journal(w, `I put a frame round "${best.title}" and set it out for sale. It looks like it matters now. Someone will want it.`, 'craft'); note(w, `${c.name} framed "${best.title}" and put it up for sale.`, 'craft');
@@ -156,7 +156,7 @@ export function finishCraft(w, id) {
   } else if (id === 'feeder') { w.deco.feeder = true; journal(w, 'I hung a bird feeder by the oak. This is not hunting. This is hospitality with a purpose.', 'craft'); note(w, `${c.name} put up a bird feeder.`, 'craft'); }
   else if (id === 'cattree') foundCatTree(w, 'made');
   else if (id === 'chime') { w.deco.chime = true; journal(w, 'The chime sings when the air moves. I hung it where I can hear it from the cushion.', 'craft'); note(w, `${c.name} hung a wind chime in the oak.`, 'craft'); }
-  c.crafted.unshift(made); if (c.crafted.length > 16) c.crafted.pop(); w.stats.crafted++;
+  c.crafted.unshift(made); if (c.crafted.length > 3000) c.crafted.pop(); w.stats.crafted++;
   feel(w, ['act:craft', 'craft:' + id], { joy: 0.28, fun: -0.2, fear: id === 'chime' ? -0.1 : 0 }, 'proud');
   onEvent(w, 'built', { id });
   c.thoughtHint = id === 'table' ? 'tableDone' : id === 'easel' ? 'easelDone' : 'craftDone';
