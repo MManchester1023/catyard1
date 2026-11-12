@@ -3,7 +3,7 @@
 // An order takes a little while and then turns up on the offering mat as a parcel (offerings.js), which the cat opens.
 import { rnd, an, SHOP, shopItem, shopLabel, matText } from './util.js';
 import { note, journal, dayOf, clockStr, clearEasel } from './world.js';
-import { PACE } from './pace.js';
+import { PACE, priceOf } from './pace.js';
 import { feel } from './feelings.js';
 import { gatherNeed, rawShortfall, goals } from './craft.js';
 import { RECIPES, onlyTwineShort } from './recipes.js';
@@ -21,13 +21,15 @@ export function ensureEconomy(w) {
   if (w.easel && w.easel.work && (c.art.works || []).some(x => x.id === w.easel.work.id && x.status)) w.easel = null; // (a save from when sold paintings stayed on the easel)
   if (!w.stats.sales) w.stats.sales = 0; if (!w.stats.earned) w.stats.earned = 0; if (!w.stats.orders) w.stats.orders = 0;
   for (const f of c.crafted || []) if (f.recipe === 'frame' && f.work) { const wk = (c.art.works || []).find(x => x.title === f.work && !x.status); if (wk) { wk.status = 'forSale'; wk.listed = { day: f.day || 1, legacy: true }; } }
+  for (const wk of c.art.works || []) if (wk.status === 'forSale' && !(wk.price > 0)) wk.price = priceOf(wk); // (a save from before paintings had an asking price)
 }
 const entry = (w, text, amt) => { const c = w.cat; c.ledger.unshift({ day: dayOf(w), time: clockStr(w), text, amt }); if (c.ledger.length > LEDGER_MAX) c.ledger.pop(); };
 
 // ---------- selling ----------
 export const forSale = w => (w.cat.art.works || []).filter(x => x.status === 'forSale');
-export const priceOf = work => Math.max(2, Math.round((PACE.priceBase + work.score * PACE.priceScore) * (1 + rnd(-0.2, 0.2))));
-export function sell(w, work, price = priceOf(work)) {
+export { priceOf };
+// (a painting is sold for the price it was listed at)
+export function sell(w, work, price = work.price || priceOf(work)) {
   const c = w.cat; ensureEconomy(w);
   work.status = 'sold'; work.sold = { day: dayOf(w), price }; clearEasel(w, work); c.money += price; w.stats.sales++; w.stats.earned += price;
   entry(w, `Sold "${work.title}"`, price);

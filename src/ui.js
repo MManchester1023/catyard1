@@ -17,7 +17,7 @@ import { wishLabel } from './sim/wishes.js';
 import { INV_CAP } from './sim/craft.js';
 import { RECIPES } from './sim/recipes.js';
 import { TEMPERS } from './sim/temper.js';
-import { moodToday, ensureChar, habitLine, DO } from './sim/character.js';
+import { moodToday, ensureChar, habitLine, DO, MOODS } from './sim/character.js';
 import { favourites } from './sim/finds.js';
 import { ensureIntent } from './sim/intent.js';
 import { ensureInterest, interestName } from './sim/interest.js';
@@ -49,12 +49,24 @@ export function updateNeeds(el, w) { for (const m of el.children) { const v = w.
 
 // ----- Cat tab: what is going on in its head -----
 const TRAIT_WORD = { curious: ['more curious', 'less curious'], bold: ['bolder', 'shyer'], affection: ['more affectionate', 'more aloof'], lazy: ['lazier', 'busier'] };
+const MOOD_WORD = { hunt: 'hunting', explore: 'exploring', perch: 'perching up high', investigate: 'investigating', cattree: 'the cat tree', idle: 'doing nothing', lounge: 'lounging', play: 'playing', zoom: 'zooming about', craft: 'making things', frog: 'visiting the frog', attention: 'your attention', offering: 'what you leave on the mat', tablet: 'the tablet', gaze: 'watching the sky', paint: 'painting', listen: 'listening to you', post: 'writing its blog', stashvisit: 'checking its treasure', yarn: 'the yarn', gather: 'gathering bark' };
+// what today's mood does to what it chooses to do (the multipliers are the ones the decision uses)
+export function moodEffect(m) {
+  const e = Object.entries(m.mul || {}), name = k => MOOD_WORD[k] || (DO[k] || k).replace(/^go and /, ''), list = a => a.slice(0, 4).map(([k]) => name(k)).join(', ');
+  const up = e.filter(([, v]) => v > 1).sort((a, b) => b[1] - a[1]), down = e.filter(([, v]) => v < 1).sort((a, b) => a[1] - b[1]), out = [];
+  if (!up.length && !down.length) out.push('No leanings today: nothing is more tempting than usual.');
+  if (up.length) out.push('Drawn to ' + list(up) + '.');
+  if (down.length) out.push('Less keen on ' + list(down) + '.');
+  if (m.joy) out.push(m.joy > 0 ? 'Small things please it a little more.' : 'Harder to cheer up today.');
+  if (m.fear) out.push(m.fear < 0 ? 'Less easily spooked.' : 'Easily spooked.');
+  return out;
+}
 function mindSections(w) {
   const c = ensureChar(w.cat), it = ensureIntent(c).intent, m = moodToday(w), out = [];
   const live = it && !it.done && w.clock < it.until, stub = c.stub && w.clock < c.stub.until;
   const moved = Object.keys(TRAIT_WORD).filter(k => c.base && Math.abs(c.traits[k] - c.base[k]) >= 0.1).map(k => TRAIT_WORD[k][c.traits[k] > c.base[k] ? 0 : 1]);
   out.push(h('div', { class: 'sec' }, h('h3', { text: 'On its mind' }),
-    h('div', { class: 'item' }, h('div', { text: 'Mood today: ' + m.label }), h('div', { class: 'muted small', text: 'It changes each morning and tilts what it fancies doing.' })),
+    h('div', { class: 'item' }, h('div', { text: 'Mood today: ' + m.label }), ...moodEffect(m).map(t => h('div', { class: 'muted small', text: t })), h('div', { class: 'muted small', text: 'It changes each morning.' })),
     live ? h('div', { class: 'item' }, h('div', { text: 'Has decided to ' + it.label }), h('div', { class: 'theory', text: '“' + it.why + '”' }), h('div', { class: 'muted small', text: it.by === 'claude' ? 'Chosen by Claude, as the cat.' : 'Its own whim.' })) : null,
     stub ? h('div', { class: 'item' }, h('div', { text: 'Stubborn notion: ' + DO[c.stub.key] }), h('div', { class: 'muted small', text: 'It will not be talked out of this one.' })) : null,
     c.habits.length ? h('div', { class: 'item' }, h('div', { text: 'Habits' }), ...c.habits.map(x => h('div', { class: 'muted small', text: cap(habitLine(x)) }))) : h('div', { class: 'muted small', text: 'No habits yet. Do something often enough at the same time of day and it becomes a ritual.' }),
@@ -80,12 +92,8 @@ const CAT_SUBS = [['overview', 'About'], ['wants', 'Wants'], ['mind', 'Mind'], [
 let catSub = 'overview';
 const wonderFound = w => Object.values(w.mysteries).some(discovered);
 
-function aboutSections(w) {
-  const c = w.cat, q = c.quirk;
-  const secs = [];
-  secs.push(h('div', { class: 'sec' }, h('div', { class: 'big', text: c.name }), h('div', { class: 'muted', text: `${c.age}-year-old ${COAT_LABEL[c.coat]} · ${moodLabel(w)}` }), h('div', { class: 'small', text: describe(w) }),
-    h('div', { style: 'margin-top:10px' }, ...[['Curious', 'curious'], ['Bold', 'bold'], ['Affectionate', 'affection'], ['Lazy', 'lazy']].map(([l, k]) => h('div', { class: 'trait' }, h('span', { text: l }), meter(c.traits[k]), h('span', { class: 'muted', text: pct(c.traits[k]) }))))));
-  if (isUpset(w)) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Upset' }), h('div', { text: 'About: ' + upsetReason(w) }), h('div', { class: 'theory', text: '“' + upsetVoice(w) + '”' }), h('div', { class: 'muted small', text: 'Something it likes, or being listened to, will help.' })));
+function quirkSec(w) {
+  const c = w.cat, q = c.quirk, secs = [];
   const tp = TEMPERS[c.temper];
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Quirk: ' + (tp ? tp.name : 'none') }), h('div', { class: 'muted small', text: tp ? tp.line : 'No temperament. (Admin: quirk trait <collector|vangogh|hunter|nightowl|techie|garfield|builder>)' }),
     h('div', { class: 'muted small', style: 'margin-top:6px', text: ({
@@ -95,12 +103,33 @@ function aboutSections(w) {
       builder: `${w.stats.crafted || 0} thing${w.stats.crafted === 1 ? '' : 's'} made, ${w.stats.gathered || 0} bits gathered.`,
       vangogh: `${c.art.count} painting${c.art.count === 1 ? '' : 's'} so far.`,
       nightowl: 'Best seen after dark.',
-      collector: `${w.stash.items.length} treasure${w.stash.items.length === 1 ? '' : 's'} so far (see the Stash tab).`,
+      collector: `${w.stash.items.length} treasure${w.stash.items.length === 1 ? '' : 's'} so far (see the Treasure tab).`,
     })[c.temper] || '' }),
     h('div', { class: 'muted small', style: 'margin-top:4px', text: `Fondest of ${ITEM_PLURAL[q.item]}, and of the color ${q.favColor}.` }),
     c.temper !== 'hunter' && (w.stats.birds || w.stats.fish) ? h('div', { class: 'muted small', style: 'margin-top:4px', text: `Has caught ${[w.stats.birds ? w.stats.birds + ' bird' + (w.stats.birds === 1 ? '' : 's') : '', w.stats.fish ? w.stats.fish + ' fish' : ''].filter(Boolean).join(' and ')}.` }) : null,
     w.catTree ? h('div', { class: 'muted small', style: 'margin-top:4px', text: `Has a cat tree behind the cabin (${w.catTree.how === 'made' ? 'built it itself' : 'found it'} on day ${w.catTree.day}).` }) : null,
     c.coinUntil > w.clock ? h('div', { class: 'small', style: 'margin-top:4px', text: 'Delighted: it found a shiny coin.' }) : null));
+  return secs[0];
+}
+function tastesSec(w) {
+  const c = w.cat;
+  return h('div', { class: 'sec' }, h('h3', { text: 'What it likes right now' }), h('div', { class: 'small', text: `Favourite colour: ${c.quirk.favColor}. Collects ${ITEM_PLURAL[c.quirk.item]}.` }),
+    h('div', { class: 'muted small', style: 'margin:8px 0 4px', text: 'Colours' }), ...topTastes(w, 'color', 4).map(([k, v]) => tasteRow(k, v, swatch(k))),
+    h('div', { class: 'muted small', style: 'margin:8px 0 4px', text: 'Things' }), ...topTastes(w, 'type', 4).map(([k, v]) => tasteRow(ITEM_LABEL[k], v)));
+}
+function feelSec(w) {
+  const fl = topFeelings(w, 5);
+  return h('div', { class: 'sec' }, h('h3', { text: 'What makes it feel good' }),
+    fl.good.length || fl.bad.length ? [...fl.good.map(r => tasteRow(r.name, Math.min(1, r.score), null, r.label)), ...fl.bad.map(r => h('div', { class: 'kv' }, h('span', { text: r.name }), h('span', { class: 'chip bad', text: r.label })))] : h('div', { class: 'muted', text: 'Too early to tell. It learns what it likes from how things make it feel.' }),
+    h('div', { class: 'muted small', style: 'margin-top:6px', text: 'Nobody told it what to like. These come from gifts, pages, paintings and what it has made.' }));
+}
+function aboutSections(w) {
+  const c = w.cat, q = c.quirk;
+  const secs = [];
+  secs.push(h('div', { class: 'sec' }, h('div', { class: 'big', text: c.name }), h('div', { class: 'muted', text: `${c.age}-year-old ${COAT_LABEL[c.coat]} · ${moodLabel(w)}` }), h('div', { class: 'small', text: describe(w) }),
+    h('div', { style: 'margin-top:10px' }, ...[['Curious', 'curious'], ['Bold', 'bold'], ['Affectionate', 'affection'], ['Lazy', 'lazy']].map(([l, k]) => h('div', { class: 'trait' }, h('span', { text: l }), meter(c.traits[k]), h('span', { class: 'muted', text: pct(c.traits[k]) }))))));
+  if (isUpset(w)) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Upset' }), h('div', { text: 'About: ' + upsetReason(w) }), h('div', { class: 'theory', text: '“' + upsetVoice(w) + '”' }), h('div', { class: 'muted small', text: 'Something it likes, or being listened to, will help.' })));
+  { const m = mindSections(w); secs.push(tastesSec(w), m[1], feelSec(w), m[2]); }
   if (w.frog) { const f = w.frog; secs.push(h('div', { class: 'sec' }, h('h3', { text: `Friend: ${f.name} the frog` }),
     h('div', { text: f.out ? `${f.name} is up on the lily pad.` : `${f.name} is under the water.` }),
     h('div', { class: 'muted small', text: `Met on day ${f.day}. ${c.name} has sat with ${f.name} ${f.visits} time${f.visits === 1 ? '' : 's'}. Visits are the best cure for loneliness it has.` }),
@@ -108,7 +137,7 @@ function aboutSections(w) {
   return secs;
 }
 function wantsSections(w) {
-  const c = w.cat, a = c.art, lvl = levelOf(a.xp), next = xpForLevel(lvl + 1), cur = xpForLevel(lvl);
+  const c = w.cat;
   const secs = [];
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Wants' }),
     c.wants.length ? c.wants.map(x => h('div', { class: 'item' }, h('div', { text: cap(x.text) }), h('div', { class: 'muted small', text: `since day ${x.day}` }), meter(x.strength))) : h('div', { class: 'muted', text: 'Nothing right now.' }),
@@ -116,20 +145,10 @@ function wantsSections(w) {
   const ch = c.choices || [];
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What Claude decided' }),
     ch.length ? ch.slice(0, 12).map(x => h('div', { class: 'item' }, h('div', { class: 'small', text: `${cap(x.kind)}: ${x.text}` }), h('div', { class: 'muted small', text: `day ${x.day}, ${x.time}` }))) : h('div', { class: 'muted small', text: 'Nothing yet. When Claude is connected, the cat\u2019s choices (what it does, wants, paints and reads about, and why) are listed here.' })));
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Painting' }),
-    w.easelMade ? [h('div', { class: 'big', text: `Level ${lvl}: ${LEVEL_NAMES[lvl]}` }),
-      lvl < 12 ? [meter((a.xp - cur) / (next - cur)), h('div', { class: 'muted small', text: `${Math.round(next - a.xp)} xp to ${LEVEL_NAMES[lvl + 1]}` })] : null,
-      h('div', { class: 'muted small', style: 'margin-top:6px', text: `${a.count} painting${a.count === 1 ? '' : 's'}${a.count ? `, best ${pct(a.best)}/100` : ''}` })]
-      : h('div', { class: 'muted', text: 'No easel yet, so nothing to paint on. It has to build one first (see the Crafting tab).' })));
   return secs;
 }
-function mindTab(w) { return mindSections(w).slice(0, 3); } // (on its mind, favourite things to do, special interest)
-function memoryTab(w) {
-  const fl = topFeelings(w, 5);
-  return [mindSections(w)[3], h('div', { class: 'sec' }, h('h3', { text: 'What makes it feel good' }),
-    fl.good.length || fl.bad.length ? [...fl.good.map(r => tasteRow(r.name, Math.min(1, r.score), null, r.label)), ...fl.bad.map(r => h('div', { class: 'kv' }, h('span', { text: r.name }), h('span', { class: 'chip bad', text: r.label })))] : h('div', { class: 'muted', text: 'Too early to tell. It learns what it likes from how things make it feel.' }),
-    h('div', { class: 'muted small', style: 'margin-top:6px', text: 'Nobody told it what to like. These come from gifts, pages, paintings and what it has made.' }))];
-}
+function mindTab(w) { return [mindSections(w)[0], quirkSec(w)]; }
+function memoryTab(w) { return [mindSections(w)[3]]; } // (the whole history sits under it, see renderCat)
 // only the things it has actually noticed are listed: the rest are none of its business yet
 function wonderingTab(w) {
   return [h('div', { class: 'sec' }, h('h3', { text: 'Wondering about' }), Object.entries(w.mysteries).filter(([, m]) => discovered(m)).map(([id, m]) => h('div', { class: 'item' },
@@ -142,48 +161,48 @@ function wonderingTab(w) {
 // the tab bar is built once (so it can be clicked while the page underneath is redrawn). The page itself is only redrawn
 // when what it shows has changed, and the scroll position is kept, so reading it half way down does not jump about.
 const catPage = (w, sub) => sub === 'mind' ? mindTab(w) : sub === 'memory' ? memoryTab(w) : sub === 'wondering' ? wonderingTab(w) : sub === 'wants' ? wantsSections(w) : aboutSections(w);
-export function renderCat(el, w) {
+export function renderCat(el, w, ctx = {}) {
   if (catSub === 'wondering' && !wonderFound(w)) catSub = 'overview';
   if (!el._cat) {
-    const bar = h('div', { class: 'subtabs', role: 'tablist' }), body = h('div', { class: 'subbody' });
-    for (const [id, label] of CAT_SUBS) bar.append(h('button', { type: 'button', role: 'tab', 'data-sub': id, text: label, onclick: () => { if (catSub !== id) { catSub = id; renderCat(el, el._cat.w); el.scrollTop = 0; } } }));
-    el._cat = { bar, body, w, html: '', sub: '' }; el.replaceChildren(bar, body);
+    const bar = h('div', { class: 'subtabs', role: 'tablist' }), page = h('div'), hist = h('div', { class: 'histbox' }), body = h('div', { class: 'subbody' }, page, hist);
+    for (const [id, label] of CAT_SUBS) bar.append(h('button', { type: 'button', role: 'tab', 'data-sub': id, text: label, onclick: () => { if (catSub !== id) { catSub = id; renderCat(el, el._cat.w, el._cat.ctx); el.scrollTop = 0; } } }));
+    el._cat = { bar, body, page, hist, w, ctx, html: '', sub: '', hupd: null, hst: null, hw: null }; el.replaceChildren(bar, body);
   }
-  const k = el._cat; k.w = w;
+  const k = el._cat; k.w = w; k.ctx = ctx;
   for (const b of k.bar.children) { b.setAttribute('aria-selected', String(b.dataset.sub === catSub)); b.hidden = b.dataset.sub === 'wondering' && !wonderFound(w); }
+  const mem = catSub === 'memory' && ctx.histSt;
+  k.hist.hidden = !mem;
+  if (mem) { // the history is built once and kept (so typing in its search box is never interrupted); a new world rebuilds it
+    if (!k.hupd || k.hw !== w || k.hst !== ctx.histSt) { k.hw = w; k.hst = ctx.histSt; ctx.histSt.sig = ''; k.hupd = renderHistory(k.hist, w, ctx.histSt, ctx); }
+    k.hupd();
+  }
   const page = document.createElement('div'); page.append(...catPage(w, catSub));
   if (k.sub === catSub && k.html === page.innerHTML) return; // nothing it shows has changed: leave the page alone
-  const top = el.scrollTop; k.body.replaceChildren(...page.childNodes); k.html = k.body.innerHTML; k.sub = catSub; el.scrollTop = top;
+  const top = el.scrollTop; k.page.replaceChildren(...page.childNodes); k.html = k.page.innerHTML; k.sub = catSub; el.scrollTop = top;
 }
 
 // ----- Crafting tab: what it carries, what it is building and what it has made -----
 export function craftingSig(w) { const c = w.cat; return JSON.stringify([c.inv, !!w.easelMade, !!w.table, !!w.catTree, w.deco, c.crafted.length, c.money, c.ledger && c.ledger.length, w.orders && w.orders.length, c.art.works.map(x => x.status || '').join(''), Object.keys(c.recipes || {}), Object.keys(c.ideas || {}), c.mem.known.tree, c.art.count > 0]); }
 const BUILT_AT = { easel: w => w.easelMade, table: w => w.table, feeder: w => w.deco && w.deco.feeder && { day: null }, chime: w => w.deco && w.deco.chime && { day: null }, cattree: w => w.catTree };
+let madeOpen = false;
 export function renderCrafting(el, w) {
   const c = w.cat, th = thingsSummary(w), secs = [];
-  const partChip = (key, label, title) => h('div', { class: 'mat' + (c.inv[key] ? '' : ' none'), title }, h('b', { text: String(c.inv[key] || 0) }), h('span', { text: label }));
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What it is carrying' }),
-    h('div', { class: 'mats' }, ...MATERIALS.map(m => partChip(m, m, `${MAT_LABEL[m]}: it can carry ${INV_CAP}`)), partChip('frame', 'oak frames', 'Made from 2 pieces of bark. Easels, feeders, chimes and cat trees are built out of them.')),
-    h('div', { class: 'muted small', text: 'It scratches the oak for bark and twigs, and birds sometimes drop bark, twigs or a bit of string in the yard. Twine is scarce: birds drop it now and then, and once it has worked out where string comes from it can pull some out of its cushion. You can also click the old oak in the yard to shake something loose for it: not every time, and only so much a day.' })));
-  if (!w.easelMade) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'No easel yet' }), h('div', { class: 'muted', text: th.recipes.some(x => x.id === 'easel') ? 'It cannot paint until it has built an easel. The urge to paint keeps building while it waits.' : 'It cannot paint until it has built an easel, and it has not worked out how to make one yet. It will, once it is carrying enough of the right things.' })));
-  const row = id => {
-    const r = RECIPES[id], rec = th.recipes.find(x => x.id === id) || {}, built = BUILT_AT[id] ? BUILT_AT[id](w) : null;
-    const lines = Object.entries(r.cost).map(([m, n]) => `${matText(m, n)}${built ? '' : ` (has ${c.inv[m] || 0})`}`).join(' + ');
-    const state = r.knowledge ? null : built ? (built.legacy ? 'was already here' : built.day ? 'built day ' + built.day : 'built') : rec.made ? 'made ' + rec.made : null;
-    return h('div', { class: 'kv recipe' }, h('span', {}, cap(r.name), state ? h('span', { class: 'chip', text: state }) : null), h('span', { class: 'muted small', text: (rec.known ? '' : 'it still has to look up how, on the tablet · ') + (r.knowledge ? 'pulled from the cushion' : lines) }), r.desc ? h('span', { class: 'muted small desc', text: r.desc }) : null);
+  const chip = (key, label, title) => h('div', { class: 'mat' + (c.inv[key] ? '' : ' none'), title }, h('b', { text: String(c.inv[key] || 0) }), h('span', { text: label }));
+  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Carrying' }),
+    h('div', { class: 'mats' }, ...MATERIALS.map(m => chip(m, m, `${MAT_LABEL[m]}: it can carry ${INV_CAP}`)), chip('frame', 'frames', 'Two bark each. Easels, feeders, chimes and cat trees are built from them.'))));
+  const seen = id => th.recipes.some(x => x.id === id) || !!(BUILT_AT[id] && BUILT_AT[id](w));
+  const ids = Object.keys(RECIPES).filter(seen), builtOf = id => BUILT_AT[id] && BUILT_AT[id](w), todo = ids.filter(id => !builtOf(id) && !RECIPES[id].knowledge), done = ids.filter(builtOf);
+  const card = id => {
+    const r = RECIPES[id], rec = th.recipes.find(x => x.id === id) || {};
+    return h('div', { class: 'craft' + (rec.known ? '' : ' unknown') }, h('div', { class: 'name' }, cap(r.name), rec.made ? h('span', { class: 'chip', text: 'made ' + rec.made }) : null),
+      rec.known ? h('div', { class: 'parts' }, ...Object.entries(r.cost).map(([m, n]) => { const have = c.inv[m] || 0; return h('span', { class: 'part' + (have >= n ? ' ok' : ''), text: `${m === 'frame' ? 'frame' : m} ${Math.min(have, n)}/${n}` }); })) : h('div', { class: 'muted small', text: 'It has to look this up on the tablet first.' }));
   };
-  const seen = id => th.recipes.some(x => x.id === id) || !!(BUILT_AT[id] && BUILT_AT[id](w)), ids = Object.keys(RECIPES).filter(seen), todo = ids.filter(id => !(BUILT_AT[id] && BUILT_AT[id](w))), done = ids.filter(id => BUILT_AT[id] && BUILT_AT[id](w));
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What it can make' }), ...todo.map(row), !todo.length ? h('div', { class: 'muted', text: th.hidden ? 'Nothing it has worked out is waiting to be built.' : 'Everything it knows how to make is built.' }) : null, th.hidden ? h('div', { class: 'muted small', style: 'margin-top:6px', text: `${th.hidden} more ${th.hidden === 1 ? 'thing' : 'things'} it has not worked out yet. A recipe turns up when it is carrying what the thing is made of, and some of them it then has to look up on the tablet.` }) : null));
-  if (done.length) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Built' }), ...done.map(row)));
-  const on = forSale(w), ord = w.orders || [];
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Account' }),
-    h('div', { class: 'kv' }, h('span', { text: 'Money' }), h('b', { text: cash(c.money || 0) })),
-    h('div', { class: 'muted small', text: c.art.count ? `Framed paintings are for sale and sell now and then, for what they are worth. ${on.length ? `${on.length} for sale now: ${on.map(x => `“${x.title}”`).join(', ')}.` : 'None for sale right now.'}` : 'Once it has an easel and has painted something, it can frame a painting to sell it.' }),
-    ...(ord.length ? [h('div', { class: 'muted small', style: 'margin-top:6px', text: 'On its way: ' + ord.map(o => o.kind === 'toy' || o.kind === 'treat' ? 'a ' + shopLabel(o.kind, o.type) : matText(o.type, o.n)).join(', ') })] : []),
-    h('div', { class: 'muted small', style: 'margin:8px 0 2px', text: 'The tablet shop' }),
-    ...SHOP.map(x => h('div', { class: 'kv' }, h('span', { class: 'small', text: cap(shopLabel(x.kind, x.type)) }), h('span', { class: 'muted small', text: x.kind === 'toy' && toyTaken(w, x.type) ? (w.toys[x.type] ? 'has it' : 'on its way') : cash(x.price) + (x.kind === 'material' ? ' each' : '') }))),
-    ...(c.ledger && c.ledger.length ? [h('div', { class: 'muted small', style: 'margin:8px 0 2px', text: 'Recent' }), ...c.ledger.slice(0, 6).map(e => h('div', { class: 'kv' }, h('span', { class: 'small', text: `d${e.day} ${e.text}` }), h('span', { class: 'small', text: (e.amt > 0 ? '+' : '−') + cash(Math.abs(e.amt)) })))] : [])));
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Made so far' }), th.crafted.length ? th.crafted.map(x => h('div', { class: 'kv' }, h('span', { text: cap(x.name) }), h('span', { class: 'muted small', text: `day ${x.day}` }))) : h('div', { class: 'muted', text: 'Nothing yet.' }), h('div', { class: 'muted small', style: 'margin-top:6px', text: `${w.stats.crafted || 0} made in all, ${w.stats.gathered || 0} bits gathered.` })));
+  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Could make' }), todo.length ? h('div', { class: 'crafts' }, ...todo.map(card)) : h('div', { class: 'muted small', text: th.hidden ? 'Nothing waiting.' : 'Everything it knows is built.' }),
+    !w.easelMade ? h('div', { class: 'muted small', style: 'margin-top:6px', text: 'No easel yet, so it cannot paint.' }) : null));
+  if (done.length) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Built' }), h('div', { class: 'dots', style: 'gap:6px' }, ...done.map(id => { const b = builtOf(id); return h('span', { class: 'chip', text: cap(RECIPES[id].name) + (b && b.day ? ' · day ' + b.day : '') }); }))));
+  const made = th.crafted;
+  secs.push(h('details', { class: 'sec fold', open: madeOpen ? true : null, ontoggle: e => { madeOpen = e.target.open; } }, h('summary', {}, h('b', { text: 'Made so far' }), h('span', { class: 'muted small', text: ` ${w.stats.crafted || 0} made · ${w.stats.gathered || 0} gathered` })),
+    made.length ? h('div', { class: 'scrollbox' }, ...made.map(x => h('div', { class: 'kv' }, h('span', { text: cap(x.name) }), h('span', { class: 'muted small', text: `day ${x.day}` })))) : h('div', { class: 'muted small', text: 'Nothing yet.' })));
   el.replaceChildren(...secs);
 }
 
@@ -246,22 +265,16 @@ export function paintInto(canvas, work, progress = 1) {
   drawPainting(g, 240, 180, buildOps(work, 240, 180), progress);
   ditherCanvas(canvas);
 }
-export function renderGallery(el, w, open) {
-  const works = w.cat.art.works;
-  if (!works.length) { el.replaceChildren(h('div', { class: 'muted', text: `${w.cat.name} has not finished a painting yet. It will, once the urge builds and the light is good.` })); return; }
-  const grid = h('div', { id: 'grid' }, ...works.map(wk => { const cv = h('canvas'); paintInto(cv, wk); return h('button', { class: 'frame', type: 'button', onclick: () => open(wk) }, cv, h('b', { text: wk.title }), h('small', { text: `Day ${wk.day} · ${LEVEL_NAMES[wk.level]} · ${pct(wk.score)}${wk.status === 'sold' ? ` · sold ${cash(wk.sold.price)}` : wk.status === 'forSale' ? ' · for sale' : ''}` })); }));
-  el.replaceChildren(h('div', { class: 'muted small', style: 'margin-bottom:10px', text: `${works.length} on display` + (works.length < w.cat.art.count ? ` (${w.cat.art.count} painted)` : '') }), grid);
-}
 export function paintingModal(wk, close) {
   const cv = h('canvas'); paintInto(cv, wk);
   return [h('h2', { text: wk.title }), h('div', { class: 'muted', text: `Day ${wk.day}, ${wk.when.toLowerCase()} · ${subjectLabel(wk.subject)} · painted at level ${wk.level} (${LEVEL_NAMES[wk.level]}) · ${pct(wk.score)}/100` }), cv, h('div', { class: 'critique', text: '“' + wk.critique + '”' }), h('div', { class: 'row2', style: 'margin-top:14px' }, h('button', { class: 'btn primary', type: 'button', onclick: close, text: 'Close' }))];
 }
 
 
-// ----- Stash tab: everything it has kept, favourite first -----
+// ----- Treasure tab: everything it has kept, favourite first -----
 export function renderStash(el, w) {
   const c = w.cat, n = w.stash.items.length;
-  if (!n) { el.replaceChildren(h('div', { class: 'muted', text: `${c.name} has not stashed anything yet. Leave something it might like on the mat in the Outside tab, or wait for a bird to drop something.` })); return; }
+  if (!n) { el.replaceChildren(h('div', { class: 'muted', text: `${c.name} has not stashed anything yet. Leave something it might like on the mat in the Tablet tab, or wait for a bird to drop something.` })); return; }
   const rows = stashRank(w), site = w.stash.site ? w.stash.site.label : 'nowhere yet';
   const swatch = r => { const cv = h('canvas', { width: 36, height: 28, class: 'swatch' }); const g = cv.getContext('2d'); g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(0, 0, 36, 28); drawItem(g, r.type, r.color, 18, 14, 10, 0.3); return cv; };
   el.replaceChildren(
@@ -293,7 +306,7 @@ const TIER_LABEL = { delight: 'delighted', pleased: 'pleased', curious: 'curious
 const swatch = c => h('span', { class: 'dot sw', style: `background:${COLORS[c] || '#888'}`, title: c });
 function tasteRow(label, v, sw, feeling) { return h('div', { class: 'trait taste' }, h('span', {}, sw || null, label, feeling ? h('em', { class: 'muted small', text: ' · ' + feeling }) : null), meter(v), h('span', { class: 'muted', text: pct(v) })); }
 
-export function renderOutside(el, w, ctx) {
+function renderMat(el, w, ctx) {
   const { actions } = ctx, kinds = { item: 'An object', toy: 'A toy', note: 'A note' }; let kind = 'item';
   const type = h('select', { id: 'of-type', 'aria-label': 'Kind of object' }, h('option', { value: '', text: 'Any kind' }), ...ITEM_TYPES.map(t => h('option', { value: t, text: cap(ITEM_LABEL[t]) })));
   const color = h('select', { id: 'of-color', 'aria-label': 'Colour' }, h('option', { value: '', text: 'Any colour' }), ...COLOR_NAMES.map(c => h('option', { value: c, text: cap(c) })));
@@ -315,42 +328,104 @@ export function renderOutside(el, w, ctx) {
     const r = actions.leave(kind === 'note' ? { kind: 'note', text: text.value } : kind === 'toy' ? { kind: 'toy', type: toy.value } : { kind: 'item', type: type.value || undefined, color: color.value || undefined });
     msg.textContent = r.ok ? 'Left on the mat. It will notice in a moment.' : r.error; msg.className = 'status ' + (r.ok ? 'ok' : 'bad'); if (r.ok && kind === 'note') text.value = ''; if (kind === 'toy') paintToys(); update();
   };
-  const dyn = { wishes: h('div', { id: 'of-wishes' }), feel: h('div', { id: 'of-feel' }), mat: h('div', { id: 'of-mat' }), tastes: h('div', { id: 'of-tastes' }), hist: h('div', { id: 'of-hist' }), keeps: h('div', { id: 'of-keeps' }), tablet: h('div', { id: 'of-tablet' }) };
+  const dyn = { wishes: h('div', { id: 'of-wishes' }), mat: h('div', { id: 'of-mat' }), hist: h('div', { id: 'of-hist' }), keeps: h('div', { id: 'of-keeps' }) };
   el.replaceChildren(
     h('div', { class: 'sec' }, h('h3', { text: 'Leave something on the mat' }),
       h('p', { class: 'muted small', text: `The mat is by the glass at the front of the yard. It holds ${MAX_ON_MAT} things. What the cat is given slowly changes what it likes.` }),
       seg, itemRow, toyRow, noteRow, h('div', { class: 'row2', style: 'margin-top:8px' }, h('button', { class: 'btn primary', type: 'button', text: 'Leave it on the mat', onclick: leave })), msg, dyn.mat),
     h('div', { class: 'sec' }, h('h3', { text: 'Notes from the cat' }), dyn.wishes),
-    h('div', { class: 'sec' }, h('h3', { text: 'What it likes right now' }), dyn.tastes, dyn.feel),
-    h('div', { class: 'sec' }, h('h3', { text: 'How it took your offerings' }), dyn.hist, dyn.keeps),
-    h('div', { class: 'sec' }, h('h3', { text: 'The tablet' }), dyn.tablet));
+    h('div', { class: 'sec' }, h('h3', { text: 'How it took your offerings' }), dyn.hist, dyn.keeps));
   let sig = '';
   function update() {
-    const c = w.cat, t = w.tablet || { pages: [], interests: {} }, net = ctx.net;
+    const c = w.cat;
     if (msg.classList.contains('bad') && w.offers.length < MAX_ON_MAT) { msg.textContent = ''; msg.className = 'status'; } // the "mat is full" notice goes away once there is room
-    const next = JSON.stringify([w.offers, c.tastes && [topTastes(w, 'color', 4), topTastes(w, 'type', 4)], c.offerHist.map(x => [x.id, x.text]), c.keepsakes, c.wishes.map(x => [x.id, x.state, x.text]), topFeelings(w, 4), t.pages.map(p => [p.id, p.reaction]), Object.keys(t.interests).length, net && net.label(), c.quirk.favColor, c.quirk.item]);
+    const next = JSON.stringify([w.offers, c.offerHist.map(x => [x.id, x.text]), c.keepsakes, c.wishes.map(x => [x.id, x.state, x.text])]);
     if (next === sig) return; sig = next; if (kind === 'toy') paintToys();
     dyn.mat.replaceChildren(...(w.offers.length ? [h('div', { class: 'muted small', text: 'On the mat now:' }), ...w.offers.map(o => h('div', { class: 'kv' }, h('span', {}, o.kind === 'item' ? swatch(o.color) : null, cap(offerLabel(o))), h('span', { class: 'muted', text: STATE_LABEL[o.state] || o.state })))] : [h('div', { class: 'muted small', style: 'margin-top:8px', text: 'The mat is empty.' })]));
-    dyn.tastes.replaceChildren(h('div', { class: 'small', text: `Favourite colour: ${c.quirk.favColor}. Collects ${ITEM_PLURAL[c.quirk.item]}.` }),
-      h('div', { class: 'muted small', style: 'margin:8px 0 4px', text: 'Colours' }), ...topTastes(w, 'color', 4).map(([k, v]) => tasteRow(k, v, swatch(k))),
-      h('div', { class: 'muted small', style: 'margin:8px 0 4px', text: 'Things' }), ...topTastes(w, 'type', 4).map(([k, v]) => tasteRow(ITEM_LABEL[k], v)));
     const openW = c.wishes.filter(x => x.state === 'open'), pastW = c.wishes.filter(x => x.state === 'granted' || x.state === 'faded').slice(0, 4);
     dyn.wishes.replaceChildren(
       h('div', { class: 'muted small', text: c.mem.known.tablet ? 'When it wants something only you can bring, it writes you a note on the tablet. Leave what it asks for on the mat and it will know you read it.' : 'Once it finds the tablet it can leave you notes here.' }),
       ...(openW.length ? openW.map(x => h('div', { class: 'wish' }, h('div', { class: 'theory', text: '“' + x.text + '”' }), h('div', { class: 'row2 between' }, h('span', { class: 'muted small', text: `Day ${x.written ? x.written.day : x.day} · asks for ${wishLabel(x)}` }), x.kind === 'need' ? h('span', { class: 'muted small', text: 'Click the oak in the yard' }) : h('button', { class: 'btn primary', type: 'button', text: 'Give it', onclick: () => { const r = actions.leave({ kind: 'item', type: x.type, color: x.color || undefined }); msg.textContent = r.ok ? 'Left on the mat. It will notice in a moment.' : r.error; msg.className = 'status ' + (r.ok ? 'ok' : 'bad'); update(); } })))) : [h('div', { class: 'muted', style: 'margin-top:6px', text: 'No notes waiting.' })]),
       ...pastW.map(x => h('div', { class: 'kv' }, h('span', { class: 'small', text: wishLabel(x) }), h('span', { class: 'chip', text: x.state === 'granted' ? 'granted' : 'faded' }))));
-    const fl = topFeelings(w, 4);
-    dyn.feel.replaceChildren(h('div', { class: 'muted small', style: 'margin:10px 0 4px', text: 'What has made it feel good (learned, not set)' }), ...(fl.good.length ? fl.good.map(r => tasteRow(r.name, Math.min(1, r.score), null, r.label)) : [h('div', { class: 'muted small', text: 'Nothing yet.' })]), ...(fl.bad.length ? [h('div', { class: 'muted small', style: 'margin:8px 0 2px', text: 'Uneasy about: ' + fl.bad.map(r => r.name).join(', ') })] : []));
     dyn.hist.replaceChildren(...(c.offerHist.length ? c.offerHist.slice(0, 8).map(x => h('div', { class: 'entry' }, h('div', { class: 'meta' }, `Day ${x.day} · ${x.time}`, h('span', { class: 'chip', text: x.kind === 'note' ? 'note' : TIER_LABEL[x.tier] })), h('div', { class: 'small', text: cap(x.label) }), h('div', { class: 'txt', text: '“' + x.text + '”' }))) : [h('div', { class: 'muted small', text: 'Nothing has been left yet.' })]));
     dyn.keeps.replaceChildren(...(c.keepsakes.length ? [h('div', { class: 'muted small', style: 'margin-top:12px', text: 'Notes it kept:' }), ...c.keepsakes.map(k => h('div', { class: 'theory', text: '“' + k.text + '”' }))] : []));
+  }
+  update(); return update;
+}
+
+
+// ----- Tablet > Wikipedia: what it has read -----
+function renderWikipedia(el, w, ctx) {
+  const box = h('div', { id: 'of-tablet' }); el.replaceChildren(h('div', { class: 'sec' }, h('h3', { text: 'Wikipedia' }), box));
+  let sig = '';
+  function update() {
+    const c = w.cat, t = w.tablet || { pages: [], interests: {}, uses: 0 }, net = ctx.net;
+    const next = JSON.stringify([t.pages.map(p => [p.id, p.reaction, p.seen]), Object.keys(t.interests).length, t.uses, net && net.label(), !!c.mem.known.tablet]);
+    if (next === sig) return; sig = next;
     const ready = !!c.mem.known.tablet;
-    dyn.tablet.replaceChildren(
+    box.replaceChildren(
       h('div', { class: 'status ' + (net && net.state === 'error' ? 'bad' : net && net.enabled() ? 'ok' : ''), text: net ? net.label() : '' }),
       h('div', { class: 'muted small', text: ready ? `It has used it ${t.uses} time${t.uses === 1 ? '' : 's'}. Everything it reads comes from Wikipedia and is shown only as text.` : 'It has not found the tablet by the stump yet. It will, or send it there with /tablet go.' }),
       Object.keys(t.interests).length ? h('div', { class: 'dots', style: 'gap:5px' }, ...Object.entries(t.interests).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => h('span', { class: 'chip', text: k + (v > 1 ? ' ×' + v : '') }))) : null,
       ...(t.pages.length ? t.pages.slice(0, 6).map(p => h('div', { class: 'entry' }, h('div', { class: 'meta' }, `Day ${p.day} · ${p.time}`, p.seen > 1 ? h('span', { class: 'chip', text: 'read ' + p.seen + '×' }) : null), h('div', { class: 'small', style: 'font-weight:600', text: p.title }), h('div', { class: 'muted small', text: p.extract.length > 180 ? p.extract.slice(0, 177) + '...' : p.extract }), p.reaction ? h('div', { class: 'txt', text: '“' + p.reaction + '”' }) : null)) : []));
   }
   update(); return update;
+}
+
+// ----- Tablet > Account: money, the shop, the ledger -----
+function renderAccount(el, w) {
+  let sig = '', ledgerOpen = false;
+  function update() {
+    const c = w.cat, on = forSale(w), ord = w.orders || [], led = c.ledger || [];
+    const next = JSON.stringify([c.money, led.length, led[0], ord.length, on.length, Object.keys(w.toys || {}).length, c.art.count]); if (next === sig) return; sig = next;
+    el.replaceChildren(
+      h('div', { class: 'sec' }, h('div', { class: 'kv' }, h('span', { text: 'Money' }), h('b', { text: cash(c.money || 0) })),
+        h('div', { class: 'muted small', text: c.art.count ? (on.length ? `${on.length} painting${on.length === 1 ? '' : 's'} for sale (see Gallery).` : 'No paintings for sale right now.') : 'Once it has an easel and has painted something, it can frame a painting to sell it.' }),
+        ord.length ? h('div', { class: 'muted small', style: 'margin-top:6px', text: 'On its way: ' + ord.map(o => o.kind === 'toy' || o.kind === 'treat' ? 'a ' + shopLabel(o.kind, o.type) : matText(o.type, o.n)).join(', ') }) : null),
+      h('div', { class: 'sec' }, h('h3', { text: 'Shop' }), ...SHOP.map(x => h('div', { class: 'kv' }, h('span', { class: 'small', text: cap(shopLabel(x.kind, x.type)) }), h('span', { class: 'muted small', text: x.kind === 'toy' && toyTaken(w, x.type) ? (w.toys[x.type] ? 'has it' : 'on its way') : cash(x.price) + (x.kind === 'material' ? ' each' : '') })))),
+      h('details', { class: 'sec fold', open: ledgerOpen ? true : null, ontoggle: e => { ledgerOpen = e.target.open; } }, h('summary', {}, h('b', { text: 'Recent' }), h('span', { class: 'muted small', text: ` ${led.length} entr${led.length === 1 ? 'y' : 'ies'}` })),
+        led.length ? h('div', { class: 'scrollbox' }, ...led.map(e => h('div', { class: 'kv' }, h('span', { class: 'small', text: `d${e.day} ${e.text}` }), h('span', { class: 'small', text: (e.amt > 0 ? '+' : '\u2212') + cash(Math.abs(e.amt)) })))) : h('div', { class: 'muted small', text: 'Nothing yet.' })));
+  }
+  update(); return update;
+}
+
+// ----- Tablet > Gallery: the painting level, and everything it has put up for sale or sold -----
+function renderGallery(el, w, ctx) {
+  let sig = '';
+  function update() {
+    const c = w.cat, a = c.art, works = a.works, lvl = levelOf(a.xp), next = xpForLevel(lvl + 1), cur = xpForLevel(lvl);
+    const next_ = JSON.stringify([!!w.easelMade, Math.round(a.xp), a.count, works.map(x => [x.title, x.status, x.price, x.sold && x.sold.day])]); if (next_ === sig) return; sig = next_;
+    const group = (label, list, line) => list.length ? h('div', { class: 'sec' }, h('h3', { text: `${label} (${list.length})` }), h('div', { id: 'grid' }, ...list.map(wk => { const cv = h('canvas'); paintInto(cv, wk);
+      return h('button', { class: 'frame', type: 'button', onclick: () => ctx.open && ctx.open(wk) }, cv, h('b', { text: wk.title }), ...line(wk).map(t => h('small', { text: t }))); }))) : null;
+    const priced = wk => cash(wk.price || 0);
+    el.replaceChildren(...[
+      h('div', { class: 'sec' }, h('h3', { text: 'Painting' }),
+        w.easelMade ? [h('div', { class: 'big', text: `Level ${lvl}: ${LEVEL_NAMES[lvl]}` }),
+          lvl < 12 ? [meter((a.xp - cur) / (next - cur)), h('div', { class: 'muted small', text: `${Math.round(next - a.xp)} xp to ${LEVEL_NAMES[lvl + 1]}` })] : null,
+          h('div', { class: 'muted small', style: 'margin-top:6px', text: `${a.count} painting${a.count === 1 ? '' : 's'}${a.count ? `, best ${pct(a.best)}/100` : ''}` })]
+          : h('div', { class: 'muted', text: 'No easel yet, so nothing to paint on. It has to build one first (see the Crafting tab).' })),
+      !works.length ? h('div', { class: 'muted', text: `${c.name} has not finished a painting yet. It will, once the urge builds and the light is good.` }) : null,
+      group('For sale', works.filter(x => x.status === 'forSale'), wk => [priced(wk), `Posted day ${wk.listed ? wk.listed.day : wk.day}` + (wk.listed && wk.listed.time ? ', ' + wk.listed.time : '')]),
+      group('Sold', works.filter(x => x.status === 'sold'), wk => [cash(wk.sold.price), `Posted day ${wk.listed ? wk.listed.day : wk.day}`, `Sold day ${wk.sold.day}`]),
+      group('Not for sale yet', works.filter(x => !x.status), wk => [`Painted day ${wk.day}`, `${pct(wk.score)}/100`])].filter(Boolean));
+  }
+  update(); return update;
+}
+
+// ----- Tablet tab: Mat (what you leave for it), Wikipedia, Account and Gallery -----
+const TAB_SUBS = [['mat', 'Mat'], ['wiki', 'Wikipedia'], ['account', 'Account'], ['gallery', 'Gallery']];
+let tabSub = 'mat';
+export function renderTablet(el, w, ctx) {
+  const bar = h('div', { class: 'subtabs', role: 'tablist' }), body = h('div', { class: 'subbody' });
+  let upd = null;
+  const open = id => {
+    tabSub = id; for (const b of bar.children) b.setAttribute('aria-selected', String(b.dataset.sub === id));
+    const box = h('div'); body.replaceChildren(box);
+    upd = ({ mat: renderMat, wiki: renderWikipedia, account: renderAccount, gallery: renderGallery })[id](box, w, ctx);
+  };
+  for (const [id, label] of TAB_SUBS) bar.append(h('button', { type: 'button', role: 'tab', 'data-sub': id, text: label, onclick: () => { if (tabSub !== id) { open(id); el.scrollTop = 0; } } }));
+  el.replaceChildren(bar, body); open(tabSub);
+  return () => upd && upd();
 }
 
 // ----- Settings -----

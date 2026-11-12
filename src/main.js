@@ -13,11 +13,11 @@ import { exportText, exportName } from './sim/history.js';
 import { storage, isDesktop } from './storage.js';
 import { blogStarted, unreadPosts, markBlogRead } from './sim/blog.js';
 import { BUILD } from './sim/version.js';
-import { h, buildNeeds, updateNeeds, renderCat, renderCrafting, craftingSig, renderStash, renderBlog, renderHistory, renderGallery, renderSettings, renderOutside, paintingModal, moodLabel } from './ui.js';
+import { h, buildNeeds, updateNeeds, renderCat, renderCrafting, craftingSig, renderStash, renderBlog, renderSettings, renderTablet, paintingModal, moodLabel } from './ui.js';
 
 const $ = id => document.getElementById(id);
 const T = window.__TAURI__;
-let w, settings, brain, net, outsideUpdate = null, historyUpdate = null, renderer, where = '', adminMode = false, activeTab = 'chat';
+let w, settings, brain, net, tabletUpdate = null, renderer, where = '', adminMode = false, activeTab = 'chat';
 let blogSig = '', blogFresh = new Set();
 let lastSave = Date.now(), saveChain = Promise.resolve(), lastDrive = performance.now(), lastDraw = 0, lastHud = 0, focused = true, histSt = { mode: 'today', kinds: new Set(['did', 'thought', 'event']), q: '', limit: 120 }, gallerySig = '', craftSig = '', stashSig = '';
 let bubbleId = -1, bubbleUntil = 0, chatSig = '', pendingCat = false;
@@ -80,13 +80,11 @@ function hud(now) {
   $('pause').textContent = w.paused ? 'Resume' : 'Pause'; if ($('speed').value !== String(w.speed) && !$('speed').matches(':focus')) { const o = [...$('speed').options].find(x => +x.value === w.speed); if (o) $('speed').value = o.value; }
   updateNeeds($('needs'), w); updateSavedLabel(); bubble(now);
   { const bt = document.querySelector('#tabs [data-tab="blog"]'), on = blogStarted(w); if (bt.hidden === on) bt.hidden = !on; const lab = 'Blog' + (on && activeTab !== 'blog' && unreadPosts(w) ? ' •' : ''); if (bt.textContent !== lab) bt.textContent = lab; }
-  if (activeTab === 'cat') renderCat($('tab-cat'), w);
+  if (activeTab === 'cat') renderCat($('tab-cat'), w, catCtx());
   else if (activeTab === 'crafting') { const sig = craftingSig(w); if (sig !== craftSig) { craftSig = sig; renderCrafting($('tab-crafting'), w); } }
-  else if (activeTab === 'outside') { if (outsideUpdate) outsideUpdate(); }
+  else if (activeTab === 'tablet') { if (tabletUpdate) tabletUpdate(); }
   else if (activeTab === 'stash') { const sig = w.stash.items.length + ':' + Object.keys(w.cat.assoc || {}).length + ':' + w.cat.quirk.favColor + w.cat.quirk.item + (w.stash.site ? w.stash.site.label : ''); if (sig !== stashSig) { stashSig = sig; renderStash($('tab-stash'), w); } }
   else if (activeTab === 'blog') { const sig = (w.blog ? w.blog.posts.length + ':' + (w.blog.draft ? 1 : 0) + ':' + w.blog.title + ':' + w.blog.posts.map(x => x.title).join('|').length : ''); if (sig !== blogSig) { blogSig = sig; const f = new Set((w.blog ? w.blog.posts : []).filter(x => !x.read).map(x => x.id)); renderBlog($('tab-blog'), w, new Set([...blogFresh, ...f])); f.forEach(id => blogFresh.add(id)); markBlogRead(w); } }
-  else if (activeTab === 'history') { if (historyUpdate) historyUpdate(); }
-  else if (activeTab === 'gallery') { const sig = w.cat.art.count + ':' + w.cat.art.works.map(x => x.title + (x.status || '')).join('|').length; if (sig !== gallerySig) { gallerySig = sig; renderGallery($('tab-gallery'), w, openWork); } }
   renderChat();
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -158,7 +156,7 @@ function tabletCmd(sub) {
 
 function setAdmin(on) { adminMode = on; $('adminToggle').setAttribute('aria-pressed', String(on)); $('chatform').classList.toggle('admin', on); $('chatin').placeholder = on ? 'Admin command (try help)' : `Say something to ${w.cat.name}…`; }
 
-function swapWorld(nw) { w = nw; w.speed = settings.speed || w.speed || 1; chatSig = ''; histSt = { mode: histSt.mode, kinds: histSt.kinds, q: '', limit: 120 }; historyUpdate = null; bubbleId = -1; brain.lastMuse = Date.now(); outsideUpdate = null; if (net) net.tick(w).catch(() => {}); if (activeTab === 'outside') queueMicrotask(() => showTab('outside')); $('chatin').placeholder = adminMode ? 'Admin command (try help)' : `Say something to ${w.cat.name}…`; }
+function swapWorld(nw) { w = nw; w.speed = settings.speed || w.speed || 1; chatSig = ''; histSt = { mode: histSt.mode, kinds: histSt.kinds, q: '', limit: 120 }; bubbleId = -1; brain.lastMuse = Date.now(); outsideUpdate = null; if (net) net.tick(w).catch(() => {}); if (activeTab === 'outside') queueMicrotask(() => showTab('outside')); $('chatin').placeholder = adminMode ? 'Admin command (try help)' : `Say something to ${w.cat.name}…`; }
 
 // ---------- exporting the story ----------
 async function exportStory() {
@@ -175,6 +173,7 @@ async function exportStory() {
 // ---------- modal and gallery ----------
 function showModal(...kids) { $('modalbox').replaceChildren(...kids.flat()); $('modal').hidden = false; $('modalbox').querySelector('button')?.focus(); }
 const closeModal = () => { $('modal').hidden = true; };
+const catCtx = () => ({ histSt, actions: { export: exportStory } });
 const openWork = wk => showModal(paintingModal(wk, closeModal));
 function awayModal(a) {
   const mins = Math.round(a.awayRealSeconds / 60), t = mins < 60 ? `${mins} minutes` : `${Math.floor(mins / 60)} h ${mins % 60} min`;
@@ -183,7 +182,7 @@ function awayModal(a) {
     h('div', { class: 'row2' }, h('button', { class: 'btn primary', type: 'button', onclick: closeModal, text: 'Say hello' })));
 }
 function resetModal() {
-  showModal(h('h2', { text: 'Start over?' }), h('p', { text: `This replaces ${w.cat.name}, the stash, the gallery and the journal with a new cat. The old save is overwritten at the next save.` }),
+  showModal(h('h2', { text: 'Start over?' }), h('p', { text: `This replaces ${w.cat.name}, the treasure, the gallery and the journal with a new cat. The old save is overwritten at the next save.` }),
     h('div', { class: 'row2' }, h('button', { class: 'btn danger', type: 'button', text: 'Yes, start over', onclick: () => { closeModal(); act({ type: 'reset' }); } }), h('button', { class: 'btn', type: 'button', text: 'Keep my cat', onclick: closeModal })));
 }
 
@@ -191,14 +190,13 @@ function resetModal() {
 function showTab(name) {
   activeTab = name;
   for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
-  for (const id of ['chat', 'cat', 'crafting', 'stash', 'blog', 'outside', 'history', 'gallery', 'settings']) $('tab-' + id).hidden = id !== name;
-  histSt.sig = ''; gallerySig = ''; stashSig = ''; craftSig = ''; blogSig = ''; blogFresh = new Set();
+  for (const id of ['chat', 'cat', 'crafting', 'stash', 'blog', 'tablet', 'settings']) $('tab-' + id).hidden = id !== name;
+  histSt.sig = ''; stashSig = ''; craftSig = ''; blogSig = ''; blogFresh = new Set();
   if (name === 'stash') renderStash($('tab-stash'), w);
   if (name === 'blog') hud(performance.now());
-  if (name === 'cat') renderCat($('tab-cat'), w);
+  if (name === 'cat') renderCat($('tab-cat'), w, catCtx());
   if (name === 'crafting') { craftSig = craftingSig(w); renderCrafting($('tab-crafting'), w); }
-  if (name === 'history') historyUpdate = renderHistory($('tab-history'), w, histSt, { actions: { export: exportStory } });
-  if (name === 'outside') outsideUpdate = renderOutside($('tab-outside'), w, { net, actions: { leave: spec => leaveOffering(w, spec) } });
+  if (name === 'tablet') tabletUpdate = renderTablet($('tab-tablet'), w, { net, open: openWork, actions: { leave: spec => leaveOffering(w, spec) } });
   if (name === 'settings') renderSettings($('tab-settings'), { settings, brain, net, where, w, actions: { saveSettings: persistSettings, saveNow: () => saveNow('main'), loadSaved: reloadLast, exportSave, importSave, reset: resetModal } });
   if (name === 'chat') { chatSig = ''; renderChat(); $('chatin').focus(); }
   hud(performance.now());

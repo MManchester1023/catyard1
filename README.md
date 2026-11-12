@@ -77,13 +77,11 @@ The yard is on the left with the cat's needs under it. The panel on the right ha
 | Tab | What it shows |
 | --- | --- |
 | **Chat** | Talk to the cat, and type commands |
-| **Cat** | The cat itself, in sub-tabs: *About* (who it is, its quirk, being upset, the frog), *Wants* (what it wants, its painting level), *Mind* (mood, habits, favourite things, special interest), *Memory* (what it remembers, what makes it feel good) and *Wondering* (the mysteries it has noticed) |
-| **Crafting** | What it is carrying, whether it has an easel, what it can make and what it has made |
-| **Stash** | Everything it has kept, favourite first |
+| **Cat** | The cat itself, in sub-tabs: *About* (who it is, what it likes right now, favourite things to do, what makes it feel good, special interest, being upset, the frog), *Wants* (what it wants, what Claude decided), *Mind* (mood and what it does to its choices, habits, quirk), *Memory* (what it remembers, and the whole history) and *Wondering* (the mysteries it has noticed) |
+| **Crafting** | What it is carrying, what it could make, what it has built, and a collapsible list of what it has made |
+| **Treasure** | Everything it has kept, favourite first |
 | **Blog** | Its blog, once it has started one |
-| **Outside** | The mat, notes from the cat, its tastes, the tablet |
-| **History** | What it did, thought and had happen |
-| **Gallery** | Its paintings |
+| **Tablet** | Sub-tabs: *Mat* (what you leave, notes from the cat), *Wikipedia* (what it has read), *Account* (money, shop, recent ledger) and *Gallery* (painting level, paintings for sale and sold with price and dates) |
 | **Settings** | Claude connection, tablet, saving, performance, start over, build line |
 
 *Wondering* stays hidden until the cat has actually noticed a mystery. The Cat tab only redraws when something on it changes, so your scroll position is kept.
@@ -179,13 +177,13 @@ Until the easel and the table exist, bark goes to them first. When it is short o
 
 Once it has an easel, the cat paints when the urge builds and the light is good, and slowly improves through 12 levels. Most paintings are of something in the yard. Now and then it paints something made up: **swirling skies**, **splatter**, **waves**, **colour blocks**, **fields of dots** or **blooms**, depending on its mood, the time of day and its skill. Each picture is generated from a seed, so it always redraws the same way. The **Gallery** tab holds them all.
 
-## The Stash tab
+## The Treasure tab
 
 Everything the cat has kept, favourite first. The ranking comes from what it collects, its favourite colour and what has made it feel good, so it changes as its tastes do.
 
 ## Money: selling paintings and the tablet shop
 
-A painting the cat has framed is **for sale**. Now and then (on average every 1.1 days, `PACE.saleDays`) a buyer turns up and it sells, for $4 plus up to $46 for how good it is (`PACE.priceBase`, `PACE.priceScore`), give or take a fifth: a poor painting fetches a few dollars, a fine one around $40. The money goes into the cat's account, which you can see in the **Crafting** tab (and with `account`). Sold paintings stay in the Gallery, marked with their price. The money is for the game only.
+A painting the cat has framed is **for sale**. Now and then (on average every 1.1 days, `PACE.saleDays`) a buyer turns up and it sells, for $4 plus up to $46 for how good it is (`PACE.priceBase`, `PACE.priceScore`), give or take a fifth: a poor painting fetches a few dollars, a fine one around $40. The money goes into the cat's account, which you can see in the **Tablet** tab under Account (and with `account`). A painting is priced when it is put up for sale, and sold paintings stay in the Gallery with their price and dates. The money is for the game only.
 
 When it has money it sits down at the tablet and uses the **shop**, which currently sells:
 
@@ -203,7 +201,7 @@ It buys the bark, twigs or twine it is short of for what it means to make first 
 
 ## Offerings: the mat
 
-The mat sits by the glass at the front of the yard and holds three things at once. In the **Outside** tab you can leave:
+The mat sits by the glass at the front of the yard and holds three things at once. In the **Tablet** tab (Mat) you can leave:
 
 - **An object**: a marble, button, feather or bottle cap, in any colour.
 - **A treat**: catnip or tuna. They are used up the moment the cat has them, so unlike toys they can be given or bought again and again (one of each kind on the mat or on order at a time). Catnip makes it roll about and be silly, which eases boredom and the urge to make things; tuna fills its tummy. The cat buys catnip when it is restless, and tuna when it is hungry, before it saves up for a toy. You give them from the same list as toys (`give catnip`, `give tuna`).

@@ -54,7 +54,7 @@ export function considerWish(w) {
 export function publishWish(w, wish) {
   const c = w.cat; wish.state = 'open'; wish.written = { day: dayOf(w), time: clockStr(w) }; w.stats.wishes++;
   journal(w, `I wrote to the human on the tablet: "${wish.text}"`, 'wish'); note(w, `${c.name} left you a note on the tablet asking for ${wishLabel(wish)}.`, 'wish');
-  w.chat.push({ from: 'sys', text: `${c.name} left you a note on the tablet: “${wish.text}” (see the Outside tab)`, day: dayOf(w), time: clockStr(w) }); if (w.chat.length > 80) w.chat.shift();
+  w.chat.push({ from: 'sys', text: `${c.name} left you a note on the tablet: “${wish.text}” (see the Tablet tab)`, day: dayOf(w), time: clockStr(w) }); if (w.chat.length > 80) w.chat.shift();
   if (w.asks && wish.kind !== 'need') w.asks.push({ type: 'wish', id: wish.id }); // (Claude rewrites the notes asking for objects; the ones asking for a shake of the oak stay as they are)
   return wish;
 }

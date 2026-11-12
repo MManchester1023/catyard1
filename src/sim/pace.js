@@ -7,6 +7,7 @@
 // all night, but it only learns a handful of things from it; the rest has to wait for tomorrow. That is what makes
 // the big discoveries take days instead of minutes, however busy the cat is.
 import { dayOf } from './world.js';
+import { rnd } from './util.js';
 import { easelUrge } from './recipes.js';
 
 export const PACE = {
@@ -64,3 +65,5 @@ export const cluesToday = (w, id) => { const m = w.mysteries[id]; return m && m.
 // is there still something today can teach it about this? (the cat stops chasing a mystery once it has nothing left to give)
 export const clueRoom = (w, id) => cluesToday(w, id) < clueCap(w, id) - 1e-9;
 export const frogRoom = w => { const m = w.mysteries.ripples; return !(m.frogDay === dayOf(w) && (m.frogToday || 0) >= Math.max(1, Math.round(PACE.frogPerDay / paceOf(w)))); };
+// what a painting is asked for when it is put up for sale: this much for any, and more for a good one, give or take a fifth
+export const priceOf = work => Math.max(2, Math.round((PACE.priceBase + work.score * PACE.priceScore) * (1 + rnd(-0.2, 0.2))));

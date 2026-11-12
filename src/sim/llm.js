@@ -206,7 +206,7 @@ export class Brain {
           if (t) {
             const old = wish.text; wish.text = t;
             const e = w.journal.find(x => x.tag === 'wish' && x.text.includes(old)); if (e) e.text = `I wrote to the human on the tablet: "${t}"`;
-            const m = w.chat.find(x => x.from === 'sys' && x.text.includes(old)); if (m) m.text = `${c.name} left you a note on the tablet: “${t}” (see the Outside tab)`;
+            const m = w.chat.find(x => x.from === 'sys' && x.text.includes(old)); if (m) m.text = `${c.name} left you a note on the tablet: “${t}” (see the Tablet tab)`;
             const h = w.hist.find(x => x.k === 'diary' && x.text.includes(old.slice(0, 40))); if (h) h.text = `I wrote to the human on the tablet: "${t}"`;
           }
         } else if (ask.type === 'page') {

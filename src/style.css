@@ -179,3 +179,18 @@ h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing
 .post p { margin: 8px 0 0; line-height: 1.5; }
 .post .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .chip.new { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+
+/* crafting cards, folds and scroll boxes */
+.crafts { display: grid; gap: 8px; }
+.craft { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.craft.unknown { opacity: .7; }
+.craft .name { font-weight: 600; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.craft .parts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+.part { font-size: 12px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); }
+.part.ok { color: var(--ink); border-color: var(--accent); }
+.fold { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--panel); }
+.fold summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.fold[open] summary { margin-bottom: 8px; }
+.scrollbox { max-height: 220px; overflow-y: auto; padding-right: 4px; }
+.histbox { margin-top: 14px; }
+.frame small { display: block; }

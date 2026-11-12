@@ -7,7 +7,7 @@ import { RECIPES, knows, found, learned, rawCost, rawHeld, partsHeld, costText, 
 import { feel } from './feelings.js';
 import { onEvent } from './wants.js';
 import { layoutStash } from './quirk.js';
-import { PACE, paceOf, barkLuck, gatherRoom } from './pace.js';
+import { PACE, paceOf, barkLuck, gatherRoom, priceOf } from './pace.js';
 import { foundCatTree } from './cattree.js';
 import { foundPlace } from './finds.js';
 import { random } from './rng.js';
@@ -129,7 +129,7 @@ export function hangSpareFrames(w) {
   while (frameSpare(w) > 0 && paintingToFrame(w)) {
     const best = unlistedWork(w); if (!best) break; // (the best one it has not framed yet: a framed painting goes up for sale)
     c.inv.frame--; c.crafted.unshift({ id: uid(), recipe: 'frame', name: 'framed painting', work: best.title, day: dayOf(w), time: clockStr(w) }); if (c.crafted.length > 16) c.crafted.pop();
-    best.status = 'forSale'; best.listed = { day: dayOf(w), time: clockStr(w) }; clearEasel(w, best);
+    best.status = 'forSale'; best.listed = { day: dayOf(w), time: clockStr(w) }; best.price = priceOf(best); clearEasel(w, best);
     c.art.xp += 6; n++;
     journal(w, `I put a frame round "${best.title}" and set it out for sale. It looks like it matters now. Someone will want it.`, 'craft'); note(w, `${c.name} framed "${best.title}" and put it up for sale.`, 'craft');
   }
