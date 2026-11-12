@@ -1,23 +1,23 @@
 // Side-panel views. All text goes in through textContent, so nothing the cat (or the model) says can inject markup.
 import { COLORS, COLOR_NAMES, ITEM_TYPES, ITEM_LABEL, ITEM_PLURAL, COAT_LABEL } from './sim/util.js';
 import { levelOf, xpForLevel, LEVEL_NAMES, buildOps, drawPainting, subjectLabel } from './sim/art.js';
-import { stashColors, stashRank, TASTE_LABEL } from './sim/quirk.js';
+import { stashRank, TASTE_LABEL } from './sim/quirk.js';
 import { drawItem } from './draw_cat.js';
 import { MYSTERY_INFO, discovered } from './sim/mysteries.js';
 import { describe } from './sim/sim.js';
 import { ditherCanvas } from './dither.js';
-import { dayOf, clockStr } from './sim/world.js';
+import { dayOf } from './sim/world.js';
 import { topTastes, offerLabel, MAX_ON_MAT, NOTE_MAX, toyTaken, treatTaken } from './sim/offerings.js';
 import { forSale, cash } from './sim/economy.js';
 import { topFeelings } from './sim/feelings.js';
 import { isUpset, upsetReason, upsetVoice } from './sim/upset.js';
-import { MATERIALS, MAT_LABEL, matText, TOYS, TOY_LABEL, TREATS, TREAT_LABEL, shopLabel, SHOP } from './sim/util.js';
+import { MATERIALS, MAT_LABEL, matText, TOYS, TOY_LABEL, TREATS, shopLabel, SHOP } from './sim/util.js';
 import { thingsSummary, timeline, daySummary, daysList, spentText, KINDS, KIND_IDS } from './sim/history.js';
 import { wishLabel } from './sim/wishes.js';
 import { INV_CAP } from './sim/craft.js';
 import { RECIPES } from './sim/recipes.js';
 import { TEMPERS } from './sim/temper.js';
-import { moodToday, ensureChar, habitLine, DO, MOODS } from './sim/character.js';
+import { moodToday, ensureChar, habitLine, DO } from './sim/character.js';
 import { favourites } from './sim/finds.js';
 import { ensureIntent } from './sim/intent.js';
 import { ensureInterest, interestName } from './sim/interest.js';
@@ -74,14 +74,14 @@ function mindSections(w) {
   const fav = favourites(w);
   out.push(h('div', { class: 'sec' }, h('h3', { text: 'Favourite things to do' }),
     fav.length ? fav.map(f => h('div', { class: 'item' }, h('div', { text: cap(f.name) }), meter(Math.max(0, Math.min(1, f.v))))) : h('div', { class: 'muted', text: 'None yet. It works out what it loves from how things make it feel.' }),
-    fav.length ? h('div', { class: 'muted small', text: 'Doing a favourite gives it a bigger lift than anything else, and it is drawn to them.' }) : null));
+    fav.length ? h('div', { class: 'muted small', text: 'Doing a favourite cheers it up more than anything else, and it keeps being drawn back to them.' }) : null));
   const ic = ensureInterest(c), cur = ic.interest;
   out.push(h('div', { class: 'sec' }, h('h3', { text: 'Special interest' }),
     cur && cur.state === 'active' ? h('div', { class: 'item' }, h('div', { text: cap(interestName(cur)) }), h('div', { class: 'muted small', text: `${cur.pages} page${cur.pages === 1 ? '' : 's'} read so far` }), cur.facts.length ? h('div', { class: 'theory', text: cur.facts[cur.facts.length - 1].text }) : null) : h('div', { class: 'muted', text: ic.interests.length ? 'Nothing at the moment. Something will catch its eye.' : 'Nothing yet. Now and then it gets fixated on one thing and reads about it on the tablet.' }),
     ...ic.interests.slice(0, 4).map(x => h('div', { class: 'item' }, h('div', { class: 'muted small', text: `Day ${x.day}: ${interestName(x)} (${x.pages} pages)` }), h('div', { class: 'theory', text: x.fact })))));
   const mem = ensureMemory(c), best = mem.memories.slice().sort((a, b) => strength(w, b) - strength(w, a)).slice(0, 6), reg = regulars(w);
   out.push(h('div', { class: 'sec' }, h('h3', { text: 'What it remembers' }),
-    best.length ? best.map(x => h('div', { class: 'item' }, h('div', { class: 'muted small', text: when(w, x) }), h('div', { text: x.text }))) : h('div', { class: 'muted', text: 'Nothing worth keeping yet. Big moments stay; small ones fade.' }),
+    best.length ? best.map(x => h('div', { class: 'item' }, h('div', { class: 'muted small', text: when(w, x) }), h('div', { text: x.text }))) : h('div', { class: 'muted', text: 'Nothing worth keeping yet. Big moments stay and small ones fade.' }),
     reg.length ? h('div', { class: 'muted small', style: 'margin-top:6px', text: 'Regulars: ' + reg.map(r => `${r.name} (${r.n} days)`).join(', ') }) : null));
   return out;
 }
@@ -105,7 +105,7 @@ function quirkSec(w) {
       nightowl: 'Best seen after dark.',
       collector: `${w.stash.items.length} treasure${w.stash.items.length === 1 ? '' : 's'} so far (see the Treasure tab).`,
     })[c.temper] || '' }),
-    h('div', { class: 'muted small', style: 'margin-top:4px', text: `Fondest of ${ITEM_PLURAL[q.item]}, and of the color ${q.favColor}.` }),
+    h('div', { class: 'muted small', style: 'margin-top:4px', text: `Fondest of ${ITEM_PLURAL[q.item]}, and of the colour ${q.favColor}.` }),
     c.temper !== 'hunter' && (w.stats.birds || w.stats.fish) ? h('div', { class: 'muted small', style: 'margin-top:4px', text: `Has caught ${[w.stats.birds ? w.stats.birds + ' bird' + (w.stats.birds === 1 ? '' : 's') : '', w.stats.fish ? w.stats.fish + ' fish' : ''].filter(Boolean).join(' and ')}.` }) : null,
     w.catTree ? h('div', { class: 'muted small', style: 'margin-top:4px', text: `Has a cat tree behind the cabin (${w.catTree.how === 'made' ? 'built it itself' : 'found it'} on day ${w.catTree.day}).` }) : null,
     c.coinUntil > w.clock ? h('div', { class: 'small', style: 'margin-top:4px', text: 'Delighted: it found a shiny coin.' }) : null));
@@ -121,14 +121,14 @@ function feelSec(w) {
   const fl = topFeelings(w, 5);
   return h('div', { class: 'sec' }, h('h3', { text: 'What makes it feel good' }),
     fl.good.length || fl.bad.length ? [...fl.good.map(r => tasteRow(r.name, Math.min(1, r.score), null, r.label)), ...fl.bad.map(r => h('div', { class: 'kv' }, h('span', { text: r.name }), h('span', { class: 'chip bad', text: r.label })))] : h('div', { class: 'muted', text: 'Too early to tell. It learns what it likes from how things make it feel.' }),
-    h('div', { class: 'muted small', style: 'margin-top:6px', text: 'Nobody told it what to like. These come from gifts, pages, paintings and what it has made.' }));
+    h('div', { class: 'muted small', style: 'margin-top:6px', text: 'Nobody told it what to like. It comes from gifts, pages, paintings and the things it has made.' }));
 }
 function aboutSections(w) {
   const c = w.cat, q = c.quirk;
   const secs = [];
   secs.push(h('div', { class: 'sec' }, h('div', { class: 'big', text: c.name }), h('div', { class: 'muted', text: `${c.age}-year-old ${COAT_LABEL[c.coat]} · ${moodLabel(w)}` }), h('div', { class: 'small', text: describe(w) }),
     h('div', { style: 'margin-top:10px' }, ...[['Curious', 'curious'], ['Bold', 'bold'], ['Affectionate', 'affection'], ['Lazy', 'lazy']].map(([l, k]) => h('div', { class: 'trait' }, h('span', { text: l }), meter(c.traits[k]), h('span', { class: 'muted', text: pct(c.traits[k]) }))))));
-  if (isUpset(w)) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Upset' }), h('div', { text: 'About: ' + upsetReason(w) }), h('div', { class: 'theory', text: '“' + upsetVoice(w) + '”' }), h('div', { class: 'muted small', text: 'Something it likes, or being listened to, will help.' })));
+  if (isUpset(w)) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Upset' }), h('div', { text: 'About: ' + upsetReason(w) }), h('div', { class: 'theory', text: '“' + upsetVoice(w) + '”' }), h('div', { class: 'muted small', text: 'A gift it likes, or someone listening, will help.' })));
   { const m = mindSections(w); secs.push(tastesSec(w), m[1], feelSec(w), m[2]); }
   if (w.frog) { const f = w.frog; secs.push(h('div', { class: 'sec' }, h('h3', { text: `Friend: ${f.name} the frog` }),
     h('div', { text: f.out ? `${f.name} is up on the lily pad.` : `${f.name} is under the water.` }),
@@ -155,7 +155,7 @@ function wonderingTab(w) {
     h('div', { text: cap(MYSTERY_INFO[id].name) + (m.solved ? ' (solved)' : '') }),
     m.theory ? h('div', { class: 'theory', text: '“' + m.theory + '”' }) : h('div', { class: 'muted small', text: m.clues ? `${Math.floor(m.clues)} clues so far, no theory yet.` : 'Just started to wonder.' }),
     m.theory && !m.solved ? h('div', { class: 'muted small', text: `Confidence ${pct(m.conf)}%` + (m.revised ? ` · changed its mind ${m.revised}×` : '') }) : null,
-    id === 'stars' && m.interest && !m.solved && m.enough ? h('div', { class: 'muted small', text: 'It has watched enough. Now it wants to read about them.' }) : null,
+    id === 'stars' && m.interest && !m.solved && m.enough ? h('div', { class: 'muted small', text: 'It has watched enough. Now it wants to read about the stars.' }) : null,
     id === 'stars' && m.solved ? h('div', { class: 'muted small', text: `A star may fall on a clear night. ${w.stats.starWishes || 0} wish${w.stats.starWishes === 1 ? '' : 'es'} so far${wishReady(w) ? '' : ', and it is waiting for the next'}.` }) : null)))];
 }
 // the tab bar is built once (so it can be clicked while the page underneath is redrawn). The page itself is only redrawn
@@ -274,7 +274,7 @@ export function paintingModal(wk, close) {
 // ----- Treasure tab: everything it has kept, favourite first -----
 export function renderStash(el, w) {
   const c = w.cat, n = w.stash.items.length;
-  if (!n) { el.replaceChildren(h('div', { class: 'muted', text: `${c.name} has not stashed anything yet. Leave something it might like on the mat in the Tablet tab, or wait for a bird to drop something.` })); return; }
+  if (!n) { el.replaceChildren(h('div', { class: 'muted', text: `${c.name} has not kept anything yet. Leave something it might like on the mat (Tablet tab), or wait for a bird to drop something.` })); return; }
   const rows = stashRank(w), site = w.stash.site ? w.stash.site.label : 'nowhere yet';
   const swatch = r => { const cv = h('canvas', { width: 36, height: 28, class: 'swatch' }); const g = cv.getContext('2d'); g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(0, 0, 36, 28); drawItem(g, r.type, r.color, 18, 14, 10, 0.3); return cv; };
   el.replaceChildren(
@@ -473,7 +473,7 @@ export function renderSettings(el, ctx) {
       field('set-tab-cap', 'Requests per day', tCap), nst),
     h('div', { class: 'sec' }, h('h3', { text: 'Saving' }),
       field('set-auto', 'Autosave', auto),
-      h('div', { class: 'muted small', text: 'The game also saves when you close or hide the window, and with /save in the chat. The last 3 backups are kept.' }),
+      h('div', { class: 'muted small', text: 'The game also saves when you close or hide the window, and when you type /save in the chat. The last 3 backups are kept.' }),
       h('div', { class: 'muted small', style: 'margin:6px 0 10px', text: 'Saved in: ' + where }),
       desktop ? null : h('div', { class: 'muted small', style: 'margin:0 0 10px', text: 'The cat lives in this browser’s storage. Clearing site data, or opening the page in another browser, means a different (or no) cat, so download a save file now and then. A save file also moves the cat to another browser or computer.' }),
       h('div', { class: 'row2' }, h('button', { class: 'btn', type: 'button', onclick: actions.saveNow, text: 'Save now' }), h('button', { class: 'btn', type: 'button', onclick: actions.loadSaved, text: 'Reload last save' })),

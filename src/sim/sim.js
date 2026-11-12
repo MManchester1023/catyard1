@@ -1,11 +1,11 @@
 // The whole simulation: build a world, advance it, fast-forward it.
 import { W, GY0, GY1, rnd, ri, clamp, pick, NAMES, COATS, COAT_LABEL } from './util.js';
-import { makeObjects, dropFromBird, fishTick, hourOf, dayOf, sunOf, isNight, beamOf, note, journal, dayRec, pushHist, weatherTick, makeBird, birdTick, mouseTick, spawnMouse, makeFly, flyTick, makeSpark, sparkTick, spawnItem, blocked, randomOpenPoint } from './world.js';
-import { makeQuirk, stealFromStash, quirkWord } from './quirk.js';
-import { makeMysteries, rippleTick, MYSTERY_INFO } from './mysteries.js';
+import { makeObjects, dropFromBird, fishTick, hourOf, dayOf, sunOf, isNight, beamOf, note, journal, dayRec, pushHist, weatherTick, makeBird, birdTick, mouseTick, spawnMouse, makeFly, flyTick, makeSpark, sparkTick, spawnItem, blocked } from './world.js';
+import { makeQuirk, stealFromStash } from './quirk.js';
+import { makeMysteries, rippleTick } from './mysteries.js';
 import { makeArt, levelOf, LEVEL_NAMES, subjectTick } from './art.js';
 import { genWants, wantsTick } from './wants.js';
-import { start, actTick, reconsider, INTERRUPT, think, describe } from './acts.js';
+import { start, actTick, reconsider, INTERRUPT, describe } from './acts.js';
 import { thoughtFor } from './thoughts.js';
 import { makeTastes, ensureOfferState, offerTick, refreshFavourites } from './offerings.js';
 import { ensureFeel } from './feelings.js';
@@ -16,7 +16,7 @@ import { ensureIntent, intentTick } from './intent.js';
 import { ensureInterest, interestTick } from './interest.js';
 import { projectTick } from './project.js';
 import { considerWish, wishTick } from './wishes.js';
-import { economyTick, ensureEconomy } from './economy.js';
+import { economyTick } from './economy.js';
 import { isUpset, upsetLevel, upsetTick } from './upset.js';
 import { secretsRoll, moonWishTick, coinActive } from './secrets.js';
 import { meteorTick } from './stars.js';

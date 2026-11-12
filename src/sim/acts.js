@@ -1,5 +1,5 @@
 // Acts: how each activity starts, moves the cat, and finishes.
-import { rnd, ri, clamp, pick, dist, an, uid, GY0, FEATHER_COLORS, MATERIALS, MAT_CAP } from './util.js';
+import { rnd, ri, clamp, pick, dist, an, uid, GY0, FEATHER_COLORS, MATERIALS } from './util.js';
 import { spot, walk, randomOpenPoint, note, journal, hourOf, sunOf, beamOf, birdLeave, moonPos, moonPhase, clockStr, pushHist } from './world.js';
 import { decide, interest, pickSleepSpot, unknownPlaces, SLEEPY } from './mind.js';
 import { itemName, chooseSite, addToStash, tidyStash, noticeTheft } from './quirk.js';

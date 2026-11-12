@@ -3,7 +3,7 @@
 // subject, until it has read about as much as it can take in. What it finds is kept as things it has learned, and it
 // talks about it, writes about it and wonders about it. Then, after a while, something else catches its eye.
 // The subject is random, tilted a little by what kind of cat it is.
-import { pick, clamp, uid } from './util.js';
+import { pick, uid } from './util.js';
 import { dayOf, journal, note, clockStr, logChoice } from './world.js';
 import { scaled } from './pace.js';
 import { feel } from './feelings.js';

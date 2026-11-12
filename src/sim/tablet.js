@@ -2,7 +2,7 @@
 // The simulation never waits on the network. When the cat sits down it puts a request on w.netq; the app
 // shell answers it whenever it can (see web.js). With no connection the cat re-reads pages it has kept.
 import { rnd, pick, clamp, uid, an } from './util.js';
-import { note, journal, dayOf, clockStr, moonPhase } from './world.js';
+import { note, journal, dayOf, clockStr } from './world.js';
 import { clue } from './mysteries.js';
 import { onEvent, hasWant, addWant, MAX_WANTS } from './wants.js';
 import { exposeTo } from './offerings.js';

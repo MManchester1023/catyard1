@@ -1,6 +1,6 @@
 // Paw painting: skill growth, works as small deterministic recipes, and a painter that draws them.
 import { rnd, pick, clamp, uid, mulberry32, COLORS } from './util.js';
-import { hourOf, dayOf, sunOf, isNight, moonPos, note, journal, logChoice } from './world.js';
+import { hourOf, dayOf, isNight, moonPos, note, journal, logChoice } from './world.js';
 import { stashColors } from './quirk.js';
 import { onEvent } from './wants.js';
 import { random } from './rng.js';

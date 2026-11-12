@@ -2,8 +2,7 @@
 import { clamp } from './util.js';
 import { learnWords, offlineReply } from './thoughts.js';
 import { onEvent } from './wants.js';
-import { note, clockStr, dayOf, pushHist } from './world.js';
-import { think } from './acts.js';
+import { clockStr, dayOf, pushHist } from './world.js';
 
 const clean = s => String(s || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400);
 

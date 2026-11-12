@@ -1,5 +1,5 @@
 // Yard layout, time, weather, geometry helpers, and the creatures that share the yard.
-import { W, H, GY0, GY1, rnd, ri, clamp, pick, dist, sstep, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, FEATHER_COLORS, MATERIALS, MAT_CAP, uid, an } from './util.js';
+import { W, GY0, GY1, rnd, clamp, pick, sstep, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, FEATHER_COLORS, MATERIALS, MAT_CAP, uid, an } from './util.js';
 import { random } from './rng.js';
 
 export const hourOf = w => ((w.clock % w.dayLen) / w.dayLen) * 24;
@@ -175,7 +175,7 @@ export function walk(w, c, tx, ty, sp, dt) {
 // ---------- log, journal and history ----------
 // Everything the cat does, thinks and has happen is also appended to w.hist (oldest first, trimmed), and the
 // important things are kept per day in w.days so the history stays readable long after the timeline has scrolled.
-export const HIST_MAX = 2000, DAYS_MAX = 45;
+export const HIST_MAX = 2000, DAYS_MAX = 45, JOURNAL_MAX = 150;
 const HIGHLIGHT = new Set(['want', 'art', 'collect', 'craft', 'offer', 'tablet', 'wish', 'discover', 'hunt', 'taste', 'wonder', 'learn', 'friend']);
 const short = (s, n = 160) => { s = String(s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 export function dayRec(w, day = dayOf(w)) {
@@ -205,7 +205,7 @@ export function note(w, text, kind = 'info') {
 }
 export function journal(w, text, tag = '') {
   w.journal.unshift({ id: ++w.logId, day: dayOf(w), time: clockStr(w), text, tag });
-  if (w.journal.length > 150) w.journal.pop();
+  if (w.journal.length > JOURNAL_MAX) w.journal.pop();
   pushHist(w, 'diary', text, tag);
 }
 

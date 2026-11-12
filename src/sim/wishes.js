@@ -1,7 +1,7 @@
 // Wishes: notes the cat writes on the tablet for the human, asking for things it wants. A wish is drafted when the
 // cat wants something only the human can bring (a colour it has been hoping for, the kind of thing it collects), written out
 // the next time it sits at the tablet, and granted when the matching thing turns up on the mat.
-import { pick, an, ITEM_LABEL, MAT_PLURAL, SHOP, shopItem } from './util.js';
+import { pick, an, ITEM_LABEL, MAT_PLURAL, shopItem } from './util.js';
 import { note, journal, dayOf, clockStr } from './world.js';
 import { itemName, stashColors } from './quirk.js';
 import { upsetBy, soothe } from './upset.js';

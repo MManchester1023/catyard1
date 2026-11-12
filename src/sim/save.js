@@ -1,6 +1,6 @@
 // Turning a world into a small JSON save and back. Transient things (birds, mice, the current
 // action) are rebuilt on load; everything the cat has lived through is kept.
-import { makeWorld, makeCat, catchUp, VERSION } from './sim.js';
+import { makeWorld, catchUp, VERSION } from './sim.js';
 import { start } from './acts.js';
 import { uid } from './util.js';
 import { makeTastes, ensureOfferState } from './offerings.js';

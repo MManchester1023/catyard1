@@ -3,7 +3,6 @@
 // cat may start wondering about the old oak and, in time, find a shiny coin in the roots (see mysteries.js).
 import { rnd, uid } from './util.js';
 import { note, journal, dayOf, moonPhase, moonPos, blocked } from './world.js';
-import { feel } from './feelings.js';
 import { PACE, paceOf } from './pace.js';
 import { starsRoll, glitterThing } from './stars.js';
 import { random } from './rng.js';

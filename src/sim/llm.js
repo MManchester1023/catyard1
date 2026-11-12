@@ -1,7 +1,7 @@
 // The optional Claude connection. The simulation never waits on this: if there is no key, no network,
 // or the daily cap is reached, the offline voice in thoughts.js carries on and nothing breaks.
-import { ITEM_PLURAL, ITEM_LABEL, COAT_LABEL } from './util.js';
-import { hourOf, clockStr, dayOf, journal, note, moonPhase, logChoice } from './world.js';
+import { ITEM_PLURAL, COAT_LABEL } from './util.js';
+import { clockStr, dayOf, journal, note, moonPhase, logChoice } from './world.js';
 import { LEVEL_NAMES, levelOf, subjectLabel } from './art.js';
 import { stashColors } from './quirk.js';
 import { MYSTERY_INFO, discovered } from './mysteries.js';
@@ -9,7 +9,7 @@ import { describe } from './acts.js';
 import { catSays } from './chat.js';
 import { feelingSummary } from './feelings.js';
 import { TEMPERS } from './temper.js';
-import { RECIPES, knows, costText } from './recipes.js';
+import { RECIPES, knows } from './recipes.js';
 import { wishLabel, openWishes } from './wishes.js';
 import { matText, MATERIALS } from './util.js';
 import { upsetAbout, upsetReason, upsetVoice } from './upset.js';

@@ -1,7 +1,7 @@
 // Offline voice: thoughts and chat replies built from what the cat actually knows and wants.
 import { pick, clamp, an, ITEM_LABEL, ITEM_PLURAL } from './util.js';
-import { hourOf, isNight, moonPhase, dayOf } from './world.js';
-import { LEVEL_NAMES, levelOf, subjectLabel } from './art.js';
+import { isNight } from './world.js';
+import { LEVEL_NAMES, levelOf } from './art.js';
 import { BLOG_THOUGHTS } from './blog.js';
 import { coinActive } from './secrets.js';
 import { isUpset, upsetVoice, upsetAbout, upsetReason } from './upset.js';
@@ -12,7 +12,7 @@ import { memoryThought, regularLine, memoryReply } from './memory.js';
 import { favourites } from './finds.js';
 import { moodToday, habitLine, ensureChar } from './character.js';
 import { intentActive } from './intent.js';
-import { interestThought, interestReply, interestActive } from './interest.js';
+import { interestThought, interestReply } from './interest.js';
 import { random } from './rng.js';
 
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => (v[k] != null ? v[k] : ''));

@@ -1,6 +1,6 @@
 // Offerings: things the human leaves on the mat by the glass. An object or a short note. The cat notices,
 // reacts according to its own tastes, and its tastes drift a little with what it is given.
-import { rnd, pick, clamp, uid, an, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, TOY_LABEL, TOY_ALIAS, TREATS, TREAT_LABEL, TREAT_ALIAS, shopLabel, matText } from './util.js';
+import { rnd, pick, clamp, uid, an, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, TOY_LABEL, TOY_ALIAS, TREAT_LABEL, TREAT_ALIAS, shopLabel, matText } from './util.js';
 import { note, journal, dayOf, clockStr } from './world.js';
 import { stashColors, itemName } from './quirk.js';
 import { addWant, hasWant, MAX_WANTS, onEvent } from './wants.js';

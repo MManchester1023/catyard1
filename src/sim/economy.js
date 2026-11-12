@@ -1,7 +1,7 @@
 // Money. A painting the cat has framed is for sale, and sells now and then, for what it is worth. The money goes into the
 // cat's account and it spends it at the shop on the tablet: toys, and the bark, twigs and twine it needs to make things.
 // An order takes a little while and then turns up on the offering mat as a parcel (offerings.js), which the cat opens.
-import { rnd, an, SHOP, shopItem, shopLabel, matText } from './util.js';
+import { an, SHOP, shopItem, shopLabel, matText } from './util.js';
 import { note, journal, dayOf, clockStr, clearEasel } from './world.js';
 import { PACE, priceOf } from './pace.js';
 import { feel } from './feelings.js';
