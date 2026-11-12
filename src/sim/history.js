@@ -1,7 +1,7 @@
 // Reading the history back: what the cat did, thought and had happen. The raw record is w.hist (a rolling timeline)
 // and w.days (a short summary per day that outlives the timeline); this module only reads them.
 import { dayOf, clockStr } from './world.js';
-import { RECIPES, costText } from './recipes.js';
+import { RECIPES, costText, found, learned } from './recipes.js';
 import { topFeelings } from './feelings.js';
 import { wishLabel } from './wishes.js';
 import { matText, MATERIALS } from './util.js';
@@ -52,8 +52,9 @@ export const spentText = (s, n = 4) => s.top.slice(0, n).map(x => `${x.label} ${
 export function thingsSummary(w) {
   const c = w.cat;
   const mats = MATERIALS.filter(m => c.inv[m] > 0).map(m => matText(m, c.inv[m]));
-  const recipes = Object.keys(RECIPES).map(id => ({ id, name: RECIPES[id].name, cost: RECIPES[id].knowledge ? 'pulled from the cushion' : costText(RECIPES[id].cost), known: !!RECIPES[id].preset || !!(c.recipes[id] && c.recipes[id].known), made: c.crafted.filter(x => x.recipe === id).length }));
-  return { mats, recipes, table: !!w.table, crafted: c.crafted };
+  const hidden = Object.keys(RECIPES).filter(id => !found(w, id)).length; // (things it has not worked out yet are not listed)
+  const recipes = Object.keys(RECIPES).filter(id => found(w, id)).map(id => ({ id, name: RECIPES[id].name, desc: RECIPES[id].desc || '', cost: RECIPES[id].knowledge ? 'pulled from the cushion' : costText(RECIPES[id].cost), known: learned(w, id), made: c.crafted.filter(x => x.recipe === id).length }));
+  return { mats, recipes, hidden, table: !!w.table, crafted: c.crafted };
 }
 
 const pad = (s, n) => String(s).padEnd(n);

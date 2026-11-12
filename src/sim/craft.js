@@ -1,8 +1,9 @@
 // Making things. The cat gathers bark and twigs by scratching the oak, works toward the recipes it wants, and
-// builds them. The first is a table: building it moves the stash out of hiding and onto the tabletop.
+// builds them. A recipe turns up when it is carrying what the thing is made of (findRecipes); the easel and table need nothing
+// more, the rest it also has to look up on the tablet. Building the table moves the stash out of hiding and onto the tabletop.
 import { rnd, uid, an, MAT_LABEL, MAT_CAP } from './util.js';
 import { note, journal, dayOf, clockStr } from './world.js';
-import { RECIPES, knows, costText, frameDemand, frameSpare, paintingToFrame } from './recipes.js';
+import { RECIPES, knows, found, learned, rawCost, rawHeld, partsHeld, costText, frameDemand, frameSpare, paintingToFrame } from './recipes.js';
 import { feel } from './feelings.js';
 import { onEvent } from './wants.js';
 import { layoutStash } from './quirk.js';
@@ -29,13 +30,43 @@ export function gatherNeed(w) {
   const need = { bark: 0, twig: 0 }; for (const id of goals(w)) { if (id === 'frame') continue; const s = rawShortfall(w, id); need.bark += s.bark; need.twig += s.twig; }
   const f = goals(w).includes('frame') ? Math.max(0, frameDemand(w) - goals(w).filter(g => g !== 'frame').reduce((m, g) => m + (shortfall(w, g).frame || 0), 0)) : 0; // (frames wanted but not yet counted against a goal)
   if (f) for (const [m, n] of Object.entries(RECIPES.frame.cost)) need[m] = (need[m] || 0) + n * f;
-  return need.bark || need.twig ? need : null;
+  return need.bark || need.twig ? need : seekNeed(w);
 }
+// Before it has worked out what to make, it gathers anyway, toward the thing it is most inclined to want (the easel, then
+// the table, then the rest). Once it is carrying enough of the right bits, the recipe turns up (findRecipes). Twine is not
+// here: it cannot be scratched off a tree.
+export function seekNeed(w) {
+  let best = null;
+  for (const [id, r] of Object.entries(RECIPES)) {
+    if (found(w, id) || !r.can(w) || !(r.desire(w) > 0)) continue;
+    const raw = rawCost(r.cost), held = rawHeld(w), miss = {}; let total = 0;
+    for (const m of ['bark', 'twig']) { const d = Math.max(0, (raw[m] || 0) - held[m]); if (d) { miss[m] = d; total += d; } }
+    const order = r.order == null ? 2 : r.order;
+    if (total && (!best || order < best.order || (order === best.order && total < best.total))) best = { miss, total, order };
+  }
+  return best && best.miss;
+}
+// it is carrying what a thing is made of, so it works out what the thing is
+export function findRecipes(w) {
+  const c = w.cat; let any = false;
+  for (const [id, r] of Object.entries(RECIPES)) {
+    if (found(w, id) || !r.can(w) || !partsHeld(w, id)) continue;
+    c.ideas[id] = { day: dayOf(w), time: clockStr(w) }; any = true;
+    const parts = costText(r.cost), research = !r.preset;
+    journal(w, `I am carrying ${parts}, and it came to me what that is for: ${an(r.name)}. ${r.why ? r.why[0].toUpperCase() + r.why.slice(1) + '. ' : ''}${research ? 'I am not sure how it is done. The tablet will know.' : 'I think I know how.'}`.trim(), 'craft');
+    note(w, `${c.name} worked out what its materials are for: ${an(r.name)}${research ? ' (it wants to look up how)' : ''}.`, 'learn');
+    onEvent(w, 'found', { id });
+  }
+  return any;
+}
+// (admin) it simply has the idea
+export function markFound(w, id) { if (found(w, id)) return false; w.cat.ideas[id] = { day: dayOf(w), time: clockStr(w) }; return true; }
 // what it would make right now. until the easel and the table exist, bark is saved for them (and for the frames they are
 // built from) rather than spent on smaller things
 const CORE = new Set(['easel', 'table', 'frame']);
 export function nextCraft(w) {
-  const gs = goals(w), coreFirst = gs.includes('table') || gs.includes('easel');
+  // (bark is saved for the easel and table as soon as it wants them, not only once it has worked out what they are)
+  const gs = goals(w), coreFirst = gs.includes('table') || gs.includes('easel') || (!w.table && RECIPES.table.desire(w) > 0) || (!w.easelMade && RECIPES.easel.desire(w) > 0);
   for (const id of gs) {
     if (Object.keys(shortfall(w, id)).length) continue;
     if (coreFirst && !CORE.has(id) && RECIPES[id].cost.bark) continue;
@@ -48,7 +79,8 @@ export function nextCraft(w) {
 export function scratchTree(w) {
   if (!gatherRoom(w)) { feel(w, ['act:tree'], { joy: 0.02 }, 'content'); return null; } // it has given what it can today
   const c = w.cat, r = random(), k = barkLuck(w), lucky = (0.38 + c.traits.curious * 0.06) * k; // pace.js: the oak is not that generous
-  const drop = r < lucky ? 'bark' : r < lucky + 0.14 * k ? 'twig' : null;
+  const need = gatherNeed(w) || {}, twigFirst = (need.twig || 0) > 0 && !(need.bark > 0), tw = (twigFirst ? 0.3 : 0.14) * k; // (when it is only short of twigs, the oak gives them up more readily)
+  const drop = twigFirst ? (r < tw ? 'twig' : r < tw + lucky * 0.4 ? 'bark' : null) : r < lucky ? 'bark' : r < lucky + tw ? 'twig' : null;
   if (!drop || c.inv[drop] >= INV_CAP) { feel(w, ['act:tree'], { joy: 0.02 }, 'content'); return null; }
   return drop;
 }
@@ -62,7 +94,7 @@ export function scratchBed(w) {
   return 'twine';
 }
 export function collectDrop(w, type) {
-  const c = w.cat; c.inv[type] = Math.min(INV_CAP, c.inv[type] + 1); w.stats.gathered++;
+  const c = w.cat; c.inv[type] = Math.min(INV_CAP, c.inv[type] + 1); w.stats.gathered++; findRecipes(w);
   const day = dayOf(w);
   if (type === 'twine') { if (c.sDay !== day) { c.sDay = day; c.sToday = 0; } c.sToday++; } else { if (c.gDay !== day) { c.gDay = day; c.gToday = 0; } c.gToday++; }
   note(w, type === 'twine' ? `${c.name} pulled at the cushion and a length of string came away.` : `${c.name} scratched the oak and ${an(MAT_LABEL[type])} came loose.`, 'craft');
@@ -70,7 +102,7 @@ export function collectDrop(w, type) {
   feel(w, ['act:tree', 'mat:' + type], { joy: 0.1 }, 'content');
 }
 // a gift from the human goes straight into its things
-export function receiveMaterial(w, type, n) { const c = w.cat; c.inv[type] = Math.min(INV_CAP, c.inv[type] + n); }
+export function receiveMaterial(w, type, n) { const c = w.cat; c.inv[type] = Math.min(INV_CAP, c.inv[type] + n); findRecipes(w); }
 
 // ---------- making ----------
 export function startable(w, id) { return !!RECIPES[id] && knows(w, id) && RECIPES[id].can(w) && !Object.keys(shortfall(w, id)).length; }
@@ -126,7 +158,7 @@ export function finishCraft(w, id) {
 
 // ---------- learning from the tablet ----------
 export function unlockRecipe(w, id, title, how = 'tablet') {
-  const c = w.cat, r = RECIPES[id]; if (knows(w, id)) return false;
+  const c = w.cat, r = RECIPES[id]; if (learned(w, id)) return false;
   c.recipes[id] = { known: true, day: dayOf(w), via: title || '' };
   if (r.knowledge) {
     journal(w, how === 'itself' ? 'I looked at the cushion for a long time and then I understood: the stuffing is held in by string. If I pull, string comes. The cushion has not agreed to this.' : `From the tablet${title ? ` ("${title}")` : ''}: string is made of fibres twisted together, and my cushion is full of them. I can pull some out whenever I need it.`, 'craft');
@@ -148,7 +180,7 @@ export function selfTaught(w) {
 export function learnFromPage(w, pg, wantedId) {
   const text = `${pg.title} ${pg.extract}`;
   for (const [id, r] of Object.entries(RECIPES)) {
-    if (r.preset || knows(w, id) || (r.knowledge && wantedId !== id)) continue; // a knowledge recipe is only learned when it was being looked for
+    if (r.preset || learned(w, id) || !found(w, id) || (r.knowledge && wantedId !== id)) continue; // (it only looks up what it has worked out it could make) // a knowledge recipe is only learned when it was being looked for
     if ((wantedId === id && r.match.test(text)) || r.match.test(pg.title)) { if (unlockRecipe(w, id, pg.title)) return id; }
   }
   return null;

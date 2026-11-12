@@ -2,7 +2,7 @@
 import { rnd, pick, uid, clamp, an, COLOR_NAMES } from './util.js';
 import { note, journal, dayOf } from './world.js';
 import { itemName, stashColors, quirkWord } from './quirk.js';
-import { RECIPES, knows } from './recipes.js';
+import { RECIPES, knows, found } from './recipes.js';
 import { paceOf } from './pace.js';
 import { random } from './rng.js';
 
@@ -57,7 +57,7 @@ export function genWants(w) {
   }
   if (c.needs.fear > 0.35 && !has(w, 'guard')) cand.push({ kind: 'guard', visits0: q.visits, w: 1.6 });
   for (const [id, r] of Object.entries(RECIPES)) {
-    if (has(w, 'craft', id) || has(w, 'learn', id) || !r.can(w)) continue;
+    if (has(w, 'craft', id) || has(w, 'learn', id) || !r.can(w) || !found(w, id)) continue; // (it only wants what it has worked out it could make)
     const d = r.desire(w); if (d <= 0) continue;
     if (knows(w, id)) cand.push({ kind: 'craft', key: id, recipe: id, w: d }); else if (c.mem.known.tablet) cand.push({ kind: 'learn', key: id, recipe: id, w: d * 0.8 });
   }

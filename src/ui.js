@@ -153,23 +153,23 @@ export function renderCat(el, w) {
 }
 
 // ----- Crafting tab: what it carries, what it is building and what it has made -----
-export function craftingSig(w) { const c = w.cat; return JSON.stringify([c.inv, !!w.easelMade, !!w.table, !!w.catTree, w.deco, c.crafted.length, Object.keys(c.recipes || {}), c.mem.known.tree, c.art.count > 0]); }
+export function craftingSig(w) { const c = w.cat; return JSON.stringify([c.inv, !!w.easelMade, !!w.table, !!w.catTree, w.deco, c.crafted.length, Object.keys(c.recipes || {}), Object.keys(c.ideas || {}), c.mem.known.tree, c.art.count > 0]); }
 const BUILT_AT = { easel: w => w.easelMade, table: w => w.table, feeder: w => w.deco && w.deco.feeder && { day: null }, chime: w => w.deco && w.deco.chime && { day: null }, cattree: w => w.catTree };
 export function renderCrafting(el, w) {
   const c = w.cat, th = thingsSummary(w), secs = [];
   const partChip = (key, label, title) => h('div', { class: 'mat' + (c.inv[key] ? '' : ' none'), title }, h('b', { text: String(c.inv[key] || 0) }), h('span', { text: label }));
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What it is carrying' }),
-    h('div', { class: 'mats' }, ...MATERIALS.map(m => partChip(m, m, `${MAT_LABEL[m]}: it can carry ${INV_CAP}`)), partChip('frame', 'oak frames', 'Made from 2 pieces of bark. Easels, tables and bigger things are built out of them.')),
+    h('div', { class: 'mats' }, ...MATERIALS.map(m => partChip(m, m, `${MAT_LABEL[m]}: it can carry ${INV_CAP}`)), partChip('frame', 'oak frames', 'Made from 2 pieces of bark. Easels, feeders, chimes and cat trees are built out of them.')),
     h('div', { class: 'muted small', text: 'It scratches the oak for bark and twigs, and birds sometimes drop bark, twigs or a bit of string in the yard. Twine is scarce: birds drop it now and then, and once it has worked out where string comes from it can pull some out of its cushion. You can also click the old oak in the yard to shake something loose for it: not every time, and only so much a day.' })));
-  if (!w.easelMade) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'No easel yet' }), h('div', { class: 'muted', text: 'It cannot paint until it has built an easel, and an easel is made from two oak frames. The urge to paint keeps building while it waits.' })));
+  if (!w.easelMade) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'No easel yet' }), h('div', { class: 'muted', text: th.recipes.some(x => x.id === 'easel') ? 'It cannot paint until it has built an easel. The urge to paint keeps building while it waits.' : 'It cannot paint until it has built an easel, and it has not worked out how to make one yet. It will, once it is carrying enough of the right things.' })));
   const row = id => {
     const r = RECIPES[id], rec = th.recipes.find(x => x.id === id) || {}, built = BUILT_AT[id] ? BUILT_AT[id](w) : null;
     const lines = Object.entries(r.cost).map(([m, n]) => `${matText(m, n)}${built ? '' : ` (has ${c.inv[m] || 0})`}`).join(' + ');
     const state = r.knowledge ? null : built ? (built.legacy ? 'was already here' : built.day ? 'built day ' + built.day : 'built') : rec.made ? 'made ' + rec.made : null;
-    return h('div', { class: 'kv' }, h('span', {}, cap(r.name), state ? h('span', { class: 'chip', text: state }) : null), h('span', { class: 'muted small', text: (rec.known ? '' : 'needs the tablet · ') + (r.knowledge ? 'pulled from the cushion' : lines) }));
+    return h('div', { class: 'kv recipe' }, h('span', {}, cap(r.name), state ? h('span', { class: 'chip', text: state }) : null), h('span', { class: 'muted small', text: (rec.known ? '' : 'it still has to look up how, on the tablet · ') + (r.knowledge ? 'pulled from the cushion' : lines) }), r.desc ? h('span', { class: 'muted small desc', text: r.desc }) : null);
   };
-  const ids = Object.keys(RECIPES), todo = ids.filter(id => !(BUILT_AT[id] && BUILT_AT[id](w))), done = ids.filter(id => BUILT_AT[id] && BUILT_AT[id](w));
-  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What it can make' }), ...todo.map(row), !todo.length ? h('div', { class: 'muted', text: 'Everything it knows how to make is built.' }) : null));
+  const seen = id => th.recipes.some(x => x.id === id) || !!(BUILT_AT[id] && BUILT_AT[id](w)), ids = Object.keys(RECIPES).filter(seen), todo = ids.filter(id => !(BUILT_AT[id] && BUILT_AT[id](w))), done = ids.filter(id => BUILT_AT[id] && BUILT_AT[id](w));
+  secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What it can make' }), ...todo.map(row), !todo.length ? h('div', { class: 'muted', text: th.hidden ? 'Nothing it has worked out is waiting to be built.' : 'Everything it knows how to make is built.' }) : null, th.hidden ? h('div', { class: 'muted small', style: 'margin-top:6px', text: `${th.hidden} more ${th.hidden === 1 ? 'thing' : 'things'} it has not worked out yet. A recipe turns up when it is carrying what the thing is made of, and some of them it then has to look up on the tablet.` }) : null));
   if (done.length) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Built' }), ...done.map(row)));
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'Made so far' }), th.crafted.length ? th.crafted.map(x => h('div', { class: 'kv' }, h('span', { text: cap(x.name) }), h('span', { class: 'muted small', text: `day ${x.day}` }))) : h('div', { class: 'muted', text: 'Nothing yet.' }), h('div', { class: 'muted small', style: 'margin-top:6px', text: `${w.stats.crafted || 0} made in all, ${w.stats.gathered || 0} bits gathered.` })));
   el.replaceChildren(...secs);

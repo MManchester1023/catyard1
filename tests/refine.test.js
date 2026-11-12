@@ -11,7 +11,7 @@ import { offlineReply, thoughtFor } from '../src/sim/thoughts.js';
 import { clue, discovered } from '../src/sim/mysteries.js';
 import { genWants } from '../src/sim/wants.js';
 import { RECIPES, knows, frameTotal, frameDemand, frameSpare } from '../src/sim/recipes.js';
-import { goals, finishCraft, startable, gatherNeed, shortfall, nextCraft, hangSpareFrames } from '../src/sim/craft.js';
+import { goals, finishCraft, startable, gatherNeed, shortfall, nextCraft, hangSpareFrames, markFound } from '../src/sim/craft.js';
 import { blocked, journal, dropFromBird } from '../src/sim/world.js';
 import { composePost, ensureBlog, feelingNow } from '../src/sim/blog.js';
 import { serialize, deserialize } from '../src/sim/save.js';
@@ -120,23 +120,23 @@ const hold = w => { w.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; w
 
 // ---- the easel is built, out of oak frames
 {
-  const w = fresh('vangogh'), c = w.cat; calm(w, 11); c.needs.create = 0.95; c.needs.tired = 0.1;
+  const w = fresh('vangogh'), c = w.cat; calm(w, 11); c.needs.create = 0.95; c.needs.tired = 0.1; markFound(w, 'easel'); markFound(w, 'table'); // (finding them is tested in discover.test.js)
   assert.equal(w.easelMade, null); assert(!unknownPlaces(w).includes('easel'), 'there is no easel to discover');
   assert(![...kinds(w, 200)].includes('paint'), 'even a Van Gogh cannot paint with no easel');
   c.x = w.o.easel.x; c.y = w.o.easel.y; hold(w); tick(w, 0.01); assert(!c.mem.known.easel, 'standing where it will go, it finds nothing');
   assert(!blocked(w, w.o.easel.x, w.o.easel.y), 'and nothing is in the way');
   // what it needs
-  assert.equal(frameTotal(w), 4, 'two for the easel and two for the table'); assert.deepEqual(RECIPES.frame.cost, { bark: 2 }); assert.deepEqual(RECIPES.easel.cost, { frame: 2 }); assert.deepEqual(RECIPES.table.cost, { frame: 2, bark: 2 });
+  assert.equal(frameTotal(w), 2, 'two for the easel (the table is bark and twigs)'); assert.deepEqual(RECIPES.frame.cost, { bark: 2 }); assert.deepEqual(RECIPES.easel.cost, { frame: 2, twig: 3 }); assert.deepEqual(RECIPES.table.cost, { bark: 2, twig: 4 });
   assert(goals(w).includes('easel') && goals(w).includes('table') && goals(w).includes('frame'));
-  assert.equal(frameDemand(w), 4); c.inv.frame = 1; assert.equal(frameDemand(w), 3); c.inv.frame = 0;
-  assert.deepEqual(gatherNeed(w), { bark: 10, twig: 0 }, 'it needs bark for the frames, and for the table');
+  assert.equal(frameDemand(w), 2); c.inv.frame = 1; assert.equal(frameDemand(w), 1); c.inv.frame = 0;
+  assert.deepEqual(gatherNeed(w), { bark: 6, twig: 7 }, 'it needs bark for the frames and the table, and twigs for both');
   c.inv.bark = 2; assert.equal(nextCraft(w), 'frame', 'the first step is a frame');
   // it wants an easel, and says so
   let want = false; for (let i = 0; i < 60 && !want; i++) { c.wants = []; genWants(w); want = c.wants.some(x => x.kind === 'craft' && x.recipe === 'easel'); } assert(want, 'a Van Gogh with no easel wants one');
   assert(!c.wants.some(x => x.recipe === 'frame'), 'frames are a step, not a want');
   // build it
   assert(finishCraft(w, 'frame') && c.inv.frame === 1 && !c.crafted.some(x => x.work), 'a frame is a part kept in its things');
-  assert(!startable(w, 'easel')); c.inv.bark = 2; finishCraft(w, 'frame'); assert.equal(c.inv.frame, 2); assert(startable(w, 'easel') && nextCraft(w) === 'easel');
+  assert(!startable(w, 'easel')); c.inv.bark = 2; finishCraft(w, 'frame'); assert.equal(c.inv.frame, 2); assert(!startable(w, 'easel'), 'no twigs yet'); c.inv.twig = 3; assert(startable(w, 'easel') && nextCraft(w) === 'easel');
   assert(finishCraft(w, 'easel') && w.easelMade && w.easelMade.day >= 1 && c.mem.known.easel && c.inv.frame === 0, 'the easel is built out of two frames');
   assert(w.journal.some(e => /built an easel/.test(e.text)) && c.thoughtHint === 'easelDone');
   assert(blocked(w, w.o.easel.x, w.o.easel.y), 'it stands in the yard'); assert(!startable(w, 'easel') && !goals(w).includes('easel'));
@@ -146,9 +146,9 @@ const hold = w => { w.cat.act = { type: 'idle', phase: 'do', t: 0, dur: 9e9 }; w
 {
   // frames for other things, and a spare one goes round a painting
   const w = fresh(), c = w.cat; calm(w); w.easelMade = { day: 1 }; w.table = { x: 1, y: 1, day: 1 }; c.inv.frame = 0;
-  assert.equal(frameTotal(w), 0); w.cat.recipes.feeder = { known: true }; w.cat.recipes.cattree = { known: true }; assert.equal(frameTotal(w), 4, 'a feeder wants one, a cat tree three'); assert(knows(w, 'feeder'));
-  assert.deepEqual(shortfall(w, 'feeder'), { frame: 1, bark: 1, twig: 2 });
-  w.cat.recipes.feeder = null; w.cat.recipes.cattree = null; c.inv.frame = 2; assert.equal(frameSpare(w), 2);
+  assert.equal(frameTotal(w), 0); w.cat.recipes.feeder = { known: true }; w.cat.recipes.cattree = { known: true }; assert.equal(frameTotal(w), 0, 'learning how is not enough: it has to have worked out what they are'); markFound(w, 'feeder'); markFound(w, 'cattree'); assert.equal(frameTotal(w), 4, 'a feeder wants one, a cat tree three'); assert(knows(w, 'feeder'));
+  assert.deepEqual(shortfall(w, 'feeder'), { frame: 1, bark: 2, twig: 1, twine: 1 });
+  w.cat.recipes.feeder = null; w.cat.recipes.cattree = null; delete w.cat.ideas.feeder; delete w.cat.ideas.cattree; c.inv.frame = 2; assert.equal(frameSpare(w), 2);
   c.art.count = 2; c.art.works = [{ id: 'a', title: 'First', score: 0.4 }, { id: 'b', title: 'Second', score: 0.8 }]; const xp = c.art.xp;
   assert.equal(hangSpareFrames(w), 2); assert(c.inv.frame === 0 && c.crafted.filter(x => x.recipe === 'frame' && x.work).length === 2 && c.art.xp > xp, 'both paintings got a frame');
   assert.equal(hangSpareFrames(w), 0);

@@ -23,7 +23,7 @@ const fresh = (temper = null) => { const w = makeWorld('Tess'); w.netOn = false;
 }
 {
   const w = fresh(); w.cat.needs.create = 0.2; const calm = gatherCap(w);
-  w.cat.needs.create = 1; assert.equal(gatherCap(w), calm + PACE.urgeExtra, 'the oak gives a desperate cat more in a day');
+  w.cat.needs.create = 1; assert.equal(gatherCap(w), calm + Math.round(PACE.urgeExtra), 'the oak gives a desperate cat more in a day');
   w.easelMade = {}; assert.equal(gatherCap(w), calm, 'and not once the easel is up');
   ok('a cat desperate for its easel gets more from the oak each day');
 }

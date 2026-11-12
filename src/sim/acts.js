@@ -10,7 +10,7 @@ import { pickSubject, paintWork, finishWork, subjectLabel } from './art.js';
 import { thoughtFor } from './thoughts.js';
 import { offerSpot, inspectOffer, finishOffer, offerLabel } from './offerings.js';
 import { tabletTick, describeTablet } from './tablet.js';
-import { scratchTree, scratchBed, collectDrop, finishCraft, startable, INV_CAP } from './craft.js';
+import { scratchTree, scratchBed, collectDrop, finishCraft, startable, findRecipes, INV_CAP } from './craft.js';
 import { RECIPES, easelUrge } from './recipes.js';
 import { feel } from './feelings.js';
 import { shiftOf, deepNightOf, birdChance } from './temper.js';
@@ -21,6 +21,7 @@ import { enjoyAct, favStart, foundThing } from './finds.js';
 import { noteAct } from './character.js';
 import { intentFulfilled } from './intent.js';
 import { random } from './rng.js';
+import { PACE } from './pace.js';
 
 export function think(w, key, extra) { const c = w.cat; c.thought = thoughtFor(w, key, extra); c.thoughtId++; c.thoughtAt = w.clock; }
 export const INTERRUPT = new Set(['idle', 'explore', 'play']);
@@ -104,7 +105,7 @@ export function start(w, type, opts = {}) {
     case 'attention': aim('glass'); a.dur = rnd(10, 26); think(w, 'glass'); break;
     case 'offering': { const sp = offerSpot(w, a.offer); a.tx = sp.x; a.ty = sp.y; a.sf = sp.face; think(w, 'offerGo'); break; }
     case 'tablet': aim('tablet'); think(w, 'tabletGo'); break;
-    case 'craft': aim('craft'); a.dur = rnd(10, 15) * (c.temper === 'builder' ? 0.7 : 1); think(w, 'craftGo'); break;
+    case 'craft': aim('craft'); a.dur = rnd(10, 15) * PACE.craftTime * (c.temper === 'builder' ? 0.7 : 1); think(w, 'craftGo'); break;
     case 'frog': { const f = frogSpot(w); a.tx = f.cx; a.ty = f.cy; a.dur = rnd(16, 24); a.nextBoop = rnd(3, 5); a.boopT = 0; think(w, 'frogGo'); break; }
     case 'fish': { const p = o.pond; a.tx = clamp(w.fish ? w.fish.x : p.x, p.x - p.rx * 0.6, p.x + p.rx * 0.6); a.ty = p.y + p.ry + 12; a.dur = rnd(16, 24); a.strikes = 0; c.fishAt = w.clock; think(w, 'fishGo'); break; }
     case 'listen': { a.tx = o.tree.x - 40; a.ty = o.tree.y + 24; a.dur = rnd(14, 22); c.listenAt = w.clock; think(w, 'listenGo'); break; }
@@ -329,7 +330,7 @@ export function actTick(w, dt) {
         if (a.t > 0.7) {
           if (w.items.includes(it)) {
             w.items = w.items.filter(x => x !== it);
-            if (MATERIALS.includes(it.type)) { c.inv[it.type] = Math.min(INV_CAP, (c.inv[it.type] || 0) + 1); w.stats.gathered++; note(w, `${c.name} picked up ${an(itemName(it.type, null))}${it.from === 'bird' ? ' the bird had dropped' : it.from === 'tree' ? ' that had fallen from the oak' : ''}.`, 'craft'); feel(w, ['act:collect', 'mat:' + it.type], { joy: 0.12 }, 'content'); think(w, it.type === 'twine' ? 'twineFound' : 'matFound'); done(w); }
+            if (MATERIALS.includes(it.type)) { c.inv[it.type] = Math.min(INV_CAP, (c.inv[it.type] || 0) + 1); w.stats.gathered++; findRecipes(w); note(w, `${c.name} picked up ${an(itemName(it.type, null))}${it.from === 'bird' ? ' the bird had dropped' : it.from === 'tree' ? ' that had fallen from the oak' : ''}.`, 'craft'); feel(w, ['act:collect', 'mat:' + it.type], { joy: 0.12 }, 'content'); think(w, it.type === 'twine' ? 'twineFound' : 'matFound'); done(w); }
             else { c.carry = { type: it.type, color: it.color }; w.stats.found++; foundThing(w, it); start(w, 'stash'); }
           } else done(w);
         }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, tick, catchUp } from '../src/sim/sim.js';
 import { start, done } from '../src/sim/acts.js';
 import { feel, affinity, topFeelings } from '../src/sim/feelings.js';
-import { selfTaught, scratchTree, collectDrop, finishCraft, startable, shortfall, gatherNeed, nextCraft, INV_CAP, unlockRecipe } from '../src/sim/craft.js';
+import { selfTaught, scratchTree, collectDrop, finishCraft, startable, shortfall, gatherNeed, nextCraft, INV_CAP, unlockRecipe, markFound } from '../src/sim/craft.js';
 import { RECIPES, knows } from '../src/sim/recipes.js';
 import { considerWish, publishWish, matchWish, wishTick, openWishes, draftWish, wishPending } from '../src/sim/wishes.js';
 import { leaveOffering, inspectOffer, finishOffer } from '../src/sim/offerings.js';
@@ -23,7 +23,7 @@ const page = (title, extract) => ({ query: { pages: [{ title, extract: extract +
 const fakeHttp = search => async url => ({ ok: true, status: 200, json: async () => (url.includes('generator=search') ? search[decodeURIComponent(url.match(/gsrsearch=([^&]*)/)[1])] || { query: { pages: [] } } : { query: { pages: [] } }) });
 const mkNet = (http) => { const s = { tablet: Object.assign({}, TABLET_DEFAULTS, { usage: { date: '', calls: 0 } }) }; return new Net({ getSettings: () => s, saveSettings: () => {}, http }); };
 const calm = w => { w.weather.type = 'clear'; w.weather.rain = 0; w.weather.timer = 1e9; w.mice = []; w.items = []; w.thiefT = 1e9; w.itemT = 1e9; w.mouseT = 1e9; };
-const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cushion', 'yarn', 'fence', 'easel', 'tablet']) w.cat.mem.known[k] = 1; };
+const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cushion', 'yarn', 'fence', 'easel', 'tablet']) w.cat.mem.known[k] = 1; for (const id of Object.keys(RECIPES)) markFound(w, id); }; // (these tests are about making things, so it has already worked out what each one is: finding them is tested in discover.test.js)
 
 // ---- feelings: how something made it feel is what it learns to like, and the same gift lands differently on a different day
 {
@@ -51,7 +51,7 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
   const w = makeWorld('Fern'), c = w.cat; calm(w); knowAll(w);
   const luck = (0.38 + c.traits.curious * 0.06) * 0.5; // the oak is half as generous as it used to be (pace.js)
   assert.equal(withRandom(0.01, () => scratchTree(w)), 'bark'); assert.equal(withRandom(luck + 0.03, () => scratchTree(w)), 'twig'); assert.equal(withRandom(0.99, () => scratchTree(w)), null);
-  c.inv.bark = INV_CAP; assert.equal(withRandom(0.01, () => scratchTree(w)), null, 'a full load gets no more');
+  c.inv.bark = INV_CAP; c.inv.twig = INV_CAP; assert.equal(withRandom(0.01, () => scratchTree(w)), null, 'a full load gets no more'); c.inv.twig = 0;
   c.inv.bark = 0; collectDrop(w, 'bark'); collectDrop(w, 'twig'); assert(c.inv.bark === 1 && c.inv.twig === 1 && w.stats.gathered === 2);
   assert(w.journal.some(e => e.tag === 'craft'), 'the first piece gets a diary line');
   // the whole act: walk to the oak, scratch, a piece drops, it picks it up
@@ -67,13 +67,11 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
   const w = makeWorld('Fern'), c = w.cat; calm(w); knowAll(w); w.easelMade = { day: 1 }; // (the easel is tested on its own below)
   for (let i = 0; i < 7; i++) w.stash.items.push({ id: 'i' + i, type: c.quirk.item, color: ['red', 'blue', 'green'][i % 3], ox: 0, oy: 0, rot: 0 });
   w.stash.site = { x: 52, y: 318, label: 'behind the cabin' };
-  assert(knows(w, 'table') && !startable(w, 'table') && shortfall(w, 'table').bark === 2 && shortfall(w, 'table').frame === 2, 'a preset recipe, but it has no frames or bark yet');
-  assert.deepEqual(gatherNeed(w), { bark: 6, twig: 0 }, 'so it knows it needs to gather bark: two for the table and four for the frames');
-  c.art.count = 1; c.art.works.unshift({ id: 'p0', title: 'First', score: 0.5, subject: 'moon', level: 1, day: 1, when: 'Night', critique: 'x' }); c.inv = { bark: 3, twig: 2, twine: 0, frame: 0 };
-  assert.equal(nextCraft(w), 'frame', 'the table is built from frames, so it makes those first'); c.art.count = 0; c.art.works = [];
-  c.inv.bark = 4; assert(finishCraft(w, 'frame') && finishCraft(w, 'frame') && c.inv.frame === 2 && c.inv.bark === 0, 'two frames made out of four bark (and kept: nothing to frame)'); assert.equal(nextCraft(w), null, 'still short of bark for the table itself'); c.inv.bark = 2; assert.equal(nextCraft(w), 'table');
+  assert(knows(w, 'table') && !startable(w, 'table') && shortfall(w, 'table').bark === 2 && shortfall(w, 'table').twig === 4, 'a preset recipe, but it has no bark or twigs yet');
+  assert.deepEqual(gatherNeed(w), { bark: 2, twig: 4 }, 'so it knows it needs to gather: two bark and four twigs');
+  c.inv = { bark: 2, twig: 3, twine: 0, frame: 0 }; assert.equal(nextCraft(w), null, 'three twigs is one short of a table'); c.inv.twig = 4; assert.equal(nextCraft(w), 'table');
   start(w, 'craft', { recipe: 'table' }); for (let i = 0; i < 1200 && !w.table; i++) { c.reeval = 1e9; tick(w, 0.1); }
-  assert(w.table, 'it built the table'); assert.equal(c.inv.bark, 0, 'and spent the bark'); assert.equal(c.inv.frame, 0, 'and the frames');
+  assert(w.table, 'it built the table'); assert.equal(c.inv.bark, 0, 'and spent the bark'); assert.equal(c.inv.twig, 0, 'and the twigs');
   assert(w.stash.site.table && w.stash.site.x === w.o.table.x, 'the stash moved onto the table');
   assert(w.stash.items.every(i => Math.abs(i.ox) <= 40 && Math.abs(i.oy) <= 12), 'laid out on the tabletop: ' + JSON.stringify(w.stash.items.slice(0, 2)));
   assert(w.journal.some(e => /table/.test(e.text) && e.tag === 'craft'), 'in its diary');
@@ -116,7 +114,7 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
   for (let v = 0; v < 3 && !knows(w2, 'chime'); v++) { start(w2, 'tablet'); for (let i = 0; i < 1800 && c2.act.type === 'tablet'; i++) { c2.reeval = 1e9; tick(w2, 0.1); if (i % 10 === 0) { net2.lastAt = 0; await net2.tick(w2); } } w2.tablet.interests = {}; w2.netq = []; }
   assert(knows(w2, 'chime'), 'after failing twice it figured it out by itself'); assert(w2.journal.some(e => /no help/.test(e.text)));
   // and with no connection at all it works it out after a couple of days
-  const w3 = makeWorld('Fern'); calm(w3); w3.netOn = false; w3.cat.wants.push({ id: 'l3', kind: 'learn', key: 'feeder', recipe: 'feeder', strength: 0.9, born: 0, day: 1, text: 'work out how to make a bird feeder' });
+  const w3 = makeWorld('Fern'); calm(w3); markFound(w3, 'feeder'); w3.netOn = false; w3.cat.wants.push({ id: 'l3', kind: 'learn', key: 'feeder', recipe: 'feeder', strength: 0.9, born: 0, day: 1, text: 'work out how to make a bird feeder' });
   assert(!selfTaught(w3), 'not at once'); w3.clock += 2.5 * w3.dayLen; assert(!selfTaught(w3), 'two and a half days is still too soon (pace.js: four)'); w3.clock += 2 * w3.dayLen; assert(selfTaught(w3) && knows(w3, 'feeder'), 'after a few days'); w3.netOn = true;
   const w4 = makeWorld('Fern'); w4.netOn = true; w4.cat.wants.push({ id: 'l4', kind: 'learn', key: 'feeder', recipe: 'feeder', strength: 0.9, born: 0, day: 1, text: 'x' }); w4.clock += 9 * w4.dayLen; assert(!selfTaught(w4), 'online, it uses the tablet instead');
   ok('recipes from the tablet: a lookup unlocks it; after two misses (or a few offline days) it works it out itself');
@@ -175,7 +173,8 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
 {
   const w = makeWorld('Fern'); calm(w); run(w, 120);
   const out = c => runCommand(w, c, { admin: false }).lines.join('\n');
-  assert(/carrying/.test(out('inventory')) && /bark table/.test(out('recipes')) && /feeder|chime/.test(out('recipes')));
+  assert(/carrying/.test(out('inventory')) && !/bark table/.test(out('recipes')), 'a recipe it has not worked out is not listed');
+  knowAll(w); assert(/bark table/.test(out('recipes')) && /feeder|chime/.test(out('recipes')), 'once it has, it is');
   assert(out('history 5').split('\n').length <= 5 && /Day 1/.test(out('history day 1')) && /Day/.test(out('history days')));
   assert(/Nothing about|d\d/.test(out('history find oak')) && /feels good|nothing/.test(out('feelings')) && /not left|day/.test(out('wishes')));
   assert.equal(runCommand(w, 'export').action.type, 'export');

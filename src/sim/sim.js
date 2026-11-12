@@ -19,7 +19,7 @@ import { isUpset, upsetLevel, upsetTick } from './upset.js';
 import { secretsRoll, moonWishTick, coinActive } from './secrets.js';
 import { meteorTick } from './stars.js';
 import { leavesTick } from './oak.js';
-import { selfTaught, hangSpareFrames } from './craft.js';
+import { selfTaught, hangSpareFrames, findRecipes } from './craft.js';
 import { makeTemper } from './temper.js';
 import { frogTick } from './frog.js';
 import { discoverRadius, placeCap } from './pace.js';
@@ -39,7 +39,7 @@ export function makeCat(name) {
     needs: { hunger: 0.4, thirst: 0.3, tired: 0.1, fun: 0.35, dirty: 0.3, wet: 0, lonely: 0.25, create: 0.35, fear: 0 },
     mood: { joy: 0.45 }, act: null, thought: '', thoughtId: 0, thoughtAt: -99, thoughtHint: null,
     reeval: 1, carry: null, huntCool: 0, begAt: -999, zoomAt: -999, attAt: -999, groomNext: false, bond: 0.2, words: {}, wants: [], doneWants: 0,
-    inv: { bark: 0, twig: 0, twine: 0 }, recipes: {}, crafted: [], wishes: [], lastWishAt: -999, assoc: {}, lastTasteSay: -999,
+    inv: { bark: 0, twig: 0, twine: 0 }, recipes: {}, ideas: {}, crafted: [], wishes: [], lastWishAt: -999, assoc: {}, lastTasteSay: -999,
     quirk, temper: makeTemper(), quirkV: 2, tastes: makeTastes(quirk), keepsakes: [], offerHist: [], art: makeArt(), mem: { known: { house: 1, bowl: 1, water: 1 }, nap: {}, lastMeal: null, caught: 0, missed: 0 },
   };
 }
@@ -163,7 +163,7 @@ export function tick(w, dt) {
   offerTick(w); upsetTick(w, dt);
 
   // wants
-  w.wantT -= dt; if (w.wantT <= 0) { w.wantT = w.dayLen / 6; characterTick(w); intentTick(w); interestTick(w); memoryTick(w); genWants(w); selfTaught(w); hangSpareFrames(w); considerWish(w); wishTick(w); considerBlog(w); refreshFavourites(w); favShift(w); secretsRoll(w); }
+  w.wantT -= dt; if (w.wantT <= 0) { w.wantT = w.dayLen / 6; characterTick(w); intentTick(w); interestTick(w); memoryTick(w); findRecipes(w); genWants(w); selfTaught(w); hangSpareFrames(w); considerWish(w); wishTick(w); considerBlog(w); refreshFavourites(w); favShift(w); secretsRoll(w); }
   moonWishTick(w); meteorTick(w, dt);
   wantsTick(w, dayDt);
 

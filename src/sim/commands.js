@@ -27,7 +27,7 @@ import { ensureChar, MOODS, moodToday, habitLine, rollMood, DO, stubbornness } f
 import { intentActive, applyIntent, whim, intentMenu } from './intent.js';
 import { startInterest, finishInterest, interestActive, ensureInterest, TOPIC_NAMES } from './interest.js';
 import { RECIPES, knows } from './recipes.js';
-import { unlockRecipe, startable, INV_CAP } from './craft.js';
+import { unlockRecipe, startable, markFound, findRecipes, INV_CAP } from './craft.js';
 import { MATERIALS, matText } from './util.js';
 import { random } from './rng.js';
 
@@ -270,13 +270,13 @@ export function runCommand(w, line, ctx = {}) {
     }
     case 'craft': {
       const sub = (a.shift() || '').toLowerCase();
-      if (sub === 'give') { const m = (a[0] || '').toLowerCase(); if (!MATERIALS.includes(m)) return bad(HELP.craft); const k = Math.round(num(a[1], 1, INV_CAP) || 1); c.inv[m] = Math.min(INV_CAP, c.inv[m] + k); return L(`${c.name} now has ${matText(m, c.inv[m])}.`); }
-      if (sub === 'learn') { const id = (a[0] || '').toLowerCase(); if (!RECIPES[id]) return bad(HELP.craft); return L(unlockRecipe(w, id, '', 'itself') ? (RECIPES[id].knowledge ? `${c.name} now knows where string comes from.` : `${c.name} now knows how to make a ${RECIPES[id].name}.`) : 'It already knew.'); }
+      if (sub === 'give') { const m = (a[0] || '').toLowerCase(); if (!MATERIALS.includes(m)) return bad(HELP.craft); const k = Math.round(num(a[1], 1, INV_CAP) || 1); c.inv[m] = Math.min(INV_CAP, c.inv[m] + k); findRecipes(w); return L(`${c.name} now has ${matText(m, c.inv[m])}.`); }
+      if (sub === 'learn') { const id = (a[0] || '').toLowerCase(); if (!RECIPES[id]) return bad(HELP.craft); markFound(w, id); return L(unlockRecipe(w, id, '', 'itself') ? (RECIPES[id].knowledge ? `${c.name} now knows where string comes from.` : `${c.name} now knows how to make a ${RECIPES[id].name}.`) : 'It already knew.'); }
       if (sub === 'now' || sub === 'table') {
         const id = sub === 'table' ? 'table' : (a[0] || '').toLowerCase(); if (!RECIPES[id]) return bad(HELP.craft);
         if (RECIPES[id].knowledge) return L('That is something it knows, not something it makes.');
         for (const [m, n] of Object.entries(RECIPES[id].cost)) c.inv[m] = Math.max(c.inv[m], n);
-        if (!knows(w, id)) unlockRecipe(w, id, '', 'itself');
+        markFound(w, id); if (!knows(w, id)) unlockRecipe(w, id, '', 'itself');
         if (!startable(w, id)) return L('That cannot be made right now (it may already exist).');
         c.mem.known.tree = 1; start(w, 'craft', { recipe: id }); return L(`${c.name} is heading to the workbench to make a ${RECIPES[id].name}.`);
       }

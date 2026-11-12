@@ -159,18 +159,20 @@ The cat scratches the oak, and now and then a piece of **bark** or a **twig** co
 
 The **oak frame** is a building part: two pieces of bark make one, and bigger things are built from frames. A cat makes the frames a project needs without being asked. A spare frame is hung around one of its paintings.
 
+**Recipes are worked out, not handed over.** A new cat has no recipes in front of it. It gathers bark and twigs toward the thing it wants most (the easel first, then the table), and the moment it is *carrying what a thing is made of* (a frame counts as the two bark in it) the recipe turns up: "I am carrying four bark and three twigs, and it came to me what that is for: an easel." Until then the Crafting tab does not list it. The easel and the table need nothing more. The feeder, chime and cat tree also have to be looked up on the tablet, so they need both the parts and the research. Twine cannot be scratched off the oak, so a recipe that is short only of twine waits for some, and the cat starts wanting to know where string comes from. Once a recipe is found, the Crafting tab shows what the thing is, what it costs and how many of each part the cat has.
+
 | Recipe | Needs | How it learns it |
 | --- | --- | --- |
-| Oak frame | 2 bark | Already knows. A part, not a finished thing. |
-| Easel | 2 oak frames | Already knows. **A new cat has no easel** and cannot paint until it builds one, so this is its first big want. |
-| Bark table | 2 oak frames, 2 bark | Already knows. The stash moves out of hiding onto the tabletop. |
-| Bird feeder | 1 oak frame, 1 bark, 2 twigs | Looks it up on the tablet. Brings more birds. |
-| Wind chime | 3 twigs, 1 twine | Looks it up on the tablet. Calms it a little. |
-| Cat tree | 3 oak frames, 2 bark, 5 twigs, 3 twine | Looks it up on the tablet (see [Secrets](#secrets)). |
+| Oak frame | 2 bark | Always knows. A part, not a finished thing. |
+| Easel | 2 oak frames, 3 twigs | Found by carrying the parts. **A new cat has no easel** and cannot paint until it builds one, so this is its first big want. |
+| Bark table | 2 bark, 4 twigs | Found by carrying the parts. The stash moves out of hiding onto the tabletop. |
+| Bird feeder | 1 oak frame, 2 bark, 1 twig, 1 twine | Found by carrying the parts, then looked up on the tablet. Brings more birds. |
+| Wind chime | 2 oak frames, 2 twigs, 1 twine | Found by carrying the parts, then looked up on the tablet. Calms it a little. |
+| Cat tree | 3 oak frames, 2 bark, 5 twigs, 3 twine | Found by carrying the parts, then looked up on the tablet (see [Secrets](#secrets)). |
 
-Until the easel and the table exist, bark goes to them first. To learn a recipe the cat looks the topic up on the tablet; if the tablet turns up nothing twice, or there is no connection for about four days, it works it out itself.
+Until the easel and the table exist, bark goes to them first. When it is short only of twigs, the oak gives them up more readily. To learn a recipe the cat looks the topic up on the tablet (but only one it has found); if the tablet turns up nothing twice, or there is no connection for about four days, it works it out itself. A save from before this keeps every recipe it already knew or had built.
 
-**Twine is scarce.** It comes now and then from a bird, and from the cushion once the cat has worked out where string comes from. Bark, twigs and twine cannot be given to the cat; the only help you can give is to **click the old oak** in the yard. A click shakes it: leaves fall, and about three shakes in ten bring down a piece of bark or a twig, which lies on the grass for the cat to pick up like anything a bird has dropped. There is a short pause between shakes and the oak gives at most eight pieces a day (`shakeChance`, `shakeCool` and `shakePerDay` in `src/sim/pace.js`).
+**Twine is scarce.** It comes now and then from a bird, and from the cushion once the cat has worked out where string comes from. Bark, twigs and twine cannot be given to the cat; the only help you can give is to **click the old oak** in the yard. A click shakes it: leaves fall, and about nine shakes in twenty (45%) bring down a piece of bark or a twig, which lies on the grass for the cat to pick up like anything a bird has dropped. There is a short pause between shakes and the oak gives at most eight pieces a day (`shakeChance`, `shakeCool` and `shakePerDay` in `src/sim/pace.js`).
 
 ## Painting
 
@@ -226,7 +228,7 @@ Some things the cat has to find out for itself.
 
 - **The cat tree.** Behind the cabin. A cat can wander round there by chance, or build one after looking it up on the tablet. It then climbs it and watches the yard.
 - **The shiny coin.** A cat with curiosity over 75 may start wondering about the old oak. If it investigates for days it finds a gold coin in the roots, which ranks first in the stash. It is delighted for two days, and nothing upsets it.
-- **The moon.** Its last step is the frog (about ten visits). Afterwards, on full-moon nights, it can make a *moon wish*: something it wished for turns up sparkling in the stash.
+- **The moon.** Its last step is the frog (about nine visits). Afterwards, on full-moon nights, it can make a *moon wish*: something it wished for turns up sparkling in the stash.
 - **The dancing sparks** only become something it wants to understand after it has seen one.
 - **The stars.** After enough clear nights of gazing it starts wondering about the stars themselves. It watches them until it has seen enough, then needs a tablet page about stars or meteors to be sure (or about six days without one). After that a star may fall on a clear night; if the cat sees it, it makes a wish, at most once every five days.
 - **A very curious cat** (over 90) works these out twice as fast.
@@ -237,14 +239,14 @@ Discoveries are slow on purpose.
 
 | Thing | Roughly, at the default pace |
 | --- | --- |
-| Noticing a part of the yard | It has to pass within about 100 px, and only three new places sink in per day: 2 to 3 days for all of them. A Techie finds the tablet regardless. |
+| Noticing a part of the yard | It has to pass within about 110 px, and only three new places sink in per day: 2 to 3 days for all of them. A Techie finds the tablet regardless. |
 | Bark and twigs from the oak | At most two pieces a day, and not every scratch gives one |
-| The easel | About 3 days (4 bark) |
-| The bark table | About 3 days more (6 bark) |
+| The easel | About 4 days with no help (4 bark and 3 twigs; measured over 24 cats: median 3.9 days, between 2 and 6). Clicking the oak helps |
+| The bark table | A few days more (2 bark and 4 twigs) |
 | Working out a recipe without the tablet | 4 days |
 | A first theory about the moon | 2 to 3 days; understanding it needs 6 different moon phases (about a week) |
 | The pond ripples (the frog) | About 5 good days |
-| The dancing sparks | 8 days at the very fastest, usually 10 to 20 |
+| The dancing sparks | 7 days at the very fastest, longer if the cat is busy elsewhere |
 | Getting curious about the stars | At least 4 clear nights of gazing, then a few days more by chance |
 | Understanding the stars | Roughly 2 to 3 weeks in all |
 | A shooting star | About half of clear nights once it understands; a wish at most every 5 days |

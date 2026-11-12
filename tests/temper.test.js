@@ -7,7 +7,7 @@ import { TEMPER_IDS, TEMPERS, deepNightOf, birdChance } from '../src/sim/temper.
 import { clue, frogSighting } from '../src/sim/mysteries.js';
 import { PACE, scaled, clueCap, gatherCap } from '../src/sim/pace.js';
 import { meetFrog, frogTick } from '../src/sim/frog.js';
-import { scratchTree, selfTaught, collectDrop } from '../src/sim/craft.js';
+import { scratchTree, selfTaught, collectDrop, markFound } from '../src/sim/craft.js';
 import { addWant } from '../src/sim/wants.js';
 import { knows } from '../src/sim/recipes.js';
 import { finishWork, paintWork, pickSubject } from '../src/sim/art.js';
@@ -34,10 +34,10 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
 // ---------- pace: discoveries take days, not minutes ----------
 {
   const daysToSolve = pace => { const w = fresh(); w.pace = pace; let d = 0; while (!w.mysteries.sparks.solved && d < 200) { d++; dayStart(w, d); for (let i = 0; i < 300; i++) clue(w, 'sparks', 0.5); } return d; };
-  assert.equal(daysToSolve(1), 8, 'the sparks take at least 8 days at the default pace (they used to take under one)');
-  assert.equal(daysToSolve(2), 32, 'twice as slow');
+  assert.equal(daysToSolve(1), 7, 'the sparks take at least 7 days at the default pace (they used to take under one)');
+  assert.equal(daysToSolve(2), 28, 'twice as slow');
   assert.equal(daysToSolve(0.5), 2, 'twice as fast');
-  ok('the dancing sparks take at least 8 days by default; pace 2 takes 32, pace 0.5 takes 2, however many clues pile up in a day');
+  ok('the dancing sparks take at least 7 days by default; pace 2 takes 28, pace 0.5 takes 2, however many clues pile up in a day');
 
   const w = fresh(); dayStart(w, 1); for (let i = 0; i < 300; i++) clue(w, 'sparks', 0.5);
   assert.ok(w.mysteries.sparks.clues <= clueCap(w, 'sparks') + 1e-9 && !w.mysteries.sparks.theory, 'one day gives at most its cap and no theory yet');
@@ -81,8 +81,8 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
   assert.deepEqual(tour(2).slice(0, 4), [2, 4, 6, 8], 'twice as slow: pace.js halves it');
   ok('three parts of the yard sink in per day (nine take three days; pace scales it)');
 
-  assert.equal(scaled(fresh(), PACE.sparksSolve), 48);
-  const slow = fresh(); slow.pace = 2; assert.equal(scaled(slow, PACE.sparksSolve), 96);
+  assert.equal(scaled(fresh(), PACE.sparksSolve), 42);
+  const slow = fresh(); slow.pace = 2; assert.equal(scaled(slow, PACE.sparksSolve), 84);
 
   // crafting: the oak is less generous, and working a recipe out alone takes longer
   const wc = fresh(); wc.cat.traits.curious = 0.5; let bark = 0; const N = 6000;
@@ -90,7 +90,7 @@ const dayStart = (w, d) => { w.clock = (d - 1) * w.dayLen + 0.4 * w.dayLen; };
   assert.ok(bark / N > 0.15 && bark / N < 0.27, 'bark rate at the default pace: ' + (bark / N).toFixed(3));
   const wq = fresh(); wq.cat.traits.curious = 0.5; wq.pace = 0.5; let bq = 0; for (let i = 0; i < N; i++) { wq.cat.inv.bark = 0; wq.cat.inv.twig = 0; if (scratchTree(wq) === 'bark') bq++; }
   assert.ok(bq / N > 0.34 && bq / N < 0.48, 'bark rate at pace 0.5: ' + (bq / N).toFixed(3));
-  const wl = fresh(); wl.netOn = false; addWant(wl, { kind: 'learn', recipe: 'feeder' });
+  const wl = fresh(); markFound(wl, 'feeder'); wl.netOn = false; addWant(wl, { kind: 'learn', recipe: 'feeder' });
   wl.clock = 3 * wl.dayLen + 5; assert.equal(selfTaught(wl), false, 'not yet after 3 days'); assert.ok(!knows(wl, 'feeder'));
   wl.clock = 4 * wl.dayLen + 5; assert.equal(selfTaught(wl), true, 'after 4 days it works the recipe out'); assert.ok(knows(wl, 'feeder'));
   ok('bark comes about half as often, and a recipe takes 4 days to work out alone (pace scales both)');

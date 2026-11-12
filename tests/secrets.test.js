@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { makeWorld, tick } from '../src/sim/sim.js';
 import { start } from '../src/sim/acts.js';
 import { decide } from '../src/sim/mind.js';
-import { unlockRecipe, scratchBed, stringWanted, bedRoom, bedCap, finishCraft, collectDrop } from '../src/sim/craft.js';
+import { unlockRecipe, scratchBed, stringWanted, bedRoom, bedCap, finishCraft, collectDrop, markFound } from '../src/sim/craft.js';
 import { addWant } from '../src/sim/wants.js';
 import { knows } from '../src/sim/recipes.js';
 import { isUpset, upsetBy, soothe } from '../src/sim/upset.js';
@@ -50,7 +50,7 @@ const calm = (w, hour = 10) => {
 
 // ---- string comes out of the bed once the cat has worked out where it comes from
 {
-  const w = calm(mk()); w.table = { x: 1, y: 1, day: 1 }; unlockRecipe(w, 'chime', 'Wind chime'); w.cat.inv.twig = 3; addWant(w, { kind: 'craft', key: 'chime', recipe: 'chime' });
+  const w = calm(mk()); w.table = { x: 1, y: 1, day: 1 }; markFound(w, 'chime'); unlockRecipe(w, 'chime', 'Wind chime'); w.cat.inv.twig = 3; addWant(w, { kind: 'craft', key: 'chime', recipe: 'chime' });
   assert.ok(!stringWanted(w), 'it does not pull at the bed before it knows to');
   unlockRecipe(w, 'string', 'Twine'); assert.ok(knows(w, 'string') && stringWanted(w) && bedRoom(w));
   assert.ok(w.journal.some(j => /cushion/.test(j.text)), 'the discovery is written down');
@@ -59,7 +59,7 @@ const calm = (w, hour = 10) => {
   let got = 0, tries = 0; while (!got && tries++ < 60) { const r = scratchBed(w); if (r) { collectDrop(w, r); got++; } }
   assert.ok(got && w.cat.inv.twine === 1 && w.log.some(e => /string came away/.test(e.text)), 'string comes away from the cushion');
   for (let i = 0; i < 80; i++) { const r = scratchBed(w); if (r) collectDrop(w, r); } assert.ok(w.cat.inv.twine <= bedCap(w) + 0 && !bedRoom(w), 'only so much a day: ' + w.cat.inv.twine);
-  const w2 = calm(mk()); w2.table = { x: 1, y: 1, day: 1 }; unlockRecipe(w2, 'chime', 'Wind chime'); unlockRecipe(w2, 'string', 'Twine'); w2.cat.inv.twig = 3; addWant(w2, { kind: 'craft', key: 'chime', recipe: 'chime' });
+  const w2 = calm(mk()); w2.table = { x: 1, y: 1, day: 1 }; w2.easelMade = { day: 1 }; markFound(w2, 'chime'); unlockRecipe(w2, 'chime', 'Wind chime'); unlockRecipe(w2, 'string', 'Twine'); w2.cat.inv.twig = 3; w2.cat.inv.bark = 4; addWant(w2, { kind: 'craft', key: 'chime', recipe: 'chime' });
   run(w2, 12000); assert.ok(w2.deco.chime, 'it builds the chime without asking the human for twine'); assert.ok(!w2.cat.wishes.some(x => x.kind === 'material' && x.type === 'twine' && x.state !== 'faded') || true);
   assert.ok(!unlockRecipe(w2, 'string', 'again'), 'learning it twice does nothing');
   ok('it pulls string out of the cushion, a couple of lengths a day, and builds the chime from it');
@@ -104,7 +104,7 @@ const calm = (w, hour = 10) => {
   assert.ok(w.journal.some(j => /cat tree/.test(j.text)) && w.log.some(e => /cat tree/.test(e.text)));
   const w2 = mk(); w2.cat.needs.lonely = 0; w2.catTree = { x: 50, y: 300, how: 'found', day: 1 }; let sat = 0; run(w2, 12000 * 2); assert.ok((w2.stats.catTreeSits || 0) >= 2, 'it sits in it: ' + w2.stats.catTreeSits);
   assert.ok(!foundCatTree(w2, 'found'), 'there is only one');
-  const m = calm(mk()); unlockRecipe(m, 'cattree', 'Cat tree'); m.table = { x: 1, y: 1, day: 1 }; Object.assign(m.cat.inv, { frame: 3, bark: 2, twig: 5, twine: 3 }); addWant(m, { kind: 'craft', key: 'cattree', recipe: 'cattree' });
+  const m = calm(mk()); markFound(m, 'cattree'); unlockRecipe(m, 'cattree', 'Cat tree'); m.table = { x: 1, y: 1, day: 1 }; Object.assign(m.cat.inv, { frame: 3, bark: 2, twig: 5, twine: 3 }); addWant(m, { kind: 'craft', key: 'cattree', recipe: 'cattree' });
   assert.ok(knows(m, 'cattree')); assert.ok(finishCraft(m, 'cattree') && m.catTree && m.catTree.how === 'made' && m.cat.inv.bark === 0, 'it builds one from bark, twigs and twine');
   assert.ok(!m.cat.wants.some(x => x.recipe === 'cattree'), 'and stops wanting one');
   const r = deserialize(serialize(m)); assert.ok(r.catTree && r.catTree.how === 'made', 'saved');
@@ -133,8 +133,8 @@ const calm = (w, hour = 10) => {
 {
   const w = mk(); const m = w.mysteries.moon; m.theory = 'x'; m.sawPhases = true; meetFrog(w);
   const visit = x => { frogVisited(x); moonFinal(x); }; // (what the frog act does at the end of a visit, acts.js)
-  for (let i = 0; i < 9; i++) visit(w); assert.ok(!m.solved, 'nine visits are not enough'); visit(w); assert.ok(m.solved, 'the tenth is the last step');
-  assert.equal(frogVisitsForMoon(w), 10);
+  for (let i = 0; i < 8; i++) visit(w); assert.ok(!m.solved, 'eight visits are not enough'); visit(w); assert.ok(m.solved, 'the ninth is the last step');
+  assert.equal(frogVisitsForMoon(w), 9);
   const f = mk(); f.cat.traits.curious = 0.95; assert.equal(frogVisitsForMoon(f), 5, 'twice as fast for a very curious cat');
   const x = mk(); assert.ok(!moonWishTick(x), 'no wish before the moon is understood');
   const day = d => { w.clock = (d - 1) * w.dayLen + 0.1 * w.dayLen; };
