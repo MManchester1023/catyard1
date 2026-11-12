@@ -42,5 +42,8 @@ export const MATERIALS = ['bark', 'twig', 'twine'];
 export const MAT_CAP = 12; // how many of each it can carry
 export const MAT_LABEL = { bark: 'piece of bark', twig: 'twig', twine: 'length of twine', frame: 'oak frame' };
 export const MAT_PLURAL = { bark: 'pieces of bark', twig: 'twigs', twine: 'lengths of twine', frame: 'oak frames' };
-export const MAT_GIFT = { bark: 2, twig: 2, twine: 1 }; // how many one offering of it is worth
+// Toys are the one thing that can only come as a gift: the human leaves one on the mat, the cat takes it into the yard.
+export const TOYS = ['ball', 'toymouse'];
+export const TOY_LABEL = { ball: 'ball', toymouse: 'toy mouse' };
+export const TOY_ALIAS = { ball: 'ball', mouse: 'toymouse', toymouse: 'toymouse', 'toy mouse': 'toymouse' };
 export const matText = (type, n = 1) => `${n} ${n === 1 ? MAT_LABEL[type] : MAT_PLURAL[type]}`;

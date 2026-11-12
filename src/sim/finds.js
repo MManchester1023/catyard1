@@ -13,7 +13,7 @@ import { random } from './rng.js';
 
 export const MAX_FAVS = 3, FAV_PULL = 0.3;
 // everything it does that can become a favourite, by the key it is remembered under
-export const FAVABLE = new Set(['act:frog', 'act:paint', 'act:tablet', 'act:gaze', 'act:perch', 'act:investigate', 'act:craft', 'act:tree', 'act:stash', 'act:cattree', 'act:post', 'act:yarn', 'act:lounge', 'act:fish', 'act:listen', 'act:hunt', 'act:wash']);
+export const FAVABLE = new Set(['act:frog', 'act:paint', 'act:tablet', 'act:gaze', 'act:perch', 'act:investigate', 'act:craft', 'act:tree', 'act:stash', 'act:cattree', 'act:post', 'act:yarn', 'act:ball', 'act:toymouse', 'act:lounge', 'act:fish', 'act:listen', 'act:hunt', 'act:wash']);
 
 export function ensureFinds(c) {
   if (!Array.isArray(c.favActs)) c.favActs = []; if (!c.found) c.found = { colors: {}, types: {}, places: {} }; if (!c.found.places) c.found.places = {};
@@ -25,12 +25,12 @@ export function ensureFinds(c) {
 const BY_TYPE = { frog: 'act:frog', paint: 'act:paint', tablet: 'act:tablet', gaze: 'act:gaze', perch: 'act:perch', investigate: 'act:investigate', craft: 'act:craft', cattree: 'act:cattree', fish: 'act:fish', listen: 'act:listen', hunt: 'act:hunt', wash: 'act:wash', stash: 'act:stash' };
 export function actKeyOf(a) {
   if (!a) return null;
-  if (a.type === 'play') return a.gather ? 'act:tree' : a.own ? ({ post: 'act:post', yarn: 'act:yarn', tree: 'act:tree' })[a.kind] || null : null;
+  if (a.type === 'play') return a.gather ? 'act:tree' : a.own ? ({ post: 'act:post', yarn: 'act:yarn', ball: 'act:ball', toymouse: 'act:toymouse', tree: 'act:tree' })[a.kind] || null : null;
   if (a.type === 'sleep') return a.lounge ? 'act:lounge' : null;
   return BY_TYPE[a.type] || null;
 }
 // the same for the decide() score names
-export const SCORE_KEY = { paint: 'act:paint', tablet: 'act:tablet', gaze: 'act:gaze', perch: 'act:perch', investigate: 'act:investigate', craft: 'act:craft', gather: 'act:tree', stashvisit: 'act:stash', frog: 'act:frog', cattree: 'act:cattree', post: 'act:post', yarn: 'act:yarn', lounge: 'act:lounge', fish: 'act:fish', listen: 'act:listen', hunt: 'act:hunt', wash: 'act:wash' };
+export const SCORE_KEY = { paint: 'act:paint', tablet: 'act:tablet', gaze: 'act:gaze', perch: 'act:perch', investigate: 'act:investigate', craft: 'act:craft', gather: 'act:tree', stashvisit: 'act:stash', frog: 'act:frog', cattree: 'act:cattree', post: 'act:post', yarn: 'act:yarn', ball: 'act:ball', toymouse: 'act:toymouse', lounge: 'act:lounge', fish: 'act:fish', listen: 'act:listen', hunt: 'act:hunt', wash: 'act:wash' };
 
 export const isFav = (w, key) => !!(key && w.cat.favActs && w.cat.favActs.includes(key));
 export const favourites = w => (w.cat.favActs || []).map(key => { const A = (w.cat.assoc || {})[key] || { v: 0, n: 0 }; return { key, name: keyName(key), v: A.v, n: A.n }; });
@@ -67,7 +67,7 @@ export function favStart(w) {
 
 // ---------- what it is feeling about the things it does ----------
 // the effect of finishing something that did not already have its own feeling, and the label for it
-const ENJOY = { 'act:paint': [{ joy: 0.07, fun: -0.05 }, 'proud'], 'act:gaze': [{ joy: 0.05, fun: -0.06, fear: -0.04 }, 'wondering'], 'act:perch': [{ joy: 0.05, fun: -0.06 }, 'content'], 'act:investigate': [{ joy: 0.04, fun: -0.05 }, 'wondering'], 'act:lounge': [{ joy: 0.05, fear: -0.05 }, 'soothed'], 'act:yarn': [{ joy: 0.06, fun: -0.1 }, 'content'], 'act:cattree': [{ joy: 0.08, fear: -0.08 }, 'soothed'] };
+const ENJOY = { 'act:paint': [{ joy: 0.07, fun: -0.05 }, 'proud'], 'act:gaze': [{ joy: 0.05, fun: -0.06, fear: -0.04 }, 'wondering'], 'act:perch': [{ joy: 0.05, fun: -0.06 }, 'content'], 'act:investigate': [{ joy: 0.04, fun: -0.05 }, 'wondering'], 'act:lounge': [{ joy: 0.05, fear: -0.05 }, 'soothed'], 'act:yarn': [{ joy: 0.06, fun: -0.1 }, 'content'], 'act:ball': [{ joy: 0.07, fun: -0.1 }, 'content'], 'act:toymouse': [{ joy: 0.07, fun: -0.1 }, 'content'], 'act:cattree': [{ joy: 0.08, fear: -0.08 }, 'soothed'] };
 // called when an act is replaced by another. Things it did for a while that did not feel anything on their own do now.
 export function enjoyAct(w, a) {
   if (!a || a.felt || a.phase === 'go' || !(a.t >= 2)) return;

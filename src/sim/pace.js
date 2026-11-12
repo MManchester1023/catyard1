@@ -32,6 +32,9 @@ export const PACE = {
   discoverRadius: 100,                             // how close it has to get to a part of the yard to notice it (was 190)
   placesPerDay: 3,                                 // parts of the yard it can take in on one day, however much it wanders (was: all of them in the first half day)
   urgeExtra: 2,                                    // most extra pieces a day the oak gives a cat that is desperate to build its easel
+  shakeChance: 0.3,                                // chance that a shake of the oak (a click) brings something down
+  shakeCool: 3,                                    // seconds between shakes that count
+  shakePerDay: 8,                                  // most pieces the oak will shake loose for you in a day
   barkLuck: 0.5,                                  // multiplies the chance that scratching the oak gives something
   selfTaughtDays: 4,                               // days before it works a recipe out alone when the tablet is off (was 2)
 };

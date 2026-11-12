@@ -170,7 +170,7 @@ The **oak frame** is a building part: two pieces of bark make one, and bigger th
 
 Until the easel and the table exist, bark goes to them first. To learn a recipe the cat looks the topic up on the tablet; if the tablet turns up nothing twice, or there is no connection for about four days, it works it out itself.
 
-**Twine is scarce.** It comes from you (leave it on the mat, or `/give twine`), now and then from a bird, and from the cushion once the cat has worked out where string comes from.
+**Twine is scarce.** It comes now and then from a bird, and from the cushion once the cat has worked out where string comes from. Bark, twigs and twine cannot be given to the cat; the only help you can give is to **click the old oak** in the yard. A click shakes it: leaves fall, and about three shakes in ten bring down a piece of bark or a twig, which lies on the grass for the cat to pick up like anything a bird has dropped. There is a short pause between shakes and the oak gives at most eight pieces a day (`shakeChance`, `shakeCool` and `shakePerDay` in `src/sim/pace.js`).
 
 ## Painting
 
@@ -185,7 +185,7 @@ Everything the cat has kept, favourite first. The ranking comes from what it col
 The mat sits by the glass at the front of the yard and holds three things at once. In the **Outside** tab you can leave:
 
 - **An object**: a marble, button, feather or bottle cap, in any colour.
-- **A material**: bark, twigs or twine.
+- **A toy**: a ball or a toy mouse. These are the only gifts of their kind: each can be given once, the cat carries it into the yard and plays with it (it chases and bats it like the yarn; the ball rolls further, the mouse stops short), and playing eases its urge to make things.
 - **A note** of up to 140 characters.
 
 The cat notices after a moment, walks over and reacts according to its own tastes and its day: a lonely, well-fed cat is easy to please, a hungry one is not. Objects it likes go to the stash; the rest are eventually tidied away. After several gifts that made it feel good its favourite colour can change, and after many, so can the thing it collects. Notes are read and kept (the last six are shown), and a word it does not know can become something it wants to look up.
@@ -206,7 +206,7 @@ A tablet stands on a stump in the yard. Once the cat finds it, it now and then s
 
 ## Notes from the cat
 
-When the cat needs something only you can bring (twine for a chime, an object it has been hoping for), it types a note on the tablet. You are told in the chat, and the note appears in the **Outside** tab with a **Give it** button. When the thing arrives it knows you read the note, and it is delighted. Unanswered notes fade after five days. It does not write notes during its first day or so.
+When the cat needs something only you can bring (an object it has been hoping for, or the kind of thing it collects), it types a note on the tablet. You are told in the chat, and the note appears in the **Outside** tab with a **Give it** button. When the thing arrives it knows you read the note, and it is delighted. Unanswered notes fade after five days. It does not write notes during its first day or so.
 
 ## The blog
 
@@ -272,8 +272,8 @@ Type in the chat to talk to the cat. Press **Admin** (or type `admin on`) to run
 | `help`, `status` | Help, and the cat at a glance |
 | `seed` | The number this cat's dice started from (see [Reporting a problem](#reporting-a-problem)) |
 | `save`, `saves` | Save now, list saves |
-| `offer item <type> [color]`, `offer material <bark\|twig\|twine>`, `offer note <text>`, `offer list` | Leave something on the mat |
-| `give <material>` | Shortcut for offering a material |
+| `offer item <type> [color]`, `offer toy <ball\|mouse>`, `offer note <text>`, `offer list` | Leave something on the mat |
+| `give <ball\|mouse>` | Shortcut for offering a toy |
 | `tastes`, `feelings` | What it likes and why |
 | `inventory`, `recipes`, `wishes` | What it carries, what it can make, what it has asked for |
 | `history [N]`, `history <did\|thought\|event\|diary\|chat> [N]`, `history day N`, `history days`, `history find <text>` | Read back what happened |

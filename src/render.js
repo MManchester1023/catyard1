@@ -5,6 +5,7 @@ import { hourOf, sunOf, moonPos, moonLight, beamOf } from './sim/world.js';
 import { buildOps, drawPainting } from './sim/art.js';
 import { slotPos } from './sim/offerings.js';
 import { frogSpot } from './sim/frog.js';
+import { LEAF_SECONDS } from './sim/oak.js';
 import { mulberry32, clamp } from './sim/util.js';
 import { dither } from './dither.js';
 
@@ -94,6 +95,23 @@ function drawCatTree(g, w, t) {
   g.fillStyle = '#c4a47c'; ell(g, x - 3, y - top - 1, 11, 2.4); g.fill();
   const sw = Math.sin(t * 1.6) * 1.6; g.strokeStyle = '#d9bf84'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(x + 14, y - top + 1); g.lineTo(x + 18 + sw, y - top + 12); g.stroke();
   g.fillStyle = '#d8453b'; ell(g, x + 18 + sw, y - top + 14, 2.6, 2.6); g.fill();                                                        // a toy on a string
+}
+// the two toys the human can give: a rubber ball and a felt mouse
+function drawToy(g, type, x, y, dir, spin) {
+  g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, x, y + 6, type === 'ball' ? 7 : 8, 2.6); g.fill();
+  if (type === 'ball') {
+    g.fillStyle = '#3d7fd0'; ell(g, x, y, 7, 7); g.fill();
+    g.save(); g.beginPath(); g.arc(x, y, 7, 0, 6.283); g.clip(); g.strokeStyle = '#f4f1e6'; g.lineWidth = 2; g.beginPath(); g.moveTo(x - 9 * Math.cos(spin), y - 9 * Math.sin(spin)); g.lineTo(x + 9 * Math.cos(spin), y + 9 * Math.sin(spin)); g.stroke(); g.restore();
+    g.fillStyle = 'rgba(255,255,255,0.45)'; ell(g, x - 2.4, y - 2.8, 1.8, 1.3); g.fill();
+  } else {
+    g.save(); g.translate(x, y + 1); g.scale(dir, 1);
+    g.strokeStyle = '#d9a0a8'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(-7, 2); g.quadraticCurveTo(-14, 6, -19, 1); g.stroke();
+    g.fillStyle = '#9a9aa6'; ell(g, 0, 0, 8.5, 5.2); g.fill();
+    g.fillStyle = '#b3b3be'; ell(g, 1, -1.4, 6, 2.6); g.fill();
+    g.fillStyle = '#e8a3ae'; ell(g, 4.4, -4, 2.2, 2.2); g.fill();
+    g.fillStyle = '#1e1a22'; ell(g, 7.2, -0.6, 0.9, 0.9); g.fill(); g.fillStyle = '#e8a3ae'; ell(g, 8.6, 0.4, 0.8, 0.8); g.fill();
+    g.restore();
+  }
 }
 function drawChime(g, w, t) {
   const x = 862, y = 262, sway = Math.sin(t * 1.3) * 1.6 + Math.sin(t * 3.1) * 0.8 * (w.weather.cloud + 0.2);
@@ -227,6 +245,10 @@ export function createRenderer(canvas) {
       if (u < 0.55) for (let i = 0; i < 6; i++) { const a = (i / 6) * 6.283 + sp.x, r = u * 18, h = Math.sin(u / 0.55 * Math.PI) * 11; g.globalAlpha = (1 - u / 0.55) * 0.9; g.beginPath(); g.arc(sp.x + Math.cos(a) * r, sp.y - h + Math.sin(a) * r * 0.35, 1.3, 0, 6.283); g.fill(); }
       g.restore();
     }
+    for (const l of w.leaves || []) { // leaves from a shaken oak
+      if (l.t < 0) continue; const u = clamp(l.t / LEAF_SECONDS), x = l.x + Math.sin(u * 7 + l.s) * 16 + u * 10, y = l.y + u * u * (w.o.tree.y + 14 - l.y);
+      g.save(); g.globalAlpha = 1 - u * u * 0.6; g.fillStyle = l.s > 3.1 ? '#52a05a' : '#3f8447'; g.translate(x, y); g.rotate(u * 5 + l.s); ell(g, 0, 0, 4.2, 2); g.fill(); g.restore();
+    }
     // the frog that became the cat's friend: on a lily pad at the near edge when it is up
     if (w.frog && w.frog.out) {
       const f = w.frog, fs = frogSpot(w), hop = Math.sin(clamp(f.hop) * Math.PI) * 5, px = fs.fx, py = fs.fy - hop, visiting = w.cat.act.type === 'frog' && w.cat.act.phase === 'do';
@@ -255,12 +277,14 @@ export function createRenderer(canvas) {
     for (const tr of w.treats) { g.fillStyle = '#e9a05a'; ell(g, tr.x, tr.y, 6, 3.6); g.fill(); g.fillStyle = '#c47a38'; ell(g, tr.x + 1.4, tr.y - 0.6, 2.6, 1.4); g.fill(); }
     const y = o.yarn; g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, y.x, y.y + 6, 9, 3); g.fill(); g.fillStyle = '#d8453b'; ell(g, y.x, y.y, 8, 8); g.fill(); g.strokeStyle = '#f08a80'; g.lineWidth = 1.2; g.beginPath(); g.arc(y.x, y.y, 5, 0.3, 2.6); g.moveTo(y.x - 7, y.y - 2); g.quadraticCurveTo(y.x, y.y + 3, y.x + 7, y.y - 3); g.stroke();
     g.strokeStyle = '#d8453b'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(y.x - 7, y.y + 4); g.quadraticCurveTo(y.x - 18, y.y + 10, y.x - 26, y.y + 6); g.stroke();
+    if (w.toys && w.toys.ball) drawToy(g, 'ball', o.ball.x, o.ball.y, 1, Math.hypot(o.ball.vx, o.ball.vy) > 4 ? t * 9 : 0);
+    if (w.toys && w.toys.toymouse) drawToy(g, 'toymouse', o.toymouse.x, o.toymouse.y, o.toymouse.vx < 0 ? -1 : 1, 0);
 
     // offerings on the mat
     for (const off of w.offers || []) {
       const sp = slotPos(w, off.slot);
       if (off.kind === 'item') { g.fillStyle = 'rgba(0,0,0,0.22)'; ell(g, sp.x, sp.y + 2, 7, 2.4); g.fill(); drawItem(g, off.type, off.color, sp.x, sp.y - 1.5, 9, 0); }
-      else if (off.kind === 'material') { if (off.type === 'bark') { drawBark(g, sp.x - 3, sp.y, 1.15, -0.2); drawBark(g, sp.x + 4, sp.y - 1.5, 1.15, 0.3); } else if (off.type === 'twig') { drawTwig(g, sp.x, sp.y - 1, 1.25, -0.1); drawTwig(g, sp.x + 1, sp.y + 2, 1.1, 0.2); } else drawTwine(g, sp.x, sp.y - 1, 1.2); }
+      else if (off.kind === 'toy') drawToy(g, off.type, sp.x, sp.y - 1, 1, 0);
       else { g.save(); g.translate(sp.x, sp.y - 1); g.rotate(-0.12); g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(-6, -3, 14, 10); g.fillStyle = '#f6f0dc'; g.fillRect(-7, -5, 14, 10); g.fillStyle = 'rgba(90,70,50,0.55)'; for (let i = 0; i < 3; i++) g.fillRect(-5, -3 + i * 3, 10 - (i === 2 ? 4 : 0), 1.2); g.fillStyle = '#d9453b'; ell(g, 4.5, 3, 1.6, 1.6); g.fill(); g.restore(); }
       if (off.state === 'new') { g.globalAlpha = 0.45 + 0.4 * Math.sin(t * 4); g.strokeStyle = '#fff6c0'; g.lineWidth = 1.6; ell(g, sp.x, sp.y, 13, 5.5); g.stroke(); g.globalAlpha = 1; }
     }

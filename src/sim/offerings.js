@@ -1,14 +1,14 @@
 // Offerings: things the human leaves on the mat by the glass. An object or a short note. The cat notices,
 // reacts according to its own tastes, and its tastes drift a little with what it is given.
-import { rnd, pick, clamp, uid, an, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, MATERIALS, MAT_GIFT, matText } from './util.js';
+import { rnd, pick, clamp, uid, an, ITEM_TYPES, ITEM_LABEL, COLOR_NAMES, TOY_LABEL, TOY_ALIAS } from './util.js';
 import { note, journal, dayOf, clockStr } from './world.js';
 import { stashColors, itemName } from './quirk.js';
 import { addWant, hasWant, MAX_WANTS, onEvent } from './wants.js';
 import { learnWords } from './thoughts.js';
 import { feel } from './feelings.js';
 import { upsetBy, soothe } from './upset.js';
-import { neededMat, receiveMaterial } from './craft.js';
-import { matchWish, grantWish } from './wishes.js';
+import { receiveMaterial } from './craft.js';
+import { matchWish, grantWish, retireMaterialWishes } from './wishes.js';
 import { ensureCraft } from './recipes.js';
 import { random } from './rng.js';
 
@@ -33,7 +33,14 @@ export function ensureOfferState(w) {
   if (!c.offerHist) c.offerHist = [];
   if (!w.offers) w.offers = [];
   if (!w.stats.offerings) w.stats.offerings = 0;
-  ensureCraft(w);
+  if (!w.toys) w.toys = { ball: null, toymouse: null };
+  ensureCraft(w); retireMaterialGifts(w);
+}
+// Saves from when bark, twigs and string could be left on the mat: anything still lying there goes to the cat, and the
+// notes asking for such things are over. (Toys are the only gifts of that kind now.)
+function retireMaterialGifts(w) {
+  for (const o of w.offers.filter(x => x.kind === 'material')) receiveMaterial(w, o.type, o.n || 1);
+  w.offers = w.offers.filter(x => x.kind !== 'material'); retireMaterialWishes(w);
 }
 export const topTastes = (w, kind, n = 4) => Object.entries(w.cat.tastes[kind]).sort((a, b) => b[1] - a[1]).slice(0, n);
 
@@ -66,7 +73,7 @@ export function exposeTo(w, type, color, amount = 0.03) {
 
 // ---------- leaving something ----------
 const clean = s => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
-export const offerLabel = off => (off.kind === 'note' ? `a note: "${off.text.length > 40 ? off.text.slice(0, 37) + '...' : off.text}"` : off.kind === 'material' ? matText(off.type, off.n) : an(itemName(off.type, off.color)));
+export const offerLabel = off => (off.kind === 'note' ? `a note: "${off.text.length > 40 ? off.text.slice(0, 37) + '...' : off.text}"` : off.kind === 'toy' ? an(TOY_LABEL[off.type]) : an(itemName(off.type, off.color)));
 
 export function leaveOffering(w, spec) {
   ensureOfferState(w);
@@ -77,8 +84,12 @@ export function leaveOffering(w, spec) {
     const text = clean(spec.text).slice(0, NOTE_MAX); if (!text) return { ok: false, error: 'A note needs some words.' };
     Object.assign(off, { kind: 'note', text });
   } else if (spec.kind === 'material') {
-    if (!MATERIALS.includes(spec.type)) return { ok: false, error: `Materials: ${MATERIALS.join(', ')}.` };
-    Object.assign(off, { kind: 'material', type: spec.type, n: MAT_GIFT[spec.type] });
+    return { ok: false, error: 'Bark and twigs come from the oak and the birds, and string from the cushion. They cannot be given.' };
+  } else if (spec.kind === 'toy') {
+    const type = TOY_ALIAS[String(spec.type || '').toLowerCase()]; if (!type) return { ok: false, error: `Toys: ball, mouse.` };
+    if (w.toys[type]) return { ok: false, error: `${w.cat.name} already has ${an(TOY_LABEL[type])}.` };
+    if (w.offers.some(o => o.kind === 'toy' && o.type === type)) return { ok: false, error: `${an(TOY_LABEL[type])[0].toUpperCase() + an(TOY_LABEL[type]).slice(1)} is already on the mat.` };
+    Object.assign(off, { kind: 'toy', type });
   } else {
     const type = spec.type || pick(ITEM_TYPES); if (!ITEM_TYPES.includes(type)) return { ok: false, error: `Types: ${ITEM_TYPES.join(', ')}.` };
     const color = spec.color || pick(COLOR_NAMES.filter(c => c !== 'black')); if (!COLOR_NAMES.includes(color)) return { ok: false, error: `Colors: ${COLOR_NAMES.join(', ')}.` };
@@ -106,10 +117,9 @@ const ITEM_REACT = {
   meh: ['{Aitem}. It is fine. Not for me.', 'I will leave this here. Politely.', 'Is this a test? I am leaving it.'],
 };
 ITEM_REACT.wished = ['{Aitem}! I asked and it came. The tablet works both ways.', '{Aitem}. You read my note. I will not forget this.', 'You brought {aitem}. I did not think anyone would.'];
-const MAT_REACT = {
-  wished: ['{what}! Exactly what I wrote the note about.', 'You read the tablet. {what}. Now I can finish it.'],
-  needed: ['{what}. I was just short of this.', '{what}! This is what the project was missing.'],
-  other: ['{what}. I will find a use for it.', 'Raw materials. Something will come of this.'],
+const TOY_REACT = {
+  ball: { delight: ['A ball. It is round. It is MINE. Do not say anything else.', 'It rolls. I have not even touched it and I know it rolls.'], pleased: ['A ball. Yes. I will take it outside and be unreasonable.', 'Round and bouncy. Good. I have plans.'], other: ['A ball. I will give it a chance.', 'It is round. That is a start.'] },
+  toymouse: { delight: ['A mouse. It does not smell like one. I will not tell it.', 'A MOUSE. It is not moving. That is how I like them.'], pleased: ['A small grey mouse. Very still. I respect that.', 'It is not a real mouse. It is a better mouse.'], other: ['A mouse that does not run. I am suspicious.', 'A mouse for me? I will have a look when nobody is watching.'] },
 };
 const NOTE_REACT = {
   pos: ['"{quote}"... It says nice things. I am keeping it.', 'Someone wrote words for me. I did not know that could happen.', 'I will keep this. Do not look at the stash for it.'],
@@ -126,7 +136,7 @@ function likingOf(w, off) {
   }
   // how it takes a gift depends on the moment as much as the gift: a lonely cat is easy to please, a hungry one is not
   const mood = (n.lonely - 0.4) * 0.2 - Math.max(0, n.hunger - 0.65) * 0.25 + (c.mood.joy - 0.45) * 0.15;
-  if (off.kind === 'material') return clamp((neededMat(w, off.type) ? 0.85 : 0.5) + mood + c.bond * 0.05 + rnd(-0.05, 0.05));
+  if (off.kind === 'toy') return clamp(0.68 + (c.temper === 'hunter' && off.type === 'toymouse' ? 0.15 : 0) + mood + c.bond * 0.05 + rnd(-0.05, 0.05)); // (a toy is almost always welcome)
   const novel = !stashColors(w)[off.color];
   return clamp(0.12 + 0.42 * t.color[off.color] + 0.34 * t.type[off.type] + (novel ? 0.1 : 0) + c.bond * 0.1 + mood + rnd(-0.08, 0.08));
 }
@@ -142,9 +152,9 @@ export function inspectOffer(w, off) {
     const mood = l >= 0.6 ? 'pos' : l < 0.35 ? 'neg' : 'neutral', words = off.text.split(' ').slice(0, 6).join(' ');
     text = fill(pick(NOTE_REACT[mood]), { quote: words + (off.text.split(' ').length > 6 ? '...' : '') }); keep = true;
     learnWords(w, off.text);
-  } else if (off.kind === 'material') {
-    const lab = matText(off.type, off.n); keep = true; keys.push('mat:' + off.type);
-    text = fill(pick(wish ? MAT_REACT.wished : l >= 0.7 ? MAT_REACT.needed : MAT_REACT.other), { what: lab, type: off.type });
+  } else if (off.kind === 'toy') {
+    keep = true; keys.push('toy:' + off.type);
+    text = pick(TOY_REACT[off.type][l >= 0.7 ? 'delight' : l >= 0.5 ? 'pleased' : 'other']);
   } else {
     const nm = itemName(off.type, off.color), A = an(nm);
     text = wish ? fill(pick(ITEM_REACT.wished), { Aitem: A[0].toUpperCase() + A.slice(1), aitem: A }) : fill(pick(ITEM_REACT[tr]), { Aitem: A[0].toUpperCase() + A.slice(1), aitem: A, color: off.color, item: ITEM_LABEL[off.type] });
@@ -179,7 +189,13 @@ export function finishOffer(w, off) {
     wonderAbout(w, off.text);
     return false;
   }
-  if (off.kind === 'material') { w.offers = w.offers.filter(x => x !== off); receiveMaterial(w, off.type, off.n); note(w, `${c.name} took ${matText(off.type, off.n)} from the mat.`, 'offer'); return false; }
+  if (off.kind === 'toy') { // it carries the toy out into the yard, and that is where it stays
+    w.offers = w.offers.filter(x => x !== off); w.toys[off.type] = { day: dayOf(w), from: 'gift' };
+    const o = w.o[off.type]; o.vx = o.vy = 0; w.stats.toys = (w.stats.toys || 0) + 1;
+    note(w, `${c.name} carried ${an(TOY_LABEL[off.type])} off the mat and into the yard.`, 'offer');
+    journal(w, `The human gave me ${an(TOY_LABEL[off.type])}. It lives in the yard now, which means I live next to it.`, 'toy');
+    return false;
+  }
   if (off.keep) { w.offers = w.offers.filter(x => x !== off); w.stats.found++; note(w, `${c.name} took the ${itemName(off.type, off.color)} from the mat.`, 'offer'); return true; }
   off.state = 'left'; off.leftAt = w.clock; note(w, `${c.name} sniffed the ${itemName(off.type, off.color)} and left it on the mat.`, 'offer');
   return false;

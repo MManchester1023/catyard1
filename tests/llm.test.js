@@ -83,13 +83,13 @@ console.log('asks ok');
 {
   const { publishWish } = await import('../src/sim/wishes.js');
   w.cat.mem.known.tablet = 1;
-  const wish = { id: 'wq1', state: 'draft', day: 1, kind: 'material', type: 'twine', recipe: 'chime', text: 'Please could you leave me some twine?' }; w.cat.wishes.unshift(wish);
+  const wish = { id: 'wq1', state: 'draft', day: 1, kind: 'item', type: 'button', color: 'blue', why: 'favourite', text: 'Please could you leave me a blue button?' }; w.cat.wishes.unshift(wish);
   publishWish(w, wish); const ask = w.asks.find(a => a.type === 'wish'); assert.ok(ask, 'publishing a wish queues an ask'); assert.equal(wish.state, 'open');
-  assert.ok(w.chat.some(m => m.from === 'sys' && m.text.includes('Please could you leave me some twine?')), 'the human is told in the chat');
+  assert.ok(w.chat.some(m => m.from === 'sys' && m.text.includes('Please could you leave me a blue button?')), 'the human is told in the chat');
   await brain.tick(w, true);
   assert.match(wish.text, /improve my week/); assert.ok(w.journal.some(e => e.tag === 'wish' && e.text.includes('improve my week')));
   assert.ok(w.chat.some(m => m.from === 'sys' && m.text.includes('improve my week')), 'chat line follows the rewrite');
-  assert.match(calls.at(-1).body.messages[0].content, /1 length of twine|twine/); assert.match(digest(w), /Notes you left the human on the tablet \(unanswered\): .*twine/);
+  assert.match(calls.at(-1).body.messages[0].content, /blue button/); assert.match(digest(w), /Notes you left the human on the tablet \(unanswered\): .*blue button/);
   assert.match(digest(w), /Making things:/); assert.match(digest(w), /What makes you feel good/);
   console.log('wish ask ok');
 }

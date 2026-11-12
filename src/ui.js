@@ -10,7 +10,7 @@ import { dayOf, clockStr } from './sim/world.js';
 import { topTastes, offerLabel, MAX_ON_MAT, NOTE_MAX } from './sim/offerings.js';
 import { topFeelings } from './sim/feelings.js';
 import { isUpset, upsetReason, upsetVoice } from './sim/upset.js';
-import { MATERIALS, MAT_LABEL, MAT_GIFT, matText } from './sim/util.js';
+import { MATERIALS, MAT_LABEL, matText, TOYS, TOY_LABEL } from './sim/util.js';
 import { thingsSummary, timeline, daySummary, daysList, spentText, KINDS, KIND_IDS } from './sim/history.js';
 import { wishLabel } from './sim/wishes.js';
 import { INV_CAP } from './sim/craft.js';
@@ -160,7 +160,7 @@ export function renderCrafting(el, w) {
   const partChip = (key, label, title) => h('div', { class: 'mat' + (c.inv[key] ? '' : ' none'), title }, h('b', { text: String(c.inv[key] || 0) }), h('span', { text: label }));
   secs.push(h('div', { class: 'sec' }, h('h3', { text: 'What it is carrying' }),
     h('div', { class: 'mats' }, ...MATERIALS.map(m => partChip(m, m, `${MAT_LABEL[m]}: it can carry ${INV_CAP}`)), partChip('frame', 'oak frames', 'Made from 2 pieces of bark. Easels, tables and bigger things are built out of them.')),
-    h('div', { class: 'muted small', text: 'It scratches the oak for bark and twigs, and birds sometimes drop bark, twigs or a bit of string in the yard. Twine is scarce, so you can leave some on the mat in the Outside tab.' })));
+    h('div', { class: 'muted small', text: 'It scratches the oak for bark and twigs, and birds sometimes drop bark, twigs or a bit of string in the yard. Twine is scarce: birds drop it now and then, and once it has worked out where string comes from it can pull some out of its cushion. You can also click the old oak in the yard to shake something loose for it: not every time, and only so much a day.' })));
   if (!w.easelMade) secs.push(h('div', { class: 'sec' }, h('h3', { text: 'No easel yet' }), h('div', { class: 'muted', text: 'It cannot paint until it has built an easel, and an easel is made from two oak frames. The urge to paint keeps building while it waits.' })));
   const row = id => {
     const r = RECIPES[id], rec = th.recipes.find(x => x.id === id) || {}, built = BUILT_AT[id] ? BUILT_AT[id](w) : null;
@@ -282,26 +282,32 @@ const swatch = c => h('span', { class: 'dot sw', style: `background:${COLORS[c] 
 function tasteRow(label, v, sw, feeling) { return h('div', { class: 'trait taste' }, h('span', {}, sw || null, label, feeling ? h('em', { class: 'muted small', text: ' · ' + feeling }) : null), meter(v), h('span', { class: 'muted', text: pct(v) })); }
 
 export function renderOutside(el, w, ctx) {
-  const { actions } = ctx, kinds = { item: 'An object', material: 'Materials', note: 'A note' }; let kind = 'item';
+  const { actions } = ctx, kinds = { item: 'An object', toy: 'A toy', note: 'A note' }; let kind = 'item';
   const type = h('select', { id: 'of-type', 'aria-label': 'Kind of object' }, h('option', { value: '', text: 'Any kind' }), ...ITEM_TYPES.map(t => h('option', { value: t, text: cap(ITEM_LABEL[t]) })));
   const color = h('select', { id: 'of-color', 'aria-label': 'Colour' }, h('option', { value: '', text: 'Any colour' }), ...COLOR_NAMES.map(c => h('option', { value: c, text: cap(c) })));
   const text = h('textarea', { id: 'of-note', rows: '3', maxlength: String(NOTE_MAX), placeholder: 'A few words for the cat…', 'aria-label': 'Note' });
-  const mat = h('select', { id: 'of-mat-type', 'aria-label': 'Material' }, ...MATERIALS.map(m => h('option', { value: m, text: cap(matText(m, MAT_GIFT[m])) })));
-  const matRow = h('div', { class: 'field' }, mat, h('div', { class: 'muted small', text: 'It can find bark and twigs on the oak. Twine it cannot find anywhere, so it can only come from you.' }));
+  const toy = h('select', { id: 'of-toy-type', 'aria-label': 'Toy' });
+  const toyNote = h('div', { class: 'muted small' });
+  const toyRow = h('div', { class: 'field' }, toy, toyNote);
+  const paintToys = () => { // (only the toys it does not have yet can be chosen)
+    const left = TOYS.filter(t => !w.toys[t] && !w.offers.some(o => o.kind === 'toy' && o.type === t)), had = TOYS.filter(t => w.toys[t]);
+    toy.replaceChildren(...(left.length ? left.map(t => h('option', { value: t, text: cap(TOY_LABEL[t]) })) : [h('option', { value: '', text: 'Nothing left to give' })])); toy.disabled = !left.length;
+    toyNote.textContent = 'Toys can only come from you, and each can be given once. The cat keeps it in the yard and plays with it.' + (had.length ? ` It has ${had.map(t => 'a ' + TOY_LABEL[t]).join(' and ')} already.` : '');
+  };
   const itemRow = h('div', { class: 'row2' }, type, color), noteRow = h('div', { class: 'field' }, text, h('div', { class: 'muted small', text: `Up to ${NOTE_MAX} characters. The cat reads it, keeps it, and may look up a word it does not know.` }));
   const msg = h('div', { class: 'status', id: 'of-msg', 'aria-live': 'polite' });
   const seg = h('div', { class: 'seg' });
-  const paintSeg = () => { seg.replaceChildren(...Object.entries(kinds).map(([k, l]) => h('button', { type: 'button', 'aria-pressed': String(kind === k), text: l, onclick: () => { kind = k; paintSeg(); itemRow.hidden = k !== 'item'; matRow.hidden = k !== 'material'; noteRow.hidden = k !== 'note'; } }))); };
-  paintSeg(); noteRow.hidden = true; matRow.hidden = true;
+  const paintSeg = () => { seg.replaceChildren(...Object.entries(kinds).map(([k, l]) => h('button', { type: 'button', 'aria-pressed': String(kind === k), text: l, onclick: () => { kind = k; paintSeg(); itemRow.hidden = k !== 'item'; toyRow.hidden = k !== 'toy'; noteRow.hidden = k !== 'note'; if (k === 'toy') paintToys(); } }))); };
+  paintSeg(); noteRow.hidden = true; toyRow.hidden = true;
   const leave = () => {
-    const r = actions.leave(kind === 'note' ? { kind: 'note', text: text.value } : kind === 'material' ? { kind: 'material', type: mat.value } : { kind: 'item', type: type.value || undefined, color: color.value || undefined });
-    msg.textContent = r.ok ? 'Left on the mat. It will notice in a moment.' : r.error; msg.className = 'status ' + (r.ok ? 'ok' : 'bad'); if (r.ok && kind === 'note') text.value = ''; update();
+    const r = actions.leave(kind === 'note' ? { kind: 'note', text: text.value } : kind === 'toy' ? { kind: 'toy', type: toy.value } : { kind: 'item', type: type.value || undefined, color: color.value || undefined });
+    msg.textContent = r.ok ? 'Left on the mat. It will notice in a moment.' : r.error; msg.className = 'status ' + (r.ok ? 'ok' : 'bad'); if (r.ok && kind === 'note') text.value = ''; if (kind === 'toy') paintToys(); update();
   };
   const dyn = { wishes: h('div', { id: 'of-wishes' }), feel: h('div', { id: 'of-feel' }), mat: h('div', { id: 'of-mat' }), tastes: h('div', { id: 'of-tastes' }), hist: h('div', { id: 'of-hist' }), keeps: h('div', { id: 'of-keeps' }), tablet: h('div', { id: 'of-tablet' }) };
   el.replaceChildren(
     h('div', { class: 'sec' }, h('h3', { text: 'Leave something on the mat' }),
       h('p', { class: 'muted small', text: `The mat is by the glass at the front of the yard. It holds ${MAX_ON_MAT} things. What the cat is given slowly changes what it likes.` }),
-      seg, itemRow, matRow, noteRow, h('div', { class: 'row2', style: 'margin-top:8px' }, h('button', { class: 'btn primary', type: 'button', text: 'Leave it on the mat', onclick: leave })), msg, dyn.mat),
+      seg, itemRow, toyRow, noteRow, h('div', { class: 'row2', style: 'margin-top:8px' }, h('button', { class: 'btn primary', type: 'button', text: 'Leave it on the mat', onclick: leave })), msg, dyn.mat),
     h('div', { class: 'sec' }, h('h3', { text: 'Notes from the cat' }), dyn.wishes),
     h('div', { class: 'sec' }, h('h3', { text: 'What it likes right now' }), dyn.tastes, dyn.feel),
     h('div', { class: 'sec' }, h('h3', { text: 'How it took your offerings' }), dyn.hist, dyn.keeps),
@@ -311,7 +317,7 @@ export function renderOutside(el, w, ctx) {
     const c = w.cat, t = w.tablet || { pages: [], interests: {} }, net = ctx.net;
     if (msg.classList.contains('bad') && w.offers.length < MAX_ON_MAT) { msg.textContent = ''; msg.className = 'status'; } // the "mat is full" notice goes away once there is room
     const next = JSON.stringify([w.offers, c.tastes && [topTastes(w, 'color', 4), topTastes(w, 'type', 4)], c.offerHist.map(x => [x.id, x.text]), c.keepsakes, c.wishes.map(x => [x.id, x.state, x.text]), topFeelings(w, 4), t.pages.map(p => [p.id, p.reaction]), Object.keys(t.interests).length, net && net.label(), c.quirk.favColor, c.quirk.item]);
-    if (next === sig) return; sig = next;
+    if (next === sig) return; sig = next; if (kind === 'toy') paintToys();
     dyn.mat.replaceChildren(...(w.offers.length ? [h('div', { class: 'muted small', text: 'On the mat now:' }), ...w.offers.map(o => h('div', { class: 'kv' }, h('span', {}, o.kind === 'item' ? swatch(o.color) : null, cap(offerLabel(o))), h('span', { class: 'muted', text: STATE_LABEL[o.state] || o.state })))] : [h('div', { class: 'muted small', style: 'margin-top:8px', text: 'The mat is empty.' })]));
     dyn.tastes.replaceChildren(h('div', { class: 'small', text: `Favourite colour: ${c.quirk.favColor}. Collects ${ITEM_PLURAL[c.quirk.item]}.` }),
       h('div', { class: 'muted small', style: 'margin:8px 0 4px', text: 'Colours' }), ...topTastes(w, 'color', 4).map(([k, v]) => tasteRow(k, v, swatch(k))),
@@ -319,7 +325,7 @@ export function renderOutside(el, w, ctx) {
     const openW = c.wishes.filter(x => x.state === 'open'), pastW = c.wishes.filter(x => x.state === 'granted' || x.state === 'faded').slice(0, 4);
     dyn.wishes.replaceChildren(
       h('div', { class: 'muted small', text: c.mem.known.tablet ? 'When it wants something only you can bring, it writes you a note on the tablet. Leave what it asks for on the mat and it will know you read it.' : 'Once it finds the tablet it can leave you notes here.' }),
-      ...(openW.length ? openW.map(x => h('div', { class: 'wish' }, h('div', { class: 'theory', text: '“' + x.text + '”' }), h('div', { class: 'row2 between' }, h('span', { class: 'muted small', text: `Day ${x.written ? x.written.day : x.day} · asks for ${wishLabel(x)}` }), h('button', { class: 'btn primary', type: 'button', text: 'Give it', onclick: () => { const r = actions.leave(x.kind === 'material' ? { kind: 'material', type: x.type } : { kind: 'item', type: x.type, color: x.color || undefined }); msg.textContent = r.ok ? 'Left on the mat. It will notice in a moment.' : r.error; msg.className = 'status ' + (r.ok ? 'ok' : 'bad'); update(); } })))) : [h('div', { class: 'muted', style: 'margin-top:6px', text: 'No notes waiting.' })]),
+      ...(openW.length ? openW.map(x => h('div', { class: 'wish' }, h('div', { class: 'theory', text: '“' + x.text + '”' }), h('div', { class: 'row2 between' }, h('span', { class: 'muted small', text: `Day ${x.written ? x.written.day : x.day} · asks for ${wishLabel(x)}` }), h('button', { class: 'btn primary', type: 'button', text: 'Give it', onclick: () => { const r = actions.leave({ kind: 'item', type: x.type, color: x.color || undefined }); msg.textContent = r.ok ? 'Left on the mat. It will notice in a moment.' : r.error; msg.className = 'status ' + (r.ok ? 'ok' : 'bad'); update(); } })))) : [h('div', { class: 'muted', style: 'margin-top:6px', text: 'No notes waiting.' })]),
       ...pastW.map(x => h('div', { class: 'kv' }, h('span', { class: 'small', text: wishLabel(x) }), h('span', { class: 'chip', text: x.state === 'granted' ? 'granted' : 'faded' }))));
     const fl = topFeelings(w, 4);
     dyn.feel.replaceChildren(h('div', { class: 'muted small', style: 'margin:10px 0 4px', text: 'What has made it feel good (learned, not set)' }), ...(fl.good.length ? fl.good.map(r => tasteRow(r.name, Math.min(1, r.score), null, r.label)) : [h('div', { class: 'muted small', text: 'Nothing yet.' })]), ...(fl.bad.length ? [h('div', { class: 'muted small', style: 'margin:8px 0 2px', text: 'Uneasy about: ' + fl.bad.map(r => r.name).join(', ') })] : []));

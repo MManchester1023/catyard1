@@ -70,7 +70,7 @@ export function start(w, type, opts = {}) {
     }
     case 'play': {
       const kinds = [];
-      if (k.yarn) kinds.push('yarn', 'yarn'); if (k.post) kinds.push('post'); if (k.tree) kinds.push('tree');
+      if (k.yarn) kinds.push('yarn', 'yarn'); if (w.toys.ball) kinds.push('ball', 'ball'); if (w.toys.toymouse) kinds.push('toymouse', 'toymouse'); if (k.post) kinds.push('post'); if (k.tree) kinds.push('tree');
       if (k.flowers && w.flies.some(f => f.on)) kinds.push('fly', 'fly');
       a.kind = opts.kind || (kinds.length ? pick(kinds) : 'yarn');
       if (a.kind === 'post' || a.kind === 'tree') aim(a.kind); else if (a.kind === 'bed') aim('cushion'); else a.phase = 'do';
@@ -127,7 +127,7 @@ export function describe(w) {
     case 'drink': return a.from === 'pond' ? 'Drinking at the pond' : 'Drinking water';
     case 'groom': return 'Grooming';
     case 'sleep': return a.lounge ? (a.spot === 'beam' ? 'Lying in the sunbeam' : 'Lounging on the cushion') : a.reason === 'rain' ? 'Waiting out the rain in the cabin' : a.spot === 'house' ? 'Sleeping in the cabin' : a.spot === 'beam' ? 'Napping in the sunbeam' : a.spot === 'cushion' ? 'Napping on the cushion' : 'Dozing in the flower bed';
-    case 'play': return a.kind === 'bed' ? (a.phase === 'go' ? 'Heading to the cushion' : 'Pulling at the cushion') : a.kind === 'yarn' ? 'Batting the yarn ball' : a.kind === 'fly' ? 'Chasing butterflies' : a.kind === 'tree' ? (a.gather ? 'Scratching the oak for bark' : 'Scratching the old oak') : 'Scratching the post';
+    case 'play': return a.kind === 'bed' ? (a.phase === 'go' ? 'Heading to the cushion' : 'Pulling at the cushion') : a.kind === 'yarn' ? 'Batting the yarn ball' : a.kind === 'ball' ? 'Chasing its ball' : a.kind === 'toymouse' ? 'Stalking its toy mouse' : a.kind === 'fly' ? 'Chasing butterflies' : a.kind === 'tree' ? (a.gather ? 'Scratching the oak for bark' : 'Scratching the old oak') : 'Scratching the post';
     case 'hunt': return c.pose === 'pounce' ? 'Pouncing' : (a.prey && a.prey.kind === 'bird' ? 'Stalking a bird' : 'Stalking a mouse');
     case 'beg': return 'Waiting by the empty bowl';
     case 'perch': return a.spot === 'tree' ? 'Watching from the oak' : 'Watching from the fence';
@@ -240,16 +240,17 @@ export function actTick(w, dt) {
         }
         break;
       }
-      n.fun = clamp(n.fun - (a.kind === 'yarn' ? 0.055 : 0.1) * dt); // (the yarn is the long game)
-      if (a.kind === 'yarn') n.create = clamp(n.create - dt * 0.012 * (c.temper === 'vangogh' ? 0.5 : 1)); // (batting the yarn works some of the urge to make things out: about 0.11 per go)
+      const toy = a.kind === 'yarn' || a.kind === 'ball' || a.kind === 'toymouse' ? a.kind : null; // (things it bats about: they all work off some of the urge to make things)
+      n.fun = clamp(n.fun - (toy ? (toy === 'yarn' ? 0.055 : 0.07) : 0.1) * dt); // (the yarn is the long game)
+      if (toy) n.create = clamp(n.create - dt * 0.012 * (c.temper === 'vangogh' ? 0.5 : 1)); // (about 0.11 per go)
       if (a.swat > 0) { a.swat -= dt; c.pose = 'swat'; break; }
-      const tgt = a.kind === 'yarn' ? o.yarn : w.flies.filter(f => f.on).sort((p, r) => dist(p, c) - dist(r, c))[0];
+      const tgt = toy ? o[toy] : w.flies.filter(f => f.on).sort((p, r) => dist(p, c) - dist(r, c))[0];
       if (!tgt || a.t > a.dur) { c.pose = 'stand'; done(w); break; }
       const d = Math.hypot(tgt.x - c.x, tgt.y - c.y);
-      if (d > 34) { c.pose = 'run'; walk(w, c, tgt.x, tgt.y + 2, a.kind === 'yarn' ? 105 : 125, dt); }
+      if (d > 34) { c.pose = 'run'; walk(w, c, tgt.x, tgt.y + 2, toy === 'yarn' ? 105 : toy ? 115 : 125, dt); }
       else {
         a.swat = 0.32; c.pose = 'swat'; c.face = tgt.x >= c.x ? 1 : -1;
-        if (a.kind === 'yarn') { const ang = rnd(-0.9, 0.9) + (c.x < 480 ? 0 : Math.PI), sp = rnd(130, 250); tgt.vx = Math.cos(ang) * sp; tgt.vy = Math.sin(ang) * sp * 0.45; }
+        if (toy) { const ang = rnd(-0.9, 0.9) + (c.x < 480 ? 0 : Math.PI), sp = toy === 'ball' ? rnd(190, 330) : toy === 'toymouse' ? rnd(70, 140) : rnd(130, 250); tgt.vx = Math.cos(ang) * sp; tgt.vy = Math.sin(ang) * sp * 0.45; }
         else { tgt.flee = 3.5; if (random() < 0.08) note(w, `${c.name} nearly caught a butterfly.`, 'play'); }
       }
       break;
@@ -328,7 +329,7 @@ export function actTick(w, dt) {
         if (a.t > 0.7) {
           if (w.items.includes(it)) {
             w.items = w.items.filter(x => x !== it);
-            if (MATERIALS.includes(it.type)) { c.inv[it.type] = Math.min(INV_CAP, (c.inv[it.type] || 0) + 1); w.stats.gathered++; note(w, `${c.name} picked up ${an(itemName(it.type, null))}${it.from === 'bird' ? ' the bird had dropped' : ''}.`, 'craft'); feel(w, ['act:collect', 'mat:' + it.type], { joy: 0.12 }, 'content'); think(w, it.type === 'twine' ? 'twineFound' : 'matFound'); done(w); }
+            if (MATERIALS.includes(it.type)) { c.inv[it.type] = Math.min(INV_CAP, (c.inv[it.type] || 0) + 1); w.stats.gathered++; note(w, `${c.name} picked up ${an(itemName(it.type, null))}${it.from === 'bird' ? ' the bird had dropped' : it.from === 'tree' ? ' that had fallen from the oak' : ''}.`, 'craft'); feel(w, ['act:collect', 'mat:' + it.type], { joy: 0.12 }, 'content'); think(w, it.type === 'twine' ? 'twineFound' : 'matFound'); done(w); }
             else { c.carry = { type: it.type, color: it.color }; w.stats.found++; foundThing(w, it); start(w, 'stash'); }
           } else done(w);
         }

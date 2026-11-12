@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, tick, catchUp } from '../src/sim/sim.js';
 import { start, done } from '../src/sim/acts.js';
 import { feel, affinity, topFeelings } from '../src/sim/feelings.js';
-import { selfTaught, scratchTree, collectDrop, finishCraft, startable, shortfall, gatherNeed, humanNeed, nextCraft, INV_CAP, unlockRecipe } from '../src/sim/craft.js';
+import { selfTaught, scratchTree, collectDrop, finishCraft, startable, shortfall, gatherNeed, nextCraft, INV_CAP, unlockRecipe } from '../src/sim/craft.js';
 import { RECIPES, knows } from '../src/sim/recipes.js';
 import { considerWish, publishWish, matchWish, wishTick, openWishes, draftWish, wishPending } from '../src/sim/wishes.js';
 import { leaveOffering, inspectOffer, finishOffer } from '../src/sim/offerings.js';
@@ -122,14 +122,13 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
   ok('recipes from the tablet: a lookup unlocks it; after two misses (or a few offline days) it works it out itself');
 }
 
-// ---- notes to the human: something only they can bring becomes a note on the tablet, and bringing it grants the wish
+// ---- notes to the human: something only they can bring (the kind of thing it collects) becomes a note on the tablet, and bringing it grants the wish
 {
   const w = makeWorld('Fern'), c = w.cat; calm(w); knowAll(w); ensureTablet(w); w.netOn = false;
   assert(!withRandom(0.1, () => considerWish(w)), 'no notes in its first hours here'); w.clock = 2 * w.dayLen;
-  unlockRecipe(w, 'chime', 'Wind chime'); c.wants.push({ id: 'c1', kind: 'craft', key: 'chime', recipe: 'chime', strength: 0.9, born: 0, day: 1, text: 'make a wind chime' }); c.inv = { bark: 0, twig: 3, twine: 0 };
-  assert.deepEqual(humanNeed(w), { twine: 1 }, 'twine is the one thing the yard does not have');
   c.wishes = []; c.lastWishAt = -999;
-  const wish = withRandom(0.1, () => considerWish(w)); assert(wish && wish.state === 'draft' && wish.kind === 'material' && wish.type === 'twine', JSON.stringify(wish));
+  const wish = withRandom(0.1, () => considerWish(w)); assert(wish && wish.state === 'draft' && wish.kind === 'item' && wish.type === c.quirk.item, JSON.stringify(wish));
+  assert(!c.wishes.some(x => x.kind === 'material'), 'it never asks the human for bark, twigs or string: those come from the oak, the birds and the cushion');
   assert(wishPending(w) && draftWish(w) === wish, 'it now has a reason to go to the tablet');
   assert(!considerWish(w), 'only one at a time while it has not been written');
   start(w, 'tablet'); let sawWrite = false; for (let i = 0; i < 400 && wish.state === 'draft'; i++) { c.reeval = 1e9; tick(w, 0.1); if (c.act.phase === 'write') sawWrite = true; }
@@ -138,12 +137,11 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
   assert(w.asks.some(a => a.type === 'wish' && a.id === wish.id), 'a Claude rewrite is queued');
   assert(w.journal.some(e => e.tag === 'wish') && w.stats.wishes === 1 && openWishes(w).length === 1);
   // the human brings it
-  w.asks.length = 0; const bond0 = c.bond, tw0 = c.inv.twine;
-  const { offer } = leaveOffering(w, { kind: 'material', type: 'twine' }); assert(matchWish(w, offer) === wish);
+  w.asks.length = 0; const bond0 = c.bond;
+  const { offer } = leaveOffering(w, { kind: 'item', type: wish.type, color: wish.color || 'red' }); assert(matchWish(w, offer) === wish);
   const re = inspectOffer(w, offer); assert(re.tier === 'delight' || re.liking >= 0.9, 'it is delighted'); assert(wish.state === 'granted' && c.bond > bond0);
-  assert(c.offerHist[0].wished === true && /asked|note|tablet/i.test(c.offerHist[0].text));
-  assert.equal(finishOffer(w, offer), false, 'materials go into its things, not the stash'); assert(c.inv.twine === tw0 + 1);
-  assert(startable(w, 'chime'), 'now it can make the chime'); assert.equal(nextCraft(w), 'chime');
+  assert(c.offerHist[0].wished === true && c.offerHist[0].text.length > 10, 'the history remembers it was asked for');
+  assert.equal(finishOffer(w, offer), true, 'a wished-for object goes to its stash');
   // unanswered notes fade after a while
   const w2 = makeWorld('Fern'); w2.cat.wishes.push({ id: 'x', state: 'open', day: 1, kind: 'item', type: 'marble', color: null, text: 'a marble', written: { day: 1, time: '10:00' } });
   w2.clock += 6 * w2.dayLen; wishTick(w2); assert.equal(w2.cat.wishes[0].state, 'faded');
@@ -181,8 +179,8 @@ const knowAll = w => { for (const k of ['pond', 'post', 'tree', 'flowers', 'cush
   assert(out('history 5').split('\n').length <= 5 && /Day 1/.test(out('history day 1')) && /Day/.test(out('history days')));
   assert(/Nothing about|d\d/.test(out('history find oak')) && /feels good|nothing/.test(out('feelings')) && /not left|day/.test(out('wishes')));
   assert.equal(runCommand(w, 'export').action.type, 'export');
-  assert(/Left .*twine/.test(out('give twine')) && /Left .*bark/.test(out('offer material bark')), 'materials can be left from the chat without admin');
-  assert(/not|Usage|Materials/.test(out('give sofa')), 'and a bad material is refused');
+  assert(/Left .*ball/.test(out('give ball')) && /Left .*toy mouse/.test(out('offer toy mouse')), 'toys can be left from the chat without admin');
+  assert(/Toys/.test(out('give sofa')) && /cannot be given/.test(out('offer material bark')), 'a bad toy is refused, and materials cannot be given at all');
   assert(/Admin mode is off/.test(runCommand(w, 'craft now table', { admin: false }).lines[0]));
   const a = c => runCommand(w, c, { admin: true }).lines.join('\n');
   assert(/now has 5 pieces of bark|now has/.test(a('craft give bark 5')) && /heading to the workbench/.test(a('craft now table')), a('craft now table'));

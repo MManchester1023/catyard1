@@ -29,6 +29,8 @@ export function makeObjects() {
     tree: { x: 822, y: 318, r: 16 },
     fence: { x: 520, y: GY0 },
     yarn: { x: 470, y: 520, vx: 0, vy: 0 },
+    ball: { x: 380, y: 440, vx: 0, vy: 0 },      // (the two toys only count once the human has given them: w.toys)
+    toymouse: { x: 300, y: 545, vx: 0, vy: 0 },
     easel: { x: 520, y: 410 },
     glass: { x: 480, y: 566 },
     mat: { x: 372, y: 540 },
@@ -289,8 +291,8 @@ function birdMaterial(w) {
   const inv = w.cat.inv || {}, wt = { bark: 1, twig: 1, twine: 0.85 };
   const room = MATERIALS.map(m => [m, wt[m] * Math.max(0, 1 - (inv[m] || 0) / MAT_CAP)]), total = room.reduce((a, r) => a + r[1], 0);
   if (total <= 0) return null;
-  let r = random() * total; for (const [m, v] of room) { r -= v; if (r <= 0) return m; }
-  return room[room.length - 1][0];
+  let r = random() * total; for (const [m, v] of room) { r -= v; if (v > 0 && r <= 0) return m; }
+  return room.filter(x => x[1] > 0).pop()[0];
 }
 
 // a fish now and then glides through the pond. The cat can try for it (acts.js 'fish').

@@ -15,7 +15,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 export function ensureFeel(c) { if (!c.assoc) c.assoc = {}; if (c.lastTasteSay == null) c.lastTasteSay = -999; return c; }
 
 // a readable name for an association key
-const ACTS = { frog: 'visiting the frog', hunt: 'hunting', paint: 'painting', tablet: 'the tablet', gaze: 'gazing at the sky', yarn: 'playing with the yarn', lounge: 'lounging in the warm', perch: 'watching from up high', craft: 'making things', tree: 'scratching the oak', post: 'scratching the post', stash: 'tending the stash', investigate: 'investigating', offering: 'what the human leaves', cattree: 'sitting in the cat tree', bed: 'pulling at the cushion', fish: 'fishing', listen: 'listening to the chime', wash: 'a proper wash', blog: 'writing the blog' };
+const ACTS = { frog: 'visiting the frog', hunt: 'hunting', paint: 'painting', tablet: 'the tablet', gaze: 'gazing at the sky', yarn: 'playing with the yarn', ball: 'chasing its ball', toymouse: 'stalking its toy mouse', toy: 'what the human gives it', lounge: 'lounging in the warm', perch: 'watching from up high', craft: 'making things', tree: 'scratching the oak', post: 'scratching the post', stash: 'tending the stash', investigate: 'investigating', offering: 'what the human leaves', cattree: 'sitting in the cat tree', bed: 'pulling at the cushion', fish: 'fishing', listen: 'listening to the chime', wash: 'a proper wash', blog: 'writing the blog' };
 export function keyName(key) {
   const [kind, name] = key.split(':');
   if (kind === 'color') return name;

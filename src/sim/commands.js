@@ -55,7 +55,7 @@ const HELP = {
   clear: 'clear log | clear journal | clear chat | clear history',
   brain: 'brain status | brain on | brain off | brain key <API key> | brain model <name> | brain cap <calls per day> | brain test',
   save: 'save [name] | load [name] | saves',
-  offer: 'offer item <type> [color]  |  offer material <bark|twig|twine>  |  offer note <text>  |  offer list  |  offer clear   (leave something on the mat for the cat; works without admin mode)',
+  offer: 'offer item <type> [color]  |  offer toy <ball|mouse>  |  offer note <text>  |  offer list  |  offer clear   (leave something on the mat for the cat; works without admin mode)',
   tablet: 'tablet status | tablet on | tablet off | tablet go (send the cat to it) | tablet pages (what it has read) | tablet forget',
   tastes: 'tastes - what the cat likes right now',
   feelings: 'feelings - what has made the cat feel good, and what has not',
@@ -65,7 +65,7 @@ const HELP = {
   recipes: 'recipes - everything it can make, and what each needs',
   wishes: 'wishes - notes the cat has left you on the tablet',
   blog: 'blog status | blog post (make the cat write a post now, starting the blog if it has not) | blog read (mark everything read) | blog clear',
-  give: 'give <bark|twig|twine> - leave a bundle of material on the mat for the cat (same as offer material)',
+  give: 'give <ball|mouse> - leave a toy on the mat for the cat (same as offer toy). Each toy can be given once; the cat keeps it in the yard',
   craft: 'craft give <bark|twig|twine> [n] | craft learn <recipe> | craft now <recipe> | craft table',
   wish: 'wish add <type> [color] | wish clear',
   reset: 'reset confirm [seed] - start over with a brand new cat (give a seed number to start from that exact cat; see seed)',
@@ -204,7 +204,8 @@ export function runCommand(w, line, ctx = {}) {
     case 'offer': {
       const sub = (a.shift() || '').toLowerCase();
       if (sub === 'item') { const type = a[0] ? a[0].toLowerCase() : undefined, color = a[1] ? a[1].toLowerCase() : undefined; const r = leaveOffering(w, { kind: 'item', type, color }); return L(r.ok ? `Left ${offerLabel(r.offer)} on the mat.` : r.error); }
-      if (sub === 'material') { const r = leaveOffering(w, { kind: 'material', type: (a[0] || '').toLowerCase() }); return L(r.ok ? `Left ${offerLabel(r.offer)} on the mat.` : r.error); }
+      if (sub === 'material') return L(leaveOffering(w, { kind: 'material' }).error); // (the old way: now it says why not)
+      if (sub === 'toy') { const r = leaveOffering(w, { kind: 'toy', type: (a[0] || '').toLowerCase() }); return L(r.ok ? `Left ${offerLabel(r.offer)} on the mat.` : r.error); }
       if (sub === 'note') { const r = leaveOffering(w, { kind: 'note', text: a.join(' ') }); return L(r.ok ? 'Left a note on the mat.' : r.error); }
       if (sub === 'list') return L(w.offers.length ? w.offers.map(o => `${o.slot + 1}. ${offerLabel(o)} (${o.state})`) : 'The mat is empty.');
       if (sub === 'clear') { if (!ctx.admin) return L('Admin mode is off. Type /admin on first.'); return L(`Cleared ${clearOffers(w)} from the mat.`); }
@@ -219,7 +220,7 @@ export function runCommand(w, line, ctx = {}) {
       if (sub === 'status' || sub === 'on' || sub === 'off') return { lines: [], action: { type: 'tablet', args: [sub] } };
       return bad(HELP.tablet);
     }
-    case 'give': { const r = leaveOffering(w, { kind: 'material', type: (a[0] || '').toLowerCase() }); return L(r.ok ? `Left ${offerLabel(r.offer)} on the mat.` : r.error); }
+    case 'give': { const r = leaveOffering(w, { kind: 'toy', type: (a.join(' ') || '').toLowerCase() }); return L(r.ok ? `Left ${offerLabel(r.offer)} on the mat.` : r.error); }
     case 'feelings': {
       const t = topFeelings(w, 6);
       return L([`feels good about: ${t.good.map(r => `${r.name} (${r.label}, ${pct(r.score)})`).join(', ') || 'nothing in particular yet'}`, `uneasy about: ${t.bad.map(r => `${r.name} (${r.label})`).join(', ') || 'nothing'}`, 'Tastes are learned from how things made it feel.']);

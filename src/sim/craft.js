@@ -31,12 +31,6 @@ export function gatherNeed(w) {
   if (f) for (const [m, n] of Object.entries(RECIPES.frame.cost)) need[m] = (need[m] || 0) + n * f;
   return need.bark || need.twig ? need : null;
 }
-// what only the human can supply (twine), for goals it actually wants
-export function humanNeed(w) {
-  if (knows(w, 'string')) return null; // once it knows where string comes from it stops asking
-  const need = {}; for (const id of goals(w)) { if (!craftWant(w, id)) continue; const n = shortfall(w, id).twine; if (n) need.twine = Math.max(need.twine || 0, n); }
-  return Object.keys(need).length ? need : null;
-}
 // what it would make right now. until the easel and the table exist, bark is saved for them (and for the frames they are
 // built from) rather than spent on smaller things
 const CORE = new Set(['easel', 'table', 'frame']);
@@ -49,8 +43,6 @@ export function nextCraft(w) {
   }
   return null;
 }
-// is this material something the cat is short of? (it likes being given what it needs)
-export const neededMat = (w, m) => goals(w).some(id => (rawShortfall(w, id)[m] || 0) > 0) || (m === 'bark' && frameDemand(w) > 0 && (w.cat.inv.bark || 0) < 2);
 
 // ---------- the oak ----------
 export function scratchTree(w) {

@@ -17,7 +17,7 @@ import { meetFrog } from './frog.js';
 import { makeTemper } from './temper.js';
 import { restoreRng, useRng } from './rng.js';
 
-const KEEP_W = ['v', 'rng', 'clock', 'dayLen', 'speed', 'paused', 'log', 'logId', 'journal', 'chat', 'pending', 'weather', 'stash', 'easel', 'easelMade', 'mysteries', 'fed', 'stats', 'createdAt', 'items', 'treats', 'wantT', 'rippleT', 'thiefT', 'lastChatAt', 'offers', 'tablet', 'table', 'deco', 'hist', 'days', 'frog', 'pace', 'catTree', 'moonWishDay', 'starWishDay', 'meteorPlan', 'blog'];
+const KEEP_W = ['v', 'rng', 'clock', 'dayLen', 'speed', 'paused', 'log', 'logId', 'journal', 'chat', 'pending', 'weather', 'stash', 'easel', 'easelMade', 'shake', 'toys', 'mysteries', 'fed', 'stats', 'createdAt', 'items', 'treats', 'wantT', 'rippleT', 'thiefT', 'lastChatAt', 'offers', 'tablet', 'table', 'deco', 'hist', 'days', 'frog', 'pace', 'catTree', 'moonWishDay', 'starWishDay', 'meteorPlan', 'blog'];
 
 export function serialize(w) {
   const data = { app: 'cat-yard', version: VERSION, savedAt: Date.now(), w: {}, cat: null, o: { bowl: w.o.bowl.food, yarn: { x: w.o.yarn.x, y: w.o.yarn.y } } };

@@ -8,6 +8,7 @@ import { Brain, DEFAULTS } from './sim/llm.js';
 import { Net } from './sim/web.js';
 import { leaveOffering } from './sim/offerings.js';
 import { clockStr, dayOf } from './sim/world.js';
+import { shakeTree, treeHit } from './sim/oak.js';
 import { exportText, exportName } from './sim/history.js';
 import { storage, isDesktop } from './storage.js';
 import { blogStarted, unreadPosts, markBlogRead } from './sim/blog.js';
@@ -238,6 +239,10 @@ async function boot() {
   where = await storage.where().catch(() => ''); storage.keep();
   buildNeeds($('needs'));
   renderer = createRenderer($('view')); new ResizeObserver(() => requestAnimationFrame(fit)).observe($('stagecol')); fit();
+  // the oak: click (or tap) it to shake something loose. A hand cursor shows when you are over it.
+  const yardPoint = e => { const r = $('view').getBoundingClientRect(); return { x: (e.clientX - r.left) * LW / r.width, y: (e.clientY - r.top) * LH / r.height }; };
+  $('view').addEventListener('click', e => { const p = yardPoint(e); shakeTree(w, p.x, p.y); });
+  $('view').addEventListener('mousemove', e => { const p = yardPoint(e); $('view').style.cursor = treeHit(w, p.x, p.y) ? 'pointer' : ''; });
   let away = null, fresh = false, note = '';
   try { const r = await loadSlot('main', { catchup: true }); if (r) { w = r.world; away = r.away; if (r.from === 'backup') note = 'The main save was unreadable, so the newest backup was loaded.'; } }
   catch (e) { note = 'Could not read the save (' + e.message + '). Starting with a new cat.'; }

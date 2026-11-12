@@ -18,6 +18,7 @@ import { considerWish, wishTick } from './wishes.js';
 import { isUpset, upsetLevel, upsetTick } from './upset.js';
 import { secretsRoll, moonWishTick, coinActive } from './secrets.js';
 import { meteorTick } from './stars.js';
+import { leavesTick } from './oak.js';
 import { selfTaught, hangSpareFrames } from './craft.js';
 import { makeTemper } from './temper.js';
 import { frogTick } from './frog.js';
@@ -54,7 +55,7 @@ export function makeWorld(name, opt = {}) {
     weather: { type: 'clear', rain: 0, cloud: 0.15, timer: rnd(160, 300), forced: null },
     o: makeObjects(), mice: [], birds: [], flies: [], sparks: [], treats: [], items: [], offers: [], tablet: null, netq: [], netOn: false,
     table: null, deco: {}, hist: [], days: {}, lastThoughtId: 0, lastDid: null, frog: null, pace: 1, catTree: null, moonWishDay: -99, starWishDay: -99, meteor: null, meteorPlan: null,
-    stash: { site: null, items: [], seed: 1, known: null }, easel: null, easelMade: null, ripple: null, rippleT: rnd(50, 100), thief: null, thiefT: dayLen * rnd(2, 4),
+    stash: { site: null, items: [], seed: 1, known: null }, toys: { ball: null, toymouse: null }, easel: null, easelMade: null, shake: { day: 0, n: 0, at: -999 }, leaves: [], ripple: null, rippleT: rnd(50, 100), thief: null, thiefT: dayLen * rnd(2, 4),
     mysteries: makeMysteries(), fed: 0, mouseT: rnd(30, 70), itemT: rnd(20, 50), wantT: 30, createdAt: Date.now(),
     stats: { meals: 0, naps: 0, mice: 0, misses: 0, treats: 0, zoomies: 0, gifts: 0, scratch: 0, collected: 0, found: 0, paintings: 0, wants: 0, offerings: 0, crafted: 0, gathered: 0, wishes: 0, birds: 0, frogVisits: 0, fish: 0 },
   };
@@ -70,6 +71,7 @@ export function makeWorld(name, opt = {}) {
   return w;
 }
 
+const ROLLERS = [['yarn', 0.04], ['ball', 0.12], ['toymouse', 0.01]];
 const PLACES = ['pond', 'post', 'tree', 'flowers', 'cushion', 'yarn', 'fence', 'easel', 'tablet'];
 function discover(w, id, text) {
   const k = w.cat.mem.known; if (k[id]) return; k[id] = 1; foundPlace(w, id);
@@ -128,7 +130,7 @@ export function tick(w, dt) {
   const hunter = c.temper === 'hunter'; // there is more to hunt where a Hunter lives
   if (w.mouseT <= 0) { if (w.mice.length < (hunter ? 2 : 1) && w.weather.rain < 0.3) spawnMouse(w); w.mouseT = rnd(60, 150) / ((h > 16.5 && h < 21) || (h > 4.5 && h < 8) ? 1.6 : 1) / (hunter ? 1.7 : 1); }
   w.mice.forEach(m => mouseTick(w, m, dt)); w.mice = w.mice.filter(m => !m.gone && !m.dead);
-  w.birds.forEach(b => birdTick(w, b, dt)); w.flies.forEach(f => flyTick(w, f, dt)); w.sparks.forEach(s => sparkTick(w, s, dt));
+  leavesTick(w, dt); w.birds.forEach(b => birdTick(w, b, dt)); w.flies.forEach(f => flyTick(w, f, dt)); w.sparks.forEach(s => sparkTick(w, s, dt));
   rippleTick(w, dt, h, isNight(w)); frogTick(w, dt); fishTick(w, dt);
   // the first time it is awake in the yard when the sparks are out, it sees them (and only then can it want to catch one)
   { const sp = w.mysteries.sparks; if (!sp.seen && w.sparks.some(s => s.on) && c.pose !== 'sleep' && c.pose !== 'inside' && !c.hidden) { sp.seen = true; note(w, `${c.name} noticed tiny lights dancing along the fence.`, 'mystery'); journal(w, 'There are lights by the fence. Small ones. They move when I look at them, and when I do not look at them, and they have never once explained themselves.', 'mystery'); c.thoughtHint = 'sawSparks'; } }
@@ -141,11 +143,11 @@ export function tick(w, dt) {
     else if (w.clock - p.at > w.dayLen * 0.6) { spawnItem(w, p.type, p.color); w.pending.splice(w.pending.indexOf(p), 1); }
   }
   w.items.forEach(i => (i.age += dt)); w.items = w.items.filter(i => i.age < w.dayLen * 1.5);
-  const y = o.yarn;
-  if (Math.abs(y.vx) + Math.abs(y.vy) > 1) {
+  for (const [id, drag] of ROLLERS) { // the things the cat bats about: the yarn, and the ball and toy mouse once they have been given (the ball rolls on, the mouse stops short)
+    const y = o[id]; if (!(Math.abs(y.vx) + Math.abs(y.vy) > 1)) continue;
     const nx = clamp(y.x + y.vx * dt, 20, W - 20), ny = clamp(y.y + y.vy * dt, GY0 + 30, GY1 - 6);
     if (blocked(w, nx, ny)) { y.vx *= -0.4; y.vy *= -0.4; } else { y.x = nx; y.y = ny; }
-    const f = Math.pow(0.04, dt); y.vx *= f; y.vy *= f;
+    const f = Math.pow(drag, dt); y.vx *= f; y.vy *= f;
   }
   w.treats.forEach(t => (t.age += dt)); w.treats = w.treats.filter(t => t.age < 140);
 
