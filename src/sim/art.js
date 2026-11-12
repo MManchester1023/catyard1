@@ -27,7 +27,8 @@ export const subjectLabel = s => SUBJ_LABEL[s] || s;
 export const SUBJECT_IDS = Object.keys(SUBJ_LABEL);
 export const isGenerated = s => !!GEN[s];
 
-export function pickSubject(w) {
+// what it could paint right now, each with a weight
+export function subjectOptions(w) {
   const c = w.cat, night = isNight(w), opts = [['yard', 0.6], ['pond', 1], ['oak', 0.8], ['flowers', 0.8], ['window', 0.3 + c.needs.lonely * 1.5]];
   if (w.stash.items.length > 2) opts.push(['stash', 0.9 + w.stash.items.length * 0.03]);
   if (night && moonPos(w)) opts.push(['moon', 2.2 + w.mysteries.moon.clues * 0.05]);
@@ -41,9 +42,36 @@ export function pickSubject(w) {
     const mood = g === 'swirl' ? (night ? 1.6 : 1) * (vg ? 8 : 1) : g === 'bloom' ? 1 + c.mood.joy : g === 'waves' ? 1 + c.needs.tired + (w.weather.rain > 0.4 ? 1 : 0) : g === 'splatter' ? 1 + c.needs.create : g === 'dots' ? 1 + c.traits.curious * 0.5 : 1;
     opts.push([g, 0.4 * mood]);
   }
+  return opts;
+}
+// With Claude connected it decides what to paint next and why (subjectTick, a few times a day); that choice is used once,
+// if it is still possible, and otherwise (or offline) the weights decide.
+export function pickSubject(w) {
+  const c = w.cat, opts = subjectOptions(w), ns = c.art.nextSubject; c.art.nextSubject = null;
+  if (ns && w.clock < ns.until && opts.some(o => o[0] === ns.key)) { journal(w, `I am going to paint ${subjectLabel(ns.key)}. ${ns.why}`.trim(), 'art'); w.stats.claudeSubjects = (w.stats.claudeSubjects || 0) + 1; return ns.key; }
   let r = random() * opts.reduce((s, o) => s + o[1], 0);
   for (const [s, wt] of opts) { r -= wt; if (r <= 0) return s; }
   return 'yard';
+}
+export const SUBJECTS_PER_DAY = 2, SUBJECT_WAIT = 0.1, SUBJECT_KEEP = 0.5;
+export function subjectTick(w) {
+  const c = w.cat, a = c.art; if (!w.llmOn || !w.easelMade || c.needs.create < 0.3) return;
+  if (a.nextSubject && w.clock < a.nextSubject.until) return;
+  if (a.subjAsk) { if (w.clock - a.subjAsk.at < w.dayLen * SUBJECT_WAIT) return; a.subjAsk = null; }
+  if (!a.subjToday || a.subjToday.day !== dayOf(w)) a.subjToday = { day: dayOf(w), n: 0 };
+  if (a.subjToday.n >= SUBJECTS_PER_DAY) return;
+  const menu = subjectOptions(w).map(o => ({ key: o[0], label: subjectLabel(o[0]) })); if (menu.length < 2) return;
+  a.subjToday.n++; a.subjAsk = { id: uid(), at: w.clock, menu }; if (w.asks) w.asks.push({ type: 'subject', id: a.subjAsk.id });
+}
+export const subjectPrompt = (w, ask) => {
+  const q = w.cat.art.subjAsk; if (!q || q.id !== ask.id) return null;
+  return `You are about to paint something. What do you want it to be of? Choose ONE, from what you can see or imagine right now:\n${q.menu.map((o, i) => `${i + 1}. ${o.label}`).join('\n')}\nPick what you actually feel like painting, and say why in your own voice.\nJSON: {"pick": <number>, "why": "<= 22 words"}`;
+};
+export function claudeSubject(w, ask, answer) {
+  const a = w.cat.art, q = a.subjAsk; if (!q || q.id !== ask.id) return null; a.subjAsk = null;
+  const o = q.menu[parseInt(answer && answer.pick, 10) - 1]; if (!o) return null;
+  a.nextSubject = { key: o.key, why: String((answer && answer.why) || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200), until: w.clock + w.dayLen * SUBJECT_KEEP };
+  return a.nextSubject;
 }
 
 function skyColors(h) {

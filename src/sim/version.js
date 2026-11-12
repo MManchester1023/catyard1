@@ -1,3 +1,3 @@
 // Which version of the game these files belong to. It is shown at the bottom of the Settings tab, so if something looks
 // out of date (an old layout, a thing that should be gone) you can tell at once whether the site is serving old files.
-export const BUILD = '2026-11-12 n: faster sales, catnip and tuna, balance test';
+export const BUILD = '2026-11-12 o: Claude brain makes more choices (goals, paintings, interests, notes), leaner calls';

@@ -128,7 +128,7 @@ A few things make it *this* cat on *this* day. All of it is saved, and shown und
 - **Change over time.** What it does day after day slowly moves its traits, and it notices.
 - **Memory.** The diary holds the last 150 lines, so the cat separately keeps up to 60 significant memories: discoveries, solved mysteries, wishes, upsets, firsts. They fade, but thinking about one makes it last. It brings them up in thoughts, chat and its blog, and it knows who its regulars are (the frog, the crow, the birds, you).
 - **Favourite things to do.** Up to three activities that keep making it feel good become favourites. Doing one lifts its mood more than anything else.
-- **A special interest.** Now and then it becomes interested in one subject (about 80 possible, tilted by its quirk) and reads up to 6 Wikipedia pages on it before something else catches its eye. This needs the tablet and a connection.
+- **Special interests.** Now and then it becomes fascinated by one subject (about 80 on the list, tilted by its quirk, or a subject Claude chooses) and reads up to 6 Wikipedia pages on it. Interests are permanent: it keeps a list, rests about half a day, and then often goes back to one it loved, reading further each time. This needs the tablet and a connection.
 
 ### Feelings and tastes
 
@@ -275,13 +275,23 @@ These are numbers in `src/sim/pace.js`. In admin mode `pace X` scales them all: 
 
 ## A Claude-powered voice (optional)
 
-Without a key the cat uses a built-in offline voice. With one, Claude writes its words: passing thoughts, chat replies, theories, painting titles, reactions to gifts and pages, wish notes and blog posts. Up to three times a day Claude also picks what the cat sets its mind on, from a menu the simulation provides. Everything else (needs, sleep, hunting, crafting, mysteries) is always decided by the simulation, so the cat behaves much the same either way.
+Without a key the cat uses a built-in offline voice. With one, Claude writes its words: passing thoughts, chat replies, theories, painting titles, reactions to gifts and pages, wish notes and blog posts. Claude also makes some of the cat's choices, each from a menu of what is actually possible, with a reason in the cat's own voice that goes in its diary:
+
+- **What it sets its mind on** (up to 5 times a day): the next thing it wants to do.
+- **Its goals** (up to 3 questions a day): which of the possible wants it works towards over the next few days.
+- **What it paints** (up to 2 a day): the subject of the next painting, used once and only if it is still possible (no moon in daytime).
+- **Its special interests:** what it becomes fascinated by (a subject from the list, one it has loved before, or one Claude invents), why, and up to 4 specific things to look up about it on Wikipedia. Interests are permanent: it keeps a list of its passions and goes back to them, reading further each time and never rereading a page.
+- **Notes you leave on the mat:** Claude says what it makes of the note, writes a reply in the chat, and, if the note asks for something it could do, may decide to do it.
+
+Each choice has an offline fallback (the old weighted choice), a daily budget, and a wait of a tenth of a day: if Claude does not answer in time, the cat decides for itself. Everything else (needs, sleep, hunting, crafting, mysteries) is always decided by the simulation, so the cat behaves much the same either way.
+
+**What it costs.** Most calls are small. The lean version of the cat's state (about 270 tokens, a third of the full one) goes to everything except chat and blog posts, which get the full state. Passing thoughts default to one every 7 minutes (`museEvery` 420 s) and the daily cap defaults to 250 calls. Settings and `brain status` show the calls and tokens used today. Prompt caching is not used: the part of a call that stays the same (about 600 tokens) is shorter than the minimum that can be cached.
 
 1. Create an API key in the Anthropic Console.
 2. Open **Settings**, paste the key, press **Save**, then **Test connection**.
 3. If the test fails with a model error, change the **Model** field to one your account can use. The default is `claude-haiku-5-5`.
 
-The simulation never waits on Claude. If the key is missing, the network is down or the daily call limit (default 400) is reached, the cat switches back to the offline voice. Settings shows how many calls were made today. The key is stored on your device (in the browser's storage, or the app's data folder on desktop) and is sent only to `api.anthropic.com`.
+The simulation never waits on Claude. If the key is missing, the network is down or the daily call limit (default 250) is reached, the cat switches back to the offline voice. Settings shows how many calls were made today. The key is stored on your device (in the browser's storage, or the app's data folder on desktop) and is sent only to `api.anthropic.com`.
 
 ## Chat and admin commands
 

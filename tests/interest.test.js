@@ -26,7 +26,7 @@ const pg = (title, extract) => ({ title, extract: extract || `${title} is a subj
   const i = withRandom(0, () => interestTick(w)); assert(i && interestActive(w) && TOPIC_NAMES.includes(i.topic), 'it takes up something: ' + (i && i.topic));
   assert(w.journal.some(e => e.tag === 'interest' && /become interested/.test(e.text)) && w.chat.some(m => m.from === 'sys' && /fascinated/.test(m.text)), 'diary and the human are told');
   assert.equal(withRandom(0, () => interestTick(w)), null, 'one at a time');
-  finishInterest(w, 'enough'); w.clock += w.dayLen * 0.5; assert.equal(withRandom(0, () => interestTick(w)), null, 'and it rests in between (nothing was read, so it is just a phase)');
+  finishInterest(w, 'enough'); w.clock += w.dayLen * 0.3; assert.equal(withRandom(0, () => interestTick(w)), null, 'and it rests in between (nothing was read, so it is just a phase)');
   ok('starts after the tablet and a few days, by chance, one at a time');
 }
 // ---- random, tilted by nature, and not the same twice
@@ -89,7 +89,7 @@ const pg = (title, extract) => ({ title, extract: extract || `${title} is a subj
     else r.result = pg('Something else ' + Math.random().toString(36).slice(2, 6)); } };
   w.clock = 3 * w.dayLen; for (let i = 0; i < 40 * 1200 / 0.5; i++) { tick(w, 0.5); answer(); }
   const done = w.cat.interests, c = w.cat; assert(done.length >= 2, 'it went through at least two interests in 40 days: ' + done.length + ' ' + done.map(x => x.topic));
-  for (const d of done) assert(d.pages >= 1 && d.pages <= INTEREST_PAGES, d.topic + ' ' + d.pages);
+  for (const d of done) assert(d.pages >= 1 && d.pages <= INTEREST_PAGES * (d.sessions || 1), d.topic + ' ' + d.pages); // (an interest is for good: coming back adds to the pages)
   assert(Object.values(served).every(l => new Set(l).size === l.length), 'never the same page twice for one subject');
   assert(w.journal.some(e => e.tag === 'interest' && /I have read \d pages? about/.test(e.text)));
   ok('40 days against a fake Wikipedia: ' + done.map(d => `${d.topic}(${d.pages})`).join(', '));
@@ -103,7 +103,7 @@ const pg = (title, extract) => ({ title, extract: extract || `${title} is a subj
   let heard = null; for (let i = 0; i < 300 && !heard; i++) { const t = thoughtFor(w, 'idle'); if (/lighthouses/.test(t)) heard = t; } assert(heard, 'it thinks about it sometimes');
   w.cat.mem.known.tablet = 1; ensureBlog(w); w.blog.started = 1; for (let i = 0; i < 8; i++) journal(w, `Entry ${i}.`, 'craft'); const ids = new Set(); for (let i = 0; i < 40; i++) { const p = composePost(w); if (/lighthouses/.test(p.body)) ids.add(1); } assert(ids.size, 'the blog covers what it learned');
   const f = fresh(); assert(/Nothing in particular/.test(offlineReply(f, 'what are you into lately?')));
-  finishInterest(w, 'enough'); assert(/Lately it was lighthouse/.test(offlineReply(w, 'what are you into lately?')) && /Your last special interest was lighthouse/.test(digest(w)));
+  finishInterest(w, 'enough'); assert(/Lately it was lighthouse/.test(offlineReply(w, 'what are you into lately?')) && /Your special interests so far: lighthouse/.test(digest(w)));
   ok('chat, thoughts, the blog and the Claude briefing');
 }
 // ---- admin, saves, away

@@ -141,7 +141,7 @@ async function act(a) {
 }
 function brainCmd(a) {
   const sub = (a[0] || 'status').toLowerCase();
-  if (sub === 'status') return sys(brain.label(), `Model: ${settings.model}. Daily cap: ${settings.dailyCap}. ${brain.usage().calls} used today.`);
+  if (sub === 'status') return sys(brain.label(), `Model: ${settings.model}. Daily cap: ${settings.dailyCap}. ${brain.usage().calls} used today (about ${brain.usage().inTok + brain.usage().outTok} tokens).`);
   if (sub === 'on' || sub === 'off') { settings.on = sub === 'on'; persistSettings(); return sys('Claude ' + sub + '.'); }
   if (sub === 'key') { if (!a[1]) return sys('Usage: brain key <API key>'); settings.apiKey = a[1]; persistSettings(); return sys('Key saved. Try "brain test".'); }
   if (sub === 'model') { if (!a[1]) return sys('Usage: brain model <model name>'); settings.model = a[1]; persistSettings(); return sys('Model set to ' + a[1] + '.'); }

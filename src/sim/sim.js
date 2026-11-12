@@ -3,7 +3,7 @@ import { W, GY0, GY1, rnd, ri, clamp, pick, NAMES, COATS, COAT_LABEL } from './u
 import { makeObjects, dropFromBird, fishTick, hourOf, dayOf, sunOf, isNight, beamOf, note, journal, dayRec, pushHist, weatherTick, makeBird, birdTick, mouseTick, spawnMouse, makeFly, flyTick, makeSpark, sparkTick, spawnItem, blocked, randomOpenPoint } from './world.js';
 import { makeQuirk, stealFromStash, quirkWord } from './quirk.js';
 import { makeMysteries, rippleTick, MYSTERY_INFO } from './mysteries.js';
-import { makeArt, levelOf, LEVEL_NAMES } from './art.js';
+import { makeArt, levelOf, LEVEL_NAMES, subjectTick } from './art.js';
 import { genWants, wantsTick } from './wants.js';
 import { start, actTick, reconsider, INTERRUPT, think, describe } from './acts.js';
 import { thoughtFor } from './thoughts.js';
@@ -164,7 +164,7 @@ export function tick(w, dt) {
   offerTick(w); upsetTick(w, dt);
 
   // wants
-  w.wantT -= dt; if (w.wantT <= 0) { w.wantT = w.dayLen / 6; characterTick(w); intentTick(w); interestTick(w); memoryTick(w); findRecipes(w); genWants(w); selfTaught(w); hangSpareFrames(w); considerWish(w); wishTick(w); considerBlog(w); refreshFavourites(w); favShift(w); secretsRoll(w); }
+  w.wantT -= dt; if (w.wantT <= 0) { w.wantT = w.dayLen / 6; characterTick(w); intentTick(w); interestTick(w); subjectTick(w); memoryTick(w); findRecipes(w); genWants(w); selfTaught(w); hangSpareFrames(w); considerWish(w); wishTick(w); considerBlog(w); refreshFavourites(w); favShift(w); secretsRoll(w); }
   moonWishTick(w); meteorTick(w, dt);
   wantsTick(w, dayDt);
 

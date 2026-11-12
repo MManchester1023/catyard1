@@ -62,8 +62,38 @@ export function genWants(w) {
     if (knows(w, id)) cand.push({ kind: 'craft', key: id, recipe: id, w: d }); else if (c.mem.known.tablet) cand.push({ kind: 'learn', key: id, recipe: id, w: d * 0.8 });
   }
   if (!cand.length) return;
+  // With Claude connected it chooses its own next goal from what is possible, and says why; otherwise (or if Claude
+  // does not answer in time) the weights decide as they always did.
+  let timedOut = false;
+  if (c.goalAsk) { if (w.llmOn && w.clock - c.goalAsk.at < w.dayLen * GOAL_WAIT) return; c.goalAsk = null; timedOut = true; }
+  if (!c.goalsToday || c.goalsToday.day !== dayOf(w)) c.goalsToday = { day: dayOf(w), n: 0 };
+  if (w.llmOn && !timedOut && cand.length >= 2 && c.goalsToday.n < GOALS_PER_DAY) {
+    const menu = cand.slice().sort((a, b) => b.w - a.w).slice(0, 6).map(x => { const { w: _w, ...rest } = x; return { want: rest, text: wantText(w, rest) }; });
+    c.goalsToday.n++; c.goalAsk = { id: uid(), at: w.clock, menu };
+    if (w.asks) w.asks.push({ type: 'goal', id: c.goalAsk.id });
+    return;
+  }
   let r = random() * cand.reduce((s, x) => s + x.w, 0);
-  for (const x of cand) { r -= x.w; if (r <= 0) { const { w: _w, ...rest } = x; const made = addWant(w, rest); if (made.kind === 'find') w.pending.push({ at: w.clock + w.dayLen * rnd(0.2, 0.55), type: made.item, color: made.color }); return; } }
+  for (const x of cand) { r -= x.w; if (r <= 0) { const { w: _w, ...rest } = x; takeWant(w, rest); return; } }
+}
+export const GOAL_WAIT = 0.1, GOALS_PER_DAY = 3;
+function takeWant(w, base, why = '') {
+  const made = addWant(w, Object.assign({}, base, why ? { why } : {}));
+  if (made.kind === 'find') w.pending.push({ at: w.clock + w.dayLen * rnd(0.2, 0.55), type: made.item, color: made.color });
+  return made;
+}
+export const goalPrompt = (w, ask) => {
+  const q = w.cat.goalAsk; if (!q || q.id !== ask.id) return null;
+  return `You are thinking about what to work towards over the next few days. Choose ONE goal from this list, everything that is possible for you right now:\n${q.menu.map((o, i) => `${i + 1}. ${o.text}`).join('\n')}\nPick the one that fits who you are, how you feel and what has been happening, and say why in your own voice.\nJSON: {"pick": <number>, "why": "<= 25 words"}`;
+};
+// Claude's answer (llm.js): a number from the menu
+export function claudeGoal(w, ask, answer) {
+  const c = w.cat, q = c.goalAsk; if (!q || q.id !== ask.id) return null; // (a stale answer)
+  c.goalAsk = null; const n = answer && parseInt(answer.pick, 10), o = q.menu[n - 1]; if (!o || c.wants.length >= MAX_WANTS) return null;
+  const why = String((answer && answer.why) || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200);
+  const made = takeWant(w, o.want, why); w.stats.claudeGoals = (w.stats.claudeGoals || 0) + 1;
+  if (why) journal(w, `Why: ${why}`, 'want');
+  return made;
 }
 
 export function fulfil(w, x, how) {
