@@ -37,3 +37,19 @@ const paint = (w, n = 1) => { for (let i = 0; i < n; i++) w.cat.art.works.unshif
   ok('the bowls are by the house');
 }
 console.log('ALL OK');
+
+{ // lightning bugs: no catching until the sparks are understood, then a jar sits in the yard
+  const { catchBug } = await import('../src/sim/world.js');
+  const { solve } = await import('../src/sim/mysteries.js');
+  const w = mk(), c = w.cat; w.clock = 20 * w.dayLen / 24; // evening
+  for (const s of w.sparks) s.on = true;
+  const x = (await import('../src/sim/acts.js'));
+  c.x = w.sparks[0].x; c.y = w.sparks[0].y;
+  c.act = { type: 'investigate', kind: 'sparks', phase: 'do', t: 1, dur: 20, swat: 0, tx: c.x, ty: c.y };
+  for (let i = 0; i < 4000; i++) { c.act = c.act || { type: 'investigate', kind: 'sparks', phase: 'do', t: 1, dur: 20, swat: 0 }; w.sparks.forEach(s => { s.on = true; s.x = c.x + 5; s.y = c.y; }); x.actTick(w, 0.1); if (c.act.type !== 'investigate') c.act = null; }
+  assert.ok(!w.deco.jar, 'no bug is caught before the sparks are worked out');
+  solve(w, 'sparks'); catchBug(w);
+  assert.ok(w.deco.jar && w.deco.jar.day >= 1, 'a caught bug becomes a jar in the yard');
+  const back = JSON.parse(JSON.stringify(w.deco)); assert.ok(back.jar, 'the jar survives a save');
+  ok('lightning bugs: only caught after the sparks are solved; the jar is kept');
+}

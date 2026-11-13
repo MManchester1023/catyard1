@@ -1,6 +1,6 @@
 // Acts: how each activity starts, moves the cat, and finishes.
 import { rnd, ri, clamp, pick, dist, an, uid, GY0, FEATHER_COLORS, MATERIALS } from './util.js';
-import { spot, walk, randomOpenPoint, note, journal, hourOf, sunOf, beamOf, birdLeave, moonPos, moonPhase, clockStr, pushHist } from './world.js';
+import { JAR, catchBug, spot, walk, randomOpenPoint, note, journal, hourOf, sunOf, beamOf, birdLeave, moonPos, moonPhase, clockStr, pushHist } from './world.js';
 import { decide, interest, pickSleepSpot, unknownPlaces, SLEEPY } from './mind.js';
 import { itemName, chooseSite, addToStash, tidyStash, noticeTheft } from './quirk.js';
 import { onEvent } from './wants.js';
@@ -109,7 +109,7 @@ export function start(w, type, opts = {}) {
     case 'craft': aim('craft'); a.dur = rnd(10, 15) * PACE.craftTime * (c.temper === 'builder' ? 0.7 : 1); think(w, 'craftGo'); break;
     case 'frog': { const f = frogSpot(w); a.tx = f.cx; a.ty = f.cy; a.dur = rnd(16, 24); a.nextBoop = rnd(3, 5); a.boopT = 0; think(w, 'frogGo'); break; }
     case 'fish': { const p = o.pond; a.tx = clamp(w.fish ? w.fish.x : p.x, p.x - p.rx * 0.6, p.x + p.rx * 0.6); a.ty = p.y + p.ry + 12; a.dur = rnd(16, 24); a.strikes = 0; c.fishAt = w.clock; think(w, 'fishGo'); break; }
-    case 'listen': { a.tx = o.tree.x - 40; a.ty = o.tree.y + 24; a.dur = rnd(14, 22); c.listenAt = w.clock; think(w, 'listenGo'); break; }
+    case 'listen': { a.jar = !!w.deco.jar && (!w.deco.chime || hourOf(w) > 18.8 || hourOf(w) < 5.2); a.tx = a.jar ? JAR.x - 34 : o.tree.x - 40; a.ty = a.jar ? JAR.y + 6 : o.tree.y + 24; a.dur = rnd(14, 22); c.listenAt = w.clock; think(w, 'listenGo'); break; }
     case 'cattree': { const s = catTreeSpot(); a.tx = s.x; a.ty = s.y; a.sf = 1; a.dur = rnd(18, 36); c.catTreeAt = w.clock; think(w, 'catTreeGo'); break; }
     case 'wash': { a.from = k.pond && random() < 0.5 ? 'pond' : 'water'; aim(a.from); c.washAt = w.clock; think(w, 'washGo'); break; }
   }
@@ -145,7 +145,7 @@ export function describe(w) {
     case 'craft': return a.phase === 'go' ? 'Heading to the workbench' : `Making ${an(RECIPES[a.recipe].name)}`;
     case 'frog': return a.phase === 'go' ? `Going to see ${frogName(w)}` : `Sitting with ${frogName(w)} the frog`;
     case 'fish': return a.phase === 'go' ? 'Heading to the pond to fish' : 'Fishing at the pond';
-    case 'listen': return a.phase === 'go' ? 'Going to listen to the chime' : 'Listening to the wind chime';
+    case 'listen': return a.jar ? (a.phase === 'go' ? 'Going to see the jar' : 'Watching the bug in the jar') : a.phase === 'go' ? 'Going to listen to the chime' : 'Listening to the wind chime';
     case 'wash': return a.phase === 'go' ? 'Heading to wash' : a.phase === 'dry' ? 'Drying off' : 'Giving itself a proper wash';
   }
   return '';
@@ -376,7 +376,7 @@ export function actTick(w, dt) {
         if (a.swat > 0) { a.swat -= dt; c.pose = 'swat'; break; }
         const d = Math.hypot(tg.x - c.x, tg.y - c.y);
         if (d > 34) { c.pose = 'run'; walk(w, c, tg.x, tg.y + 6, 80, dt); }
-        else { a.swat = 0.4; c.pose = 'swat'; c.face = tg.x >= c.x ? 1 : -1; clue(w, 'sparks', 0.5); tg.x += rnd(-60, 60); tg.y += rnd(-20, 20); }
+        else { a.swat = 0.4; c.pose = 'swat'; c.face = tg.x >= c.x ? 1 : -1; clue(w, 'sparks', 0.5); if (w.mysteries.sparks.solved && !w.deco.jar && random() < 0.3) { catchBug(w); c.bugAt = w.clock; c.pose = 'stand'; done(w); break; } tg.x += rnd(-60, 60); tg.y += rnd(-20, 20); }
       }
       break;
     }
@@ -437,8 +437,8 @@ export function actTick(w, dt) {
     case 'listen': {
       if (a.phase === 'go') { c.pose = 'walk'; if (arrive(66)) { toDo(); c.face = 1; } break; }
       c.pose = a.t > a.dur * 0.7 ? 'sit' : 'gaze'; n.fun = clamp(n.fun - 0.045 * dt); c.mood.joy = clamp(c.mood.joy + 0.006 * dt); n.fear = clamp(n.fear - 0.01 * dt);
-      if (random() < dt * 0.07) think(w, 'listen');
-      if (a.t > a.dur || n.fun < 0.04 || !w.deco.chime) { feel(w, ['act:listen', 'craft:chime'], { joy: 0.06, fun: -0.05 }, 'soothed'); done(w); }
+      if (random() < dt * 0.07) think(w, a.jar ? 'jar' : 'listen');
+      if (a.t > a.dur || n.fun < 0.04 || !(a.jar ? w.deco.jar : w.deco.chime)) { feel(w, ['act:listen', a.jar ? 'bug:jar' : 'craft:chime'], { joy: 0.06, fun: -0.05 }, 'soothed'); done(w); }
       break;
     }
     case 'wash': {

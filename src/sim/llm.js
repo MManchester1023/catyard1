@@ -228,8 +228,8 @@ export class Brain {
         } else if (ask.type === 'blog') {
           const post = w.blog && w.blog.posts.find(x => x.id === ask.id); if (!post) return;
           this.busy = true; this._set('busy');
-          const out = await this.call(SYSTEM(w), `STATE\n${digest(w)}\n\nYou are writing a post for your own blog, "${w.blog.title}". Below is what the post has to be about: things from your diary, how you feel, what is on your mind and what you want. Write it in your own voice, first person, as one to three short paragraphs of 60 to 110 words in all. Cover what you did, how you feel and what you want, using only what is in the facts. No hashtags, no emoji.\nFACTS:\n${clip(post.body, 900)}\nJSON: {"title": "<= 7 words", "body": "<= 110 words"}`, 340);
-          const j = parseJson(out), body = clip(j && j.body, 900), t = clip(j && j.title, 70);
+          const out = await this.call(SYSTEM(w), `STATE\n${digest(w)}\n\nYou are writing a post for your own blog, "${w.blog.title}". Below is what the post has to be about: what you did, and then four things from inside your head: what is on your mind (mood, habits, favourites, interests), what you want, something you remember and something you are wondering about. Write it in your own voice, first person, as two to four short paragraphs of 90 to 150 words in all. Touch on each of those four things that appears in the facts, using only what is in the facts. No hashtags, no emoji.\nFACTS:\n${clip(post.body, 1500)}\nJSON: {"title": "<= 7 words", "body": "<= 150 words"}`, 460);
+          const j = parseJson(out), body = clip(j && j.body, 1100), t = clip(j && j.title, 70);
           if (body) {
             const old = post.title; post.body = body; if (t) post.title = t; post.by = 'claude';
             if (t) { const e = w.journal.find(x => x.id === post.jid); if (e) e.text = e.text.replace(`"${old}"`, `"${t}"`); const h = w.hist.find(x => x.k === 'diary' && x.text.includes(`"${old}"`)); if (h) h.text = h.text.replace(`"${old}"`, `"${t}"`); }

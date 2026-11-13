@@ -10,6 +10,11 @@ import { coinActive } from './secrets.js';
 import { isUpset, upsetVoice, upsetAbout } from './upset.js';
 import { recall, touch, when, regularLine } from './memory.js';
 import { random } from './rng.js';
+import { moodToday, ensureChar, habitLine, DO } from './character.js';
+import { ensureIntent } from './intent.js';
+import { ensureInterest, interestName } from './interest.js';
+import { favourites } from './finds.js';
+import { MYSTERY_INFO, discovered } from './mysteries.js';
 
 export const POSTS_MAX = 80;
 export function ensureBlog(w) {
@@ -130,27 +135,66 @@ const THOUGHT_LEAD = ['One thought I cannot shake:', 'Something I keep thinking:
 const WANT_LINES = x => [`I would really like to ${x}.`, `Next on my list: I want to ${x}.`, `If I could have one thing this week, it would be to ${x}.`, `What I am hoping for is simple: to ${x}.`];
 const LOOK_BACK = ['I keep coming back to it.', 'It has stayed with me.', 'I have been thinking about it since.'];
 
+
+// ---------- the four pages of the cat's mind: Mind, Wants, Memory and Wondering (what it writes about) ----------
+const lc = t => String(t || '').replace(/^go and /, '');
+const cap1 = t => t[0].toUpperCase() + t.slice(1);
+// Mind: today's mood and what it does to it, what it has decided, a habit, a favourite, a special interest
+export function mindBits(w) {
+  const c = ensureChar(w.cat), m = moodToday(w), it = ensureIntent(c).intent, out = [];
+  const pull = Object.entries(m.mul || {}).filter(([k, v]) => v > 1 && DO[k]).sort((a, b) => b[1] - a[1])[0];
+  if (m.line) out.push(`${pick(m.line)}${pull ? ` I keep wanting to ${lc(DO[pull[0]])}.` : ''}`);
+  if (it && !it.done && w.clock < it.until) out.push(`I have decided to ${it.label}${it.why ? `, because ${String(it.why).replace(/^because\s+/i, '').replace(/[.]+$/, '')}` : ''}.`);
+  if (c.habits && c.habits.length) out.push(`It has become a habit: ${habitLine(c.habits[0])}.`);
+  const fav = favourites(w)[0]; if (fav) out.push(`My favourite thing to do is ${fav.name}. Nothing cheers me up more.`);
+  const ic = ensureInterest(c).interest;
+  if (ic && ic.state === 'active') { const f = ic.facts && ic.facts.length ? ic.facts[ic.facts.length - 1].text : ''; out.push(`I am fascinated by ${interestName(ic)} at the moment.${f ? ` ${trim(f, 140)}` : ''}`); }
+  return out;
+}
+// Wants: what it is hoping for, what it has done about it
+export function wantBits(w) {
+  const c = w.cat, open = c.wants.filter(x => x.text).sort((a, b) => b.strength - a.strength).slice(0, 2).map(x => x.text.replace(/\s*\([^)]*\)/g, '').replace(/[.]+$/, ''));
+  const out = [];
+  if (open.length) out.push(open.length === 2 ? `What I want most: to ${open[0]}, and to ${open[1]}.` : `What I want most: to ${open[0]}.`);
+  if (c.doneWants > 0 && random() < 0.5) out.push(`I have got ${c.doneWants} thing${c.doneWants === 1 ? '' : 's'} I wanted so far. I am keeping count.`);
+  return out;
+}
+// Wondering: the mysteries it has noticed, and what it makes of them
+export function wonderBits(w) {
+  const out = [];
+  for (const [id, m] of Object.entries(w.mysteries || {})) {
+    if (!discovered(m)) continue; const name = MYSTERY_INFO[id].name;
+    if (m.solved) continue;
+    out.push(m.theory ? `I am still wondering about ${name}. My theory: ${String(m.theory).replace(/^“|”$/g, '')}` : `I have started to wonder about ${name}. I do not have a theory yet.`);
+  }
+  return out;
+}
+
 // put a post together from what has happened since the last one: a story, a look back, how it feels, and what it hopes for
 export function composePost(w) {
   const c = w.cat, b = w.blog, first = !b.started, v = voiceOf(c);
   if (first && !b.title) b.title = pickBlogTitle(w);
-  const items = chooseEntries(material(w), 3), fl = feelingNow(w), want = topWant(w);
+  const items = chooseEntries(material(w), 2), fl = feelingNow(w), want = topWant(w);
   const top = items.slice().sort((a, z) => wt(z) - wt(a))[0];
   const title = first ? 'Hello, Yard' : pick(HEAD[top && HEAD[top.tag] ? top.tag : 'default']);
   const paras = [first ? `Welcome to ${b.title}. I am ${c.name}. This is a blog about what I do, what I think, how I feel and what I want. I have heard that writing things down makes them real. I am testing that.` : pick(v.open).replace('#N', `#${b.posts.length + 1}`)];
   if (items.length) paras.push(story(w, items));
-  const old = !first && random() < 0.4 ? recall(w, { exclude: items.length ? items[0].id : null }) : null; // looking back
+  const tabs = [];
+  const mind = mindBits(w); if (mind.length) { paras.push(mind.slice(0, 2).join(' ')); tabs.push('mind'); }
+  const wants = wantBits(w); if (wants.length) { paras.push(wants.join(' ')); tabs.push('wants'); }
+  const old = !first ? recall(w, { exclude: items.length ? items[0].id : null }) : null; // looking back
   if (old) {
-    touch(w, old); const t = trim(old.text, 170), lead = when(w, old);
+    touch(w, old); const t = trim(old.text, 170), lead = when(w, old); tabs.push('memory');
     paras.push(SOFT.test(t) || /^I\b/.test(t) ? `${lead}, ${lowerFirst(t)} ${pick(LOOK_BACK)}` : `${t} That was ${lead.toLowerCase()}. ${pick(LOOK_BACK)}`);
-  } else if (!first && random() < 0.25) { const rl = regularLine(w); if (rl) paras.push(rl); }
+  } else if (!first && random() < 0.25) { const rl = regularLine(w); if (rl) { paras.push(rl); tabs.push('memory'); } }
+  const wonder = wonderBits(w); if (wonder.length) { paras.push(wonder.slice(0, 2).join(' ')); tabs.push('wondering'); }
   const th = c.thought && w.clock - c.thoughtAt < w.dayLen * 0.5 ? c.thought : null;
   const mood = [feelLine(w, fl)];
   if (th && random() < 0.7) mood.push(`${pick(THOUGHT_LEAD)} “${th.replace(/^“|”$/g, '')}”`);
-  if (want && random() < 0.8) mood.push(pick(WANT_LINES(want)));
+  if (want && !wants.length && random() < 0.8) mood.push(pick(WANT_LINES(want)));
   paras.push(mood.join(' '));
   paras.push(pick(v.close));
-  return { id: uid(), title, body: paras.join('\n\n'), mood: fl.label, want: want || '', did: items.map(e => e.id), upTo: w.journal.length ? w.journal[0].id : 0, by: 'offline', read: false };
+  return { id: uid(), title, body: paras.join('\n\n'), mood: fl.label, want: want || '', did: items.map(e => e.id), tabs, upTo: w.journal.length ? w.journal[0].id : 0, by: 'offline', read: false };
 }
 
 // ---------- starting and posting ----------

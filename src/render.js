@@ -7,7 +7,7 @@ import { slotPos } from './sim/offerings.js';
 import { frogSpot } from './sim/frog.js';
 import { LEAF_SECONDS } from './sim/oak.js';
 import { mulberry32, clamp } from './sim/util.js';
-import { dither } from './dither.js';
+import { dither, sharpen } from './dither.js';
 
 export const LW = 960, LH = 600;
 const ell = (g, x, y, rx, ry, rot = 0) => { g.beginPath(); g.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot, 0, 6.2832); };
@@ -268,6 +268,7 @@ export function createRenderer(canvas) {
     // what the cat has made and gathered
     if (w.deco && w.deco.feeder) drawFeeder(g, w, t);
     if (w.deco && w.deco.chime) drawChime(g, w, t);
+    if (w.deco && w.deco.jar) { const j = w.deco.jar, gl = night > 0.2 ? 0.35 + 0.65 * Math.max(0, Math.sin(t * 1.6)) : 0.25; g.fillStyle = 'rgba(0,0,0,0.22)'; ell(g, j.x, j.y + 2, 9, 3); g.fill(); g.fillStyle = 'rgba(190,225,235,0.55)'; g.fillRect(j.x - 6, j.y - 16, 12, 17); g.fillStyle = '#8a6a44'; g.fillRect(j.x - 6, j.y - 19, 12, 3); g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(j.x - 4, j.y - 14, 2, 11); g.globalCompositeOperation = 'lighter'; const jy = j.y - 8 + Math.sin(t * 0.8) * 2, gg = g.createRadialGradient(j.x, jy, 0, j.x, jy, night > 0.2 ? 20 : 8); gg.addColorStop(0, `rgba(230,255,120,${0.9 * gl})`); gg.addColorStop(1, 'rgba(230,255,120,0)'); g.fillStyle = gg; g.fillRect(j.x - 20, jy - 20, 40, 40); g.globalCompositeOperation = 'source-over'; }
     if (w.catTree) drawCatTree(g, w, t);
     drawPile(g, w);
     const dr = c.act && c.act.type === 'play' && c.act.drop; if (dr) { const u = Math.min(1, c.act.t * 2.4); g.fillStyle = 'rgba(0,0,0,0.2)'; ell(g, dr.x, dr.y + 3, 6, 2); g.fill(); MATS[dr.type](g, dr.x, dr.y - (1 - u) * 14 - 1, 1.15, u * 1.3); g.globalAlpha = 0.5 + 0.4 * Math.sin(t * 9); g.fillStyle = '#fff6c0'; ell(g, dr.x + 7, dr.y - 7, 1.6, 1.6); g.fill(); g.globalAlpha = 1; }
@@ -339,7 +340,7 @@ export function createRenderer(canvas) {
     // faint glass sheen along the bottom
     const gs = g.createLinearGradient(0, LH - 40, 0, LH); gs.addColorStop(0, 'rgba(255,255,255,0)'); gs.addColorStop(1, 'rgba(255,255,255,0.08)'); g.fillStyle = gs; g.fillRect(0, LH - 40, LW, 40);
     // dither the finished frame, then blow it up to the screen
-    g.setTransform(1, 0, 0, 1, 0, 0); g.putImageData(dither().apply(g.getImageData(0, 0, RW, RH)), 0, 0);
+    g.setTransform(1, 0, 0, 1, 0, 0); g.putImageData(dither().apply(sharpen(g.getImageData(0, 0, RW, RH))), 0, 0);
     out.drawImage(lo, 0, 0, RW * P, RH * P);
   }
   return { resize, draw, persp, canvas };

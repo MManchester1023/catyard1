@@ -146,19 +146,19 @@ export const ACTIVITIES = [
     prep: x => {
       const { w, c } = x;
       x.ripple = w.clock - (w.rippleAt || -999) < 40 && !w.mysteries.ripples.solved && frogRoom(w) && x.ago(c.ripAt || -1e9, 0.1);
-      x.spark = w.sparks.some(s => s.on) && !w.mysteries.sparks.solved && clueRoom(w, 'sparks');
+      x.spark = w.sparks.some(s => s.on) && (w.mysteries.sparks.solved ? !w.deco.jar && x.ago(c.bugAt || -1e9, 0.08) : clueRoom(w, 'sparks'));
     },
     when: x => x.dry && x.n.tired < 0.9,
     score: x => {
       const { w, c, k, T } = x, mt = w.mysteries.tree;
-      const sr = x.ripple ? 0.8 + T.curious * 0.4 + (x.solving('ripples') ? 0.8 : 0) : 0, ss = x.spark ? 0.45 + T.curious * 0.4 + (x.solving('sparks') ? 0.8 : 0) : 0;
+      const sr = x.ripple ? 0.8 + T.curious * 0.4 + (x.solving('ripples') ? 0.8 : 0) : 0, ss = x.spark ? 0.45 + T.curious * 0.4 + (x.solving('sparks') ? 0.8 : 0) + (w.mysteries.sparks.solved ? 0.3 : 0) : 0;
       const st = mt.interest && !mt.solved && k.tree && x.sun > 0.3 && clueRoom(w, 'tree') && x.ago(c.oakAt || -1e9, 0.07) ? 0.55 + T.curious * 0.35 + (x.solving('tree') ? 0.6 : 0) : 0;
       if (!(sr || ss || st)) return 0;
       x.opts.investigate = { kind: st >= sr && st >= ss ? 'tree' : sr >= ss ? 'ripples' : 'sparks' };
       return (Math.max(sr, ss, st) + x.N()) * (x.tech ? 0.6 : 1);
     } },
   { key: 'listen', // the wind chime: sit and listen, which takes the edge off being bored
-    when: x => x.w.deco && x.w.deco.chime && x.dry && x.n.fun > 0.3 && x.awake && x.fit && x.ago(x.c.listenAt || -1e9, 0.12),
+    when: x => x.w.deco && (x.w.deco.chime || (x.w.deco.jar && x.night > 0.5)) && x.dry && x.n.fun > 0.3 && x.awake && x.fit && x.ago(x.c.listenAt || -1e9, 0.12),
     score: x => 0.24 + (x.n.fun - 0.3) * 1.5 + x.T.lazy * 0.15 + (x.n.fear > 0.3 ? 0.25 : 0) + x.N() },
   { key: 'fish', // a fish in the pond
     when: x => x.w.fish && !x.w.fish.spooked && x.k.pond && x.dry && x.out && x.n.tired < 0.9 && x.awake && x.ago(x.c.fishAt || -1e9, 0.3),

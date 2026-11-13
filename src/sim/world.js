@@ -369,6 +369,15 @@ export function sparkTick(w, s, dt) {
   s.x += Math.cos(s.ang) * 14 * dt; s.y += Math.sin(s.ang) * 8 * dt; s.z = 28 + Math.sin(s.t * 0.9 + s.ph) * 16;
 }
 
+// a caught lightning bug lives in a jar on the grass, and the cat can come and watch it
+export const JAR = { x: 520, y: 520 };
+export function catchBug(w) {
+  const c = w.cat; w.deco.jar = { day: Math.floor(w.clock / w.dayLen) + 1, x: JAR.x, y: JAR.y };
+  note(w, `${c.name} caught a lightning bug and it is now in a jar on the grass.`, 'wonder');
+  journal(w, 'I caught one. Gently. It sits in a jar by the grass now, and glows when it likes, which is more than I can say for most things.', 'wonder');
+  c.thoughtHint = 'bugCaught'; c.mood.joy = Math.min(1, c.mood.joy + 0.5);
+}
+
 // ---------- things lying around for a collector ----------
 export function spawnItem(w, forceType, forceColor) {
   if (w.items.length >= 7) return null;

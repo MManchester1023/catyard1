@@ -2,7 +2,7 @@
 
 A small world where a cat lives on its own and you watch. It has needs, moods and a personality of its own. It collects small things in a stash, builds an easel and paints, makes things out of bark, keeps theories about the mysteries of the yard, befriends a frog, reads Wikipedia on a tablet and writes a blog. You can talk to it, leave it gifts, and (in admin mode) change the world.
 
-The yard is drawn in a dithered, low-resolution pixel style, including the cat's paintings.
+The yard is drawn in a dithered, low-resolution pixel style, including the cat's paintings. The picture is slightly brightened and sharpened before it is dithered, so small things like the bowls and stones keep their outlines.
 
 It is plain JavaScript with no bundler and no framework, so it runs as a normal web page in any modern browser. An optional Tauri wrapper turns the same files into a small Windows desktop app.
 
@@ -238,6 +238,8 @@ If it is held up for want of bark or twigs and cannot afford to buy them, it ask
 
 Once the cat has found the tablet and has a few days to write about (around day 4, or day 2 for a Techie), it starts a blog with a name that suits its quirk. Each post is drafted from what has happened since the last one, in the cat's own voice, and typed up the next time it sits at the tablet: about one post every day or two. The **Blog** tab appears once the blog has started and shows a dot for unread posts. Posts are folded: only the newest is open, and a folded post still shows its title, date, feeling and what it wants. Open or close any of them and they stay that way. The cat notices when you read it, and that cheers it up a little.
 
+Posts are written about what appears in the Cat tab: what is on its mind, what it wants, something it remembers (after the first post) and what it is wondering about, besides the day's events.
+
 ## History
 
 The whole history lives under **Cat → Memory**, below what the cat remembers.
@@ -256,6 +258,7 @@ Some things the cat has to find out for itself.
 - **The shiny coin.** A cat with curiosity over 75 may start wondering about the old oak. If it investigates for days it finds a gold coin in the roots, which ranks first in the stash. It is delighted for two days, and nothing upsets it.
 - **The moon.** Its last step is the frog (about nine visits). Afterwards, on full-moon nights, it can make a *moon wish*: something it wished for turns up sparkling in the stash.
 - **The dancing sparks** only become something it wants to understand after it has seen one.
+- **Lightning bugs** can only be caught once it has worked out the dancing sparks. When it chases one after that, each swat has a chance to catch it, and the bug goes into a **jar** on the grass that stays for good. At night the jar glows, and the cat sometimes goes and sits with it (the same urge as listening to the wind chime).
 - **The stars.** After enough clear nights of gazing it starts wondering about the stars themselves. It watches them until it has seen enough, then needs a tablet page about stars or meteors to be sure (or about six days without one). After that a star may fall on a clear night; if the cat sees it, it makes a wish, at most once every five days.
 - **A very curious cat** (over 90) works these out twice as fast.
 

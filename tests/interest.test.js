@@ -87,11 +87,11 @@ const pg = (title, extract) => ({ title, extract: extract || `${title} is a subj
   const answer = () => { for (const r of w.netq) if (r.state === 'queued') {
     r.state = 'done'; if (r.interest) { const n = (served[r.q] = served[r.q] || []).length + 1; if (n > 8) { r.state = 'error'; r.error = 'nothing more found'; continue; } assert(!r.skip.includes(`${r.q} page ${n}`), 'never asked for what it has'); served[r.q].push(`${r.q} page ${n}`); r.result = pg(`${r.q} page ${n}`, `Page ${n} about ${r.q}. ${r.q} has a long and surprising history that people have enjoyed learning about.`); }
     else r.result = pg('Something else ' + Math.random().toString(36).slice(2, 6)); } };
-  w.clock = 3 * w.dayLen; for (let i = 0; i < 40 * 1200 / 0.5; i++) { tick(w, 0.5); answer(); }
+  w.clock = 3 * w.dayLen; let wrote = false; for (let i = 0; i < 40 * 1200 / 0.5; i++) { tick(w, 0.5); answer(); if (!wrote && i % 40 === 0) wrote = w.journal.some(e => e.tag === 'interest' && /I have read \d pages? about/.test(e.text)); } // (checked along the way: old diary entries are trimmed)
   const done = w.cat.interests, c = w.cat; assert(done.length >= 2, 'it went through at least two interests in 40 days: ' + done.length + ' ' + done.map(x => x.topic));
   for (const d of done) assert(d.pages >= 1 && d.pages <= INTEREST_PAGES * (d.sessions || 1), d.topic + ' ' + d.pages); // (an interest is for good: coming back adds to the pages)
   assert(Object.values(served).every(l => new Set(l).size === l.length), 'never the same page twice for one subject');
-  assert(w.journal.some(e => e.tag === 'interest' && /I have read \d pages? about/.test(e.text)));
+  assert(wrote || w.journal.some(e => e.tag === 'interest' && /I have read \d pages? about/.test(e.text)), 'it wrote about what it read');
   ok('40 days against a fake Wikipedia: ' + done.map(d => `${d.topic}(${d.pages})`).join(', '));
 }
 

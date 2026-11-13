@@ -2,7 +2,7 @@
 // colour turns into the fixed crosshatch look. It is a lookup per channel, so a whole frame costs about a
 // millisecond. The yard, the cat and the paintings all go through it.
 
-export const STYLE = { levels: [5, 5, 4], size: 4, gamma: 1.0, strength: 0.55 };
+export const STYLE = { levels: [8, 8, 6], size: 4, gamma: 0.94, strength: 0.4, sharpen: 0.4 };
 
 function bayer(n) {
   if (n === 1) return [[0]];
@@ -38,6 +38,26 @@ export function makeDither(style = STYLE) {
     return img;
   }
   return { apply, style };
+}
+
+// A light unsharp mask, so the small things (stones, bowls, whiskers, the edges of the cabin) keep their outline instead of
+// melting into the grass. It runs on the small picture before it is dithered, so every art pixel stays one colour.
+let scratch = null;
+export function sharpen(img, amount = STYLE.sharpen) {
+  if (!amount) return img;
+  const d = img.data, w = img.width, h = img.height, stride = w << 2, k = Math.round(amount * 2 * 64); // v + (v - avg) * 2a, in 1/256ths of (4v - sum)
+  if (!scratch || scratch.length !== d.length) scratch = new Uint8ClampedArray(d.length);
+  scratch.set(d); const s0 = scratch;
+  for (let y = 1; y < h - 1; y++) {
+    let i = y * stride + 4;
+    for (let x = 1; x < w - 1; x++, i += 4) {
+      const n = i - stride, s = i + stride, l = i - 4, r = i + 4;
+      d[i] = s0[i] + (((s0[i] << 2) - s0[l] - s0[r] - s0[n] - s0[s]) * k >> 8);
+      d[i + 1] = s0[i + 1] + (((s0[i + 1] << 2) - s0[l + 1] - s0[r + 1] - s0[n + 1] - s0[s + 1]) * k >> 8);
+      d[i + 2] = s0[i + 2] + (((s0[i + 2] << 2) - s0[l + 2] - s0[r + 2] - s0[n + 2] - s0[s + 2]) * k >> 8);
+    }
+  }
+  return img;
 }
 
 let shared = null;
